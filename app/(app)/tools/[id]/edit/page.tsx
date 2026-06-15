@@ -1,0 +1,150 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { ArrowLeft, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { useSession } from 'next-auth/react'
+
+const categories = ['Power Tools', 'Hand Tools', 'Measuring Tools', 'Safety Equipment', 'Lifting Equipment', 'Other']
+
+export default function EditToolPage() {
+  const router = useRouter()
+  const { id } = useParams() as { id: string }
+  const { data: session } = useSession()
+  const [form, setForm] = useState({
+    name: '', description: '', category: '', imageUrl: '',
+    totalStock: '1', minStock: '2', maxStock: '10',
+  })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/tools/${id}`)
+      .then((r) => r.json())
+      .then((tool) => {
+        setForm({
+          name: tool.name || '',
+          description: tool.description || '',
+          category: tool.category || '',
+          imageUrl: tool.imageUrl || '',
+          totalStock: String(tool.totalStock),
+          minStock: String(tool.minStock),
+          maxStock: String(tool.maxStock),
+        })
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [id])
+
+  function update(k: string, v: string) {
+    setForm((f) => ({ ...f, [k]: v }))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/tools/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed')
+      router.push(`/tools/${id}`)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm('Deactivate this tool? It will be hidden from inventory.')) return
+    await fetch(`/api/tools/${id}`, { method: 'DELETE' })
+    router.push('/tools')
+  }
+
+  if (loading) return <div className="animate-pulse h-64 bg-white rounded-2xl" />
+
+  return (
+    <div className="max-w-2xl mx-auto fade-in">
+      <div className="flex items-center gap-3 mb-6">
+        <Link href={`/tools/${id}`} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+          <ArrowLeft size={20} className="text-gray-600" />
+        </Link>
+        <h1 className="text-2xl font-bold text-gray-900">Edit Tool</h1>
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+        {error && <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm">{error}</div>}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tool Name *</label>
+            <input required value={form.name} onChange={(e) => update('name', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+            <textarea value={form.description} onChange={(e) => update('description', e.target.value)}
+              rows={3} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 resize-none" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
+            <select value={form.category} onChange={(e) => update('category', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
+              <option value="">Select category</option>
+              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Image URL</label>
+            <input value={form.imageUrl} onChange={(e) => update('imageUrl', e.target.value)}
+              placeholder="https://…"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100 pt-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Stock Settings</h3>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { key: 'totalStock', label: 'Total Stock', min: 1 },
+              { key: 'minStock', label: 'Min Level', min: 1 },
+              { key: 'maxStock', label: 'Max Level', min: 1 },
+            ].map(({ key, label, min }) => (
+              <div key={key}>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">{label}</label>
+                <input type="number" min={min} value={form[key as keyof typeof form]}
+                  onChange={(e) => update(key, e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-center" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          {session?.user?.role === 'ADMIN' && (
+            <button type="button" onClick={handleDelete}
+              className="flex items-center gap-1.5 px-4 py-3 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors">
+              <Trash2 size={14} /> Delete
+            </button>
+          )}
+          <Link href={`/tools/${id}`} className="flex-1 text-center py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            Cancel
+          </Link>
+          <button type="submit" disabled={saving}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-60">
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}

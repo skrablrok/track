@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"c:\\\\Users\\\\rok\\\\iCloudDrive\\\\spletne strani skrablweb\\\\SKLADIŠČE\\\\tool-inventory\"; $env:DATABASE_URL=\"file:./prisma/dev.db\"; npx prisma db push)",
+      "PowerShell(cd \"c:\\\\Users\\\\rok\\\\iCloudDrive\\\\spletne strani skrablweb\\\\SKLADIŠČE\\\\tool-inventory\"; $env:DATABASE_URL=\"file:./prisma/dev.db\"; npx prisma generate)",
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; cd \"c:\\\\Users\\\\rok\\\\iCloudDrive\\\\spletne strani skrablweb\\\\SKLADIŠČE\\\\tool-inventory\"; $env:DATABASE_URL=\"file:./prisma/dev.db\"; npx prisma generate)",
+      "PowerShell(cd \"c:\\\\Users\\\\rok\\\\iCloudDrive\\\\spletne strani skrablweb\\\\SKLADIŠČE\\\\tool-inventory\"; $env:DATABASE_URL=\"file:./dev.db\"; npx prisma db push)",
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; cd \"c:\\\\Users\\\\rok\\\\iCloudDrive\\\\spletne strani skrablweb\\\\SKLADIŠČE\\\\tool-inventory\"; $env:DATABASE_URL=\"file:./dev.db\"; npx prisma generate)",
+      "PowerShell(cd \"c:\\\\Users\\\\rok\\\\iCloudDrive\\\\spletne strani skrablweb\\\\SKLADIŠČE\\\\tool-inventory\"; $env:DATABASE_URL=\"file:./dev.db\"; npx tsx scripts/reset.ts)",
+      "PowerShell(cd \"c:\\\\Users\\\\rok\\\\iCloudDrive\\\\spletne strani skrablweb\\\\SKLADIŠČE\\\\tool-inventory\"; $env:DATABASE_URL=\"file:./dev.db\"; npx tsx -e \"import { PrismaClient } from '@prisma/client'; import bcrypt from 'bcryptjs'; const db = new PrismaClient\\(\\); bcrypt.hash\\('Kosarkaljubljana2007!', 12\\).then\\(h => db.user.update\\({ where: { email: 'rok.skrabl@gmail.com' }, data: { password: h } }\\)\\).then\\(\\(\\) => { console.log\\('Password updated.'\\); db.\\\\$disconnect\\(\\); }\\)\")"
+    ]
+  }
+}
