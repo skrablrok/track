@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
     if (existing && existing.setupComplete) return badRequest('Email already in use')
 
     const inviteToken = crypto.randomBytes(32).toString('hex')
-    const inviteExpiry = new Date(Date.now() + 48 * 60 * 60 * 1000)
-    const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/$/, '')
+    const inviteExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const appUrl = (process.env.NEXTAUTH_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || 'http://localhost:3000').replace(/\/$/, '')
     const inviteUrl = `${appUrl}/invite/${inviteToken}`
 
     let user

@@ -13,7 +13,7 @@ function createTransporter() {
 }
 
 export async function sendInviteEmail(to: string, token: string) {
-  const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/$/, '')
+  const appUrl = (process.env.NEXTAUTH_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || 'http://localhost:3000').replace(/\/$/, '')
   const inviteUrl = `${appUrl}/invite/${token}`
 
   const transporter = createTransporter()
@@ -30,7 +30,7 @@ export async function sendInviteEmail(to: string, token: string) {
         <div style="background:white;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
           <h2 style="color:#1e293b;margin:0 0 12px;">You've been invited!</h2>
           <p style="color:#475569;margin:0 0 20px;">You have been invited to join the ToolTrack tool inventory system. Click the button below to complete your registration.</p>
-          <p style="color:#64748b;font-size:13px;margin:0 0 24px;">This link expires in <strong>48 hours</strong>.</p>
+          <p style="color:#64748b;font-size:13px;margin:0 0 24px;">This link expires in <strong>7 days</strong>.</p>
           <div style="text-align:center;margin-bottom:24px;">
             <a href="${inviteUrl}" style="display:inline-block;background:#2563eb;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
               Complete Registration
