@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Wrench, QrCode, ClipboardList,
-  FolderOpen, BarChart3, Users, LogOut, ClipboardCheck,
+  FolderOpen, BarChart3, Users, LogOut, ClipboardCheck, ShoppingCart, FileSpreadsheet,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,8 @@ export default function Sidebar({ role }: { role: string }) {
     { href: '/checkouts',   key: 'nav_checkouts',  icon: ClipboardList,   roles: ['ADMIN','MANAGER','EMPLOYEE'] },
     { href: '/projects',    key: 'nav_projects',   icon: FolderOpen,      roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
     { href: '/reports',     key: 'nav_reports',    icon: BarChart3,       roles: ['ADMIN','MANAGER'] },
+    { href: '/admin/procurement', key: 'nav_procurement', icon: ShoppingCart, roles: ['ADMIN','MANAGER'] },
+    { href: '/admin/import', key: 'nav_import', icon: FileSpreadsheet, roles: ['ADMIN','MANAGER'] },
     { href: '/admin/users', key: 'nav_users',      icon: Users,           roles: ['ADMIN'] },
   ] as const
 

@@ -25,6 +25,7 @@ type RequestDetail = {
     approvedQty: number | null
     notes?: string
     itemName?: string | null
+    procurementStatus?: string | null
     tool: { id: string; name: string; imageUrl?: string; category?: string; currentStock: number; minStock: number; totalStock: number } | null
   }>
 }
@@ -34,6 +35,13 @@ const STATUS_CONFIG = {
   APPROVED:           { label: 'Approved',           color: 'bg-green-100 text-green-800 border-green-200',  icon: CheckCircle2 },
   PARTIALLY_APPROVED: { label: 'Partially Approved', color: 'bg-blue-100 text-blue-800 border-blue-200',     icon: AlertCircle },
   REJECTED:           { label: 'Rejected',           color: 'bg-red-100 text-red-800 border-red-200',        icon: XCircle },
+}
+
+const PROCUREMENT_BADGE: Record<string, { label: string; color: string }> = {
+  PENDING_PURCHASE: { label: 'Pending Purchase', color: 'bg-amber-100 text-amber-700' },
+  ORDERED:          { label: 'Ordered',          color: 'bg-blue-100 text-blue-700' },
+  RECEIVED:         { label: 'Received',         color: 'bg-purple-100 text-purple-700' },
+  COMPLETED:        { label: 'Completed',        color: 'bg-green-100 text-green-700' },
 }
 
 export default function RequestDetailPage() {
@@ -231,6 +239,11 @@ export default function RequestDetailPage() {
                       {isCustom && (
                         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
                           Not in inventory
+                        </span>
+                      )}
+                      {item.procurementStatus && PROCUREMENT_BADGE[item.procurementStatus] && (
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PROCUREMENT_BADGE[item.procurementStatus].color}`}>
+                          {PROCUREMENT_BADGE[item.procurementStatus].label}
                         </span>
                       )}
                     </div>

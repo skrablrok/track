@@ -51,3 +51,6 @@
 }
 
 .fade-in { animation: fadeIn 0.3s ease-out; }
+
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth, logAudit, unauthorized, serverError, badRequest } from '@/lib/utils'
 import { notifyAdmins } from '@/lib/notifications'
+import { sendProcurementEmail } from '@/lib/email'
 
 export async function GET(req: NextRequest) {
   try {
@@ -61,6 +62,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Look up current stock for any referenced tools, to flag insufficient-stock items for procurement
+    const toolIds = items.filter((i: any) => i.toolId).map((i: any) => i.toolId)
+    const tools = toolIds.length
+      ? await db.tool.findMany({ where: { id: { in: toolIds } }, select: { id: true, name: true, currentStock: true } })
+      : []
+    const toolById = new Map(tools.map((t) => [t.id, t]))
+
+    const needsProcurement = (i: any) => {
+      if (!i.toolId) return true
+      const tool = toolById.get(i.toolId)
+      return !!tool && parseInt(i.requestedQty) > tool.currentStock
+    }
+
     const request = await db.request.create({
       data: {
         requesterId: user.id,
@@ -73,6 +87,8 @@ export async function POST(req: NextRequest) {
             itemName: i.toolId ? null : String(i.itemName).trim(),
             requestedQty: parseInt(i.requestedQty),
             notes: i.notes || null,
+            procurementStatus: needsProcurement(i) ? 'PENDING_PURCHASE' : null,
+            procurementUpdatedAt: needsProcurement(i) ? new Date() : null,
           })),
         },
       },
@@ -88,15 +104,31 @@ export async function POST(req: NextRequest) {
 
     // Notify all admins and managers
     const projectName = request.project?.name || 'no project'
-    const customItemCount = items.filter((i: any) => !i.toolId).length
+    const neverStocked = items.filter((i: any) => !i.toolId).map((i: any) => ({ name: String(i.itemName).trim(), qty: parseInt(i.requestedQty) }))
+    const lowStock = items
+      .filter((i: any) => i.toolId && needsProcurement(i))
+      .map((i: any) => ({ name: toolById.get(i.toolId)!.name, qty: parseInt(i.requestedQty), currentStock: toolById.get(i.toolId)!.currentStock }))
+    const procurementCount = neverStocked.length + lowStock.length
+
     await notifyAdmins(
       'REQUEST_SUBMITTED',
-      customItemCount > 0 ? '⚠️ Item Needed — Not In Stock' : 'New Tool Request',
-      customItemCount > 0
-        ? `${user.name} requested ${items.length} item(s) for ${projectName} — ${customItemCount} item(s) not in inventory and will need to be sourced`
+      procurementCount > 0 ? '⚠️ Item Needed — Not In Stock' : 'New Tool Request',
+      procurementCount > 0
+        ? `${user.name} requested ${items.length} item(s) for ${projectName} — ${procurementCount} item(s) need procurement: ${[...neverStocked.map((i) => i.name), ...lowStock.map((i) => `${i.name} (qty ${i.qty}, ${i.currentStock} in stock)`)].join(', ')}`
         : `${user.name} requested ${items.length} item(s) for ${projectName}`,
       `/requests/${request.id}`
     )
+
+    if (procurementCount > 0) {
+      const admins = await db.user.findMany({ where: { active: true, role: { in: ['ADMIN', 'MANAGER'] } }, select: { email: true } })
+      await sendProcurementEmail(admins.map((a) => a.email), {
+        requesterName: user.name as string,
+        projectName,
+        neverStocked,
+        lowStock,
+        linkUrl: `/requests/${request.id}`,
+      })
+    }
 
     return NextResponse.json(request, { status: 201 })
   } catch (e: any) {

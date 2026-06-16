@@ -28,6 +28,8 @@ export default function CheckoutsPage() {
   const [status, setStatus] = useState<'ALL' | 'ACTIVE' | 'RETURNED' | 'CONSUMED'>('ALL')
   const [search, setSearch] = useState('')
   const [returning, setReturning] = useState<string | null>(null)
+  const [armedId, setArmedId] = useState<string | null>(null)
+  const [returnError, setReturnError] = useState('')
 
   const isAdmin = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
 
@@ -44,10 +46,21 @@ export default function CheckoutsPage() {
   useEffect(() => { load() }, [status])
 
   async function handleReturn(id: string) {
-    if (!confirm(t('confirmReturn'))) return
+    if (armedId !== id) {
+      setArmedId(id)
+      setTimeout(() => setArmedId((cur) => (cur === id ? null : cur)), 3000)
+      return
+    }
+    setArmedId(null)
+    setReturnError('')
     setReturning(id)
-    await fetch(`/api/checkouts/${id}/return`, { method: 'POST' })
+    const res = await fetch(`/api/checkouts/${id}/return`, { method: 'POST' })
     setReturning(null)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setReturnError(d.error || 'Failed to return tool')
+      return
+    }
     load()
   }
 
@@ -73,6 +86,10 @@ export default function CheckoutsPage() {
           {isAdmin ? t('allCheckouts') : t('yourCheckouts')}
         </p>
       </div>
+
+      {returnError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{returnError}</div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -109,7 +126,7 @@ export default function CheckoutsPage() {
               <div className="space-y-3">
                 {active.map((c) => (
                   <CheckoutRow key={c.id} checkout={c} onReturn={handleReturn}
-                    returning={returning === c.id} session={session} isAdmin={isAdmin} t={t} />
+                    returning={returning === c.id} armed={armedId === c.id} session={session} isAdmin={isAdmin} t={t} />
                 ))}
               </div>
             </div>
@@ -123,7 +140,7 @@ export default function CheckoutsPage() {
               <div className="space-y-3">
                 {returned.map((c) => (
                   <CheckoutRow key={c.id} checkout={c} onReturn={handleReturn}
-                    returning={returning === c.id} session={session} isAdmin={isAdmin} t={t} />
+                    returning={returning === c.id} armed={armedId === c.id} session={session} isAdmin={isAdmin} t={t} />
                 ))}
               </div>
             </div>
@@ -137,7 +154,7 @@ export default function CheckoutsPage() {
               <div className="space-y-3">
                 {consumed.map((c) => (
                   <CheckoutRow key={c.id} checkout={c} onReturn={handleReturn}
-                    returning={returning === c.id} session={session} isAdmin={isAdmin} t={t} />
+                    returning={returning === c.id} armed={armedId === c.id} session={session} isAdmin={isAdmin} t={t} />
                 ))}
               </div>
             </div>
@@ -155,10 +172,11 @@ export default function CheckoutsPage() {
   )
 }
 
-function CheckoutRow({ checkout: c, onReturn, returning, session, isAdmin, t }: {
+function CheckoutRow({ checkout: c, onReturn, returning, armed, session, isAdmin, t }: {
   checkout: Checkout
   onReturn: (id: string) => void
   returning: boolean
+  armed: boolean
   session: any
   isAdmin: boolean
   t: (key: any) => string
@@ -209,8 +227,10 @@ function CheckoutRow({ checkout: c, onReturn, returning, session, isAdmin, t }: 
               )}
               {canReturn && (
                 <button onClick={() => onReturn(c.id)} disabled={returning}
-                  className="flex items-center gap-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 font-medium px-2.5 py-1.5 rounded-xl transition-colors disabled:opacity-60 whitespace-nowrap">
-                  <CornerDownLeft size={12} /> {t('returnTool')}
+                  className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-xl transition-colors disabled:opacity-60 whitespace-nowrap ${
+                    armed ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-green-50 hover:bg-green-100 text-green-700'
+                  }`}>
+                  <CornerDownLeft size={12} /> {returning ? '…' : armed ? t('confirmQuestion') : t('returnTool')}
                 </button>
               )}
             </div>

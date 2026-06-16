@@ -98,16 +98,18 @@ model Request {
 }
 
 model RequestItem {
-  id           String   @id @default(cuid())
-  requestId    String
-  toolId       String?
-  itemName     String?
-  requestedQty Int
-  approvedQty  Int?
-  notes        String?
-  createdAt    DateTime @default(now())
-  request      Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  tool         Tool?    @relation(fields: [toolId], references: [id])
+  id                   String    @id @default(cuid())
+  requestId            String
+  toolId               String?
+  itemName             String?
+  requestedQty         Int
+  approvedQty          Int?
+  notes                String?
+  procurementStatus    String?
+  procurementUpdatedAt DateTime?
+  createdAt            DateTime  @default(now())
+  request              Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  tool                 Tool?     @relation(fields: [toolId], references: [id])
 }
 
 model Notification {

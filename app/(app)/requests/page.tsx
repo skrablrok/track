@@ -20,6 +20,7 @@ type Request = {
     requestedQty: number
     approvedQty?: number
     itemName?: string | null
+    procurementStatus?: string | null
     tool: { id: string; name: string; imageUrl?: string; category?: string; currentStock: number } | null
   }>
 }
@@ -162,7 +163,7 @@ function RequestRow({ request: r, isPrivileged, statusConfig, t }: {
   const Icon = s.icon
   const totalRequested = r.items.reduce((sum, i) => sum + i.requestedQty, 0)
   const totalApproved = r.items.reduce((sum, i) => sum + (i.approvedQty ?? 0), 0)
-  const hasCustomItem = r.items.some((i) => !i.tool)
+  const needsSourcing = r.items.some((i) => !i.tool || !!i.procurementStatus)
 
   return (
     <Link href={`/requests/${r.id}`}
@@ -177,7 +178,7 @@ function RequestRow({ request: r, isPrivileged, statusConfig, t }: {
             {r.items.length > 2 && ` +${r.items.length - 2}`}
           </span>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</span>
-          {hasCustomItem && (
+          {needsSourcing && (
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
               {t('sourcingNeeded')}
             </span>

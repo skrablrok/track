@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { QrCode, CheckCircle2, XCircle, Wrench, MapPin, User, ArrowRight } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import CheckoutModal from '@/components/checkouts/CheckoutModal'
@@ -21,18 +22,20 @@ type ScannedTool = {
   qrCode: string
   checkouts: Array<{
     id: string
-    user: { name: string }
+    user: { id: string; name: string }
     project?: { name: string; location?: string }
     checkoutDate: string
   }>
 }
 
 export default function ScanPage() {
+  const { data: session } = useSession()
+  const isAdmin = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
   const [scanning, setScanning] = useState(false)
   const [result, setResult] = useState<ScannedTool | null>(null)
   const [error, setError] = useState('')
   const [checkoutOpen, setCheckoutOpen] = useState(false)
-  const [returning, setReturning] = useState(false)
+  const [returningId, setReturningId] = useState<string | null>(null)
   const [successInfo, setSuccessInfo] = useState<{ title: string; message: string } | null>(null)
 
   async function handleScan(code: string) {
@@ -56,18 +59,20 @@ export default function ScanPage() {
   }
 
   async function handleReturn(checkoutId: string) {
-    setReturning(true)
+    setReturningId(checkoutId)
     const res = await fetch(`/api/checkouts/${checkoutId}/return`, { method: 'POST' })
-    setReturning(false)
+    setReturningId(null)
     if (res.ok) {
       setSuccessInfo({ title: 'Tool Returned!', message: 'The tool has been marked as available.' })
       setResult(null)
     } else {
-      setError('Failed to return tool')
+      const d = await res.json().catch(() => ({}))
+      setError(d.error || 'Failed to return tool')
     }
   }
 
-  const activeCheckout = result?.checkouts?.[0]
+  const ownCheckout = result?.checkouts?.find((c) => c.user.id === session?.user?.id)
+  const otherCheckouts = result?.checkouts?.filter((c) => c.user.id !== session?.user?.id) ?? []
 
   return (
     <div className="max-w-lg mx-auto space-y-6 fade-in">
@@ -164,37 +169,70 @@ export default function ScanPage() {
               </span>
             </div>
 
-            {activeCheckout ? (
+            {ownCheckout && (
               <div className="space-y-3">
                 <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
-                  <p className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-2">Currently In Use</p>
-                  <div className="flex items-center gap-2 text-sm text-gray-700 mb-1">
-                    <User size={14} className="text-gray-400" />
-                    {activeCheckout.user.name}
-                  </div>
-                  {activeCheckout.project && (
+                  <p className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-2">You Currently Have This</p>
+                  {ownCheckout.project && (
                     <div className="flex items-center gap-2 text-sm text-gray-700">
                       <MapPin size={14} className="text-gray-400" />
-                      {activeCheckout.project.name}
+                      {ownCheckout.project.name}
                     </div>
                   )}
                 </div>
                 <button
-                  onClick={() => handleReturn(activeCheckout.id)}
-                  disabled={returning}
+                  onClick={() => handleReturn(ownCheckout.id)}
+                  disabled={returningId === ownCheckout.id}
                   className="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 rounded-2xl font-medium transition-colors disabled:opacity-60"
                 >
-                  {returning ? 'Returning…' : 'Return This Tool'}
+                  {returningId === ownCheckout.id ? 'Returning…' : 'Return This Tool'}
                 </button>
               </div>
-            ) : result.currentStock > 0 ? (
+            )}
+
+            {otherCheckouts.length > 0 && (
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-3">
+                <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">
+                  {otherCheckouts.length} Other Unit{otherCheckouts.length > 1 ? 's' : ''} Currently Out
+                </p>
+                {otherCheckouts.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between gap-3 bg-white rounded-xl p-2.5 border border-amber-100">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                        <User size={13} className="text-gray-400 flex-shrink-0" />
+                        <span className="truncate">{c.user.name}</span>
+                      </div>
+                      {c.project && (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
+                          <MapPin size={11} className="text-gray-400 flex-shrink-0" />
+                          <span className="truncate">{c.project.name}</span>
+                        </div>
+                      )}
+                    </div>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleReturn(c.id)}
+                        disabled={returningId === c.id}
+                        className="flex-shrink-0 text-xs bg-green-50 hover:bg-green-100 text-green-700 font-medium px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-60"
+                      >
+                        {returningId === c.id ? '…' : 'Return'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!ownCheckout && result.currentStock > 0 && (
               <button
                 onClick={() => setCheckoutOpen(true)}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-medium transition-colors"
               >
                 {result.type === 'MATERIAL' ? 'Use This Material' : 'Check Out This Tool'}
               </button>
-            ) : (
+            )}
+
+            {!ownCheckout && result.currentStock === 0 && (
               <div className="bg-red-50 rounded-2xl p-4 text-center">
                 <p className="text-sm font-medium text-red-700">Out of Stock</p>
                 <p className="text-xs text-red-500 mt-0.5">All units are currently checked out</p>
