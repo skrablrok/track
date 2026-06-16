@@ -35,7 +35,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
   const isAdmin = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
   const isMaterial = tool.type === 'MATERIAL'
 
-  const stockPct = Math.round((tool.currentStock / tool.totalStock) * 100)
+  const stockPct = Math.min(100, Math.max(0, Math.round((tool.currentStock / tool.totalStock) * 100)))
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 fade-in">
@@ -99,7 +99,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
             </div>
             <div className="flex justify-between text-xs text-gray-400 mt-1.5">
               <span>Min: {tool.minStock}</span>
-              <span>Max: {tool.maxStock}</span>
+              {!isMaterial && <span>Max: {tool.maxStock}</span>}
             </div>
           </div>
 

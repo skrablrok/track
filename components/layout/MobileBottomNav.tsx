@@ -1,10 +1,11 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Wrench, QrCode, ClipboardCheck,
-  FolderOpen, ClipboardList, BarChart3, Users, ShoppingCart, FileSpreadsheet,
+  FolderOpen, ClipboardList, BarChart3, Users, ShoppingCart, FileSpreadsheet, MoreHorizontal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
@@ -22,24 +23,42 @@ const ALL_LINKS = [
   { href: '/admin/users', key: 'nav_users',     icon: Users,           roles: ['ADMIN'] },
 ] as const
 
+// Pages that always stay visible in the bottom bar — the rest collapse into the dropdown.
+const PRIMARY_HREFS = ['/dashboard', '/tools', '/scan', '/requests']
+
 export default function MobileBottomNav({ role }: { role: string }) {
   const pathname = usePathname()
   const { t } = useLanguage()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const allowed = ALL_LINKS.filter((l) => (l.roles as readonly string[]).includes(role))
+  const primary = allowed.filter((l) => PRIMARY_HREFS.includes(l.href))
+  const overflow = allowed.filter((l) => !PRIMARY_HREFS.includes(l.href))
+  const hasMore = overflow.length > 0
+  const isOverflowActive = overflow.some((l) => pathname === l.href || pathname.startsWith(l.href + '/'))
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
-      <div className="flex overflow-x-auto no-scrollbar">
-        {allowed.map(({ href, key, icon: Icon }) => {
+      <div className="flex">
+        {primary.map(({ href, key, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           const isScan = href === '/scan'
           return (
             <Link
               key={href}
               href={href}
+              onClick={() => setMenuOpen(false)}
               className={cn(
-                'flex-shrink-0 basis-[20%] flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
+                'flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
                 active ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
               )}
             >
@@ -54,6 +73,42 @@ export default function MobileBottomNav({ role }: { role: string }) {
             </Link>
           )
         })}
+
+        {hasMore && (
+          <div ref={menuRef} className="relative flex-1">
+            {menuOpen && (
+              <div className="absolute bottom-full right-1 mb-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-1.5 z-50">
+                {overflow.map(({ href, key, icon: Icon }) => {
+                  const active = pathname === href || pathname.startsWith(href + '/')
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setMenuOpen(false)}
+                      className={cn(
+                        'flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors',
+                        active ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50'
+                      )}
+                    >
+                      <Icon size={17} />
+                      {t(key)}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className={cn(
+                'w-full flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
+                isOverflowActive || menuOpen ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+              )}
+            >
+              <MoreHorizontal size={20} />
+              <span>{t('more')}</span>
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   )

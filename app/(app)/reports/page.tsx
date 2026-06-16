@@ -131,7 +131,7 @@ export default function ReportsPage() {
                   </h2>
                   <div className="space-y-2">
                     {overview.lowStockTools.map((tool: any) => {
-                      const pct = Math.round((tool.currentStock / (tool.totalStock || 1)) * 100) || 0
+                      const pct = Math.min(100, Math.max(0, Math.round((tool.currentStock / (tool.totalStock || 1)) * 100) || 0))
                       return (
                         <div key={tool.id} className="flex items-center gap-3">
                           <span className="text-sm text-gray-700 w-40 truncate">{tool.name}</span>

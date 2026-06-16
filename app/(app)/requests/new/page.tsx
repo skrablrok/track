@@ -11,6 +11,7 @@ type Tool = {
   name: string
   category?: string
   imageUrl?: string
+  type?: string
   currentStock: number
   minStock: number
   totalStock: number
@@ -173,22 +174,28 @@ function NewRequestPageInner() {
                   className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
               </div>
               <div className="max-h-48 overflow-y-auto space-y-1">
-                {filteredTools.slice(0, 20).map((tool) => (
-                  <button key={tool.id} type="button" onClick={() => addTool(tool)}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white text-left transition-colors">
-                    <div className="w-8 h-8 bg-white rounded-lg border border-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {tool.imageUrl
-                        ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" />
-                        : <Wrench size={14} className="text-gray-400" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{tool.name}</p>
-                      <p className="text-xs text-gray-400">{tool.category} · {tool.currentStock} {t('inStock')}</p>
-                    </div>
-                    {tool.currentStock <= 0 && <span className="text-xs text-red-500 font-medium">{t('outOfStock')}</span>}
-                    {tool.currentStock > 0 && tool.currentStock <= tool.minStock && <AlertTriangle size={14} className="text-amber-400" />}
-                  </button>
-                ))}
+                {filteredTools.slice(0, 20).map((tool) => {
+                  const isMaterial = tool.type === 'MATERIAL'
+                  const blocked = !isMaterial && tool.currentStock <= 0
+                  return (
+                    <button key={tool.id} type="button" onClick={() => !blocked && addTool(tool)} disabled={blocked}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-colors ${
+                        blocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white'
+                      }`}>
+                      <div className="w-8 h-8 bg-white rounded-lg border border-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {tool.imageUrl
+                          ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" />
+                          : <Wrench size={14} className="text-gray-400" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{tool.name}</p>
+                        <p className="text-xs text-gray-400">{tool.category} · {tool.currentStock} {t('inStock')}</p>
+                      </div>
+                      {tool.currentStock <= 0 && <span className="text-xs text-red-500 font-medium">{t('outOfStock')}</span>}
+                      {tool.currentStock > 0 && tool.currentStock <= tool.minStock && <AlertTriangle size={14} className="text-amber-400" />}
+                    </button>
+                  )
+                })}
                 {filteredTools.length === 0 && (
                   <p className="text-sm text-gray-400 text-center py-4">{t('noToolsFound')}</p>
                 )}
@@ -226,6 +233,8 @@ function NewRequestPageInner() {
           <div className="space-y-3">
             {items.map((item, idx) => {
               const isCustom = !item.tool
+              const isMaterial = !isCustom && item.tool!.type === 'MATERIAL'
+              const isCappedTool = !isCustom && !isMaterial
               const isOut = !isCustom && item.tool!.currentStock <= 0
               const exceeds = !isCustom && item.requestedQty > item.tool!.currentStock
               return (
@@ -258,8 +267,11 @@ function NewRequestPageInner() {
                       <div className="flex items-center gap-3 mt-2">
                         <div className="flex items-center gap-2">
                           <label className="text-xs text-gray-500">Qty:</label>
-                          <input type="number" min={1} value={item.requestedQty}
-                            onChange={(e) => updateItem(idx, 'requestedQty', Math.max(1, parseInt(e.target.value) || 1))}
+                          <input type="number" min={1} max={isCappedTool ? item.tool!.currentStock : undefined} value={item.requestedQty}
+                            onChange={(e) => {
+                              const raw = Math.max(1, parseInt(e.target.value) || 1)
+                              updateItem(idx, 'requestedQty', isCappedTool ? Math.min(item.tool!.currentStock, raw) : raw)
+                            }}
                             className="w-16 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         </div>
                         <input type="text" placeholder={t('itemNote')} value={item.notes}

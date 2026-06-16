@@ -126,11 +126,11 @@ export default function NewToolPage() {
 
         <div className="border-t border-gray-100 pt-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">Stock Settings</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${form.type === 'MATERIAL' ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {[
               { key: 'totalStock', label: 'Initial Stock', min: 1 },
               { key: 'minStock', label: 'Min Level (Alert)', min: 1 },
-              { key: 'maxStock', label: 'Max Level', min: 1 },
+              ...(form.type === 'MATERIAL' ? [] : [{ key: 'maxStock', label: 'Max Level', min: 1 }]),
             ].map(({ key, label, min }) => (
               <div key={key}>
                 <label className="block text-xs font-medium text-gray-600 mb-1.5">{label}</label>

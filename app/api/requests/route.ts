@@ -54,20 +54,27 @@ export async function POST(req: NextRequest) {
       return badRequest('At least one item is required')
     }
 
+    // Look up current stock for any referenced tools, to flag insufficient-stock items for procurement
+    // and to enforce the "can't request more tool units than the warehouse has" cap
+    const toolIds = items.filter((i: any) => i.toolId).map((i: any) => i.toolId)
+    const tools = toolIds.length
+      ? await db.tool.findMany({ where: { id: { in: toolIds } }, select: { id: true, name: true, type: true, currentStock: true } })
+      : []
+    const toolById = new Map(tools.map((t) => [t.id, t]))
+
     for (const item of items) {
       const hasTool = !!item.toolId
       const hasCustomName = typeof item.itemName === 'string' && item.itemName.trim().length > 0
       if ((!hasTool && !hasCustomName) || !item.requestedQty || item.requestedQty < 1) {
         return badRequest('Each item needs a tool or a custom item name, and quantity ≥ 1')
       }
+      if (hasTool) {
+        const tool = toolById.get(item.toolId)
+        if (tool && tool.type !== 'MATERIAL' && parseInt(item.requestedQty) > tool.currentStock) {
+          return badRequest(`Cannot request more than what's in stock for "${tool.name}" (${tool.currentStock} available)`)
+        }
+      }
     }
-
-    // Look up current stock for any referenced tools, to flag insufficient-stock items for procurement
-    const toolIds = items.filter((i: any) => i.toolId).map((i: any) => i.toolId)
-    const tools = toolIds.length
-      ? await db.tool.findMany({ where: { id: { in: toolIds } }, select: { id: true, name: true, currentStock: true } })
-      : []
-    const toolById = new Map(tools.map((t) => [t.id, t]))
 
     const needsProcurement = (i: any) => {
       if (!i.toolId) return true
