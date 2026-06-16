@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Upload, Wrench } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import PhotoInput from '@/components/tools/PhotoInput'
 
 const categories = ['Power Tools', 'Hand Tools', 'Measuring Tools', 'Safety Equipment', 'Lifting Equipment', 'Other']
 
@@ -106,7 +107,7 @@ export default function NewToolPage() {
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
             <select
               value={form.category}
@@ -118,17 +119,8 @@ export default function NewToolPage() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Image URL</label>
-            <div className="relative">
-              <Upload className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                value={form.imageUrl}
-                onChange={(e) => update('imageUrl', e.target.value)}
-                placeholder="https://…"
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-              />
-            </div>
+          <div className="sm:col-span-2">
+            <PhotoInput value={form.imageUrl} onChange={(dataUrl) => update('imageUrl', dataUrl)} />
           </div>
         </div>
 
@@ -153,12 +145,6 @@ export default function NewToolPage() {
             ))}
           </div>
         </div>
-
-        {form.imageUrl && (
-          <div className="rounded-xl overflow-hidden h-32 bg-gray-50 border border-gray-100">
-            <img src={form.imageUrl} alt="Preview" className="w-full h-full object-contain" onError={() => {}} />
-          </div>
-        )}
 
         <div className="flex gap-3 pt-2">
           <Link href="/tools" className="flex-1 text-center py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
