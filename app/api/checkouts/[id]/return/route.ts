@@ -5,7 +5,7 @@ import { requireAuth, logAudit, unauthorized, serverError, calcDurationMins } fr
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await requireAuth()
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
     const { notes } = body
 
     const checkout = await db.checkout.findUnique({
