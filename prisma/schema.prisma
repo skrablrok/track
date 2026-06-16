@@ -9,9 +9,10 @@ datasource db {
 
 // Role values: ADMIN, MANAGER, EMPLOYEE, FOREMAN
 // ProjectStatus values: ACTIVE, COMPLETED, ON_HOLD
-// CheckoutStatus values: ACTIVE, RETURNED
+// CheckoutStatus values: ACTIVE, RETURNED, CONSUMED
 // RequestStatus values: PENDING, APPROVED, PARTIALLY_APPROVED, REJECTED
 // NotificationType values: REQUEST_SUBMITTED, REQUEST_REVIEWED, STOCK_LOW, STOCK_NEGATIVE
+// ToolType values: TOOL, MATERIAL
 
 model User {
   id             String         @id @default(cuid())
@@ -37,6 +38,7 @@ model Tool {
   description  String?
   category     String?
   imageUrl     String?
+  type         String        @default("TOOL")
   totalStock   Int           @default(1)
   currentStock Int           @default(1)
   minStock     Int           @default(2)

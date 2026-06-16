@@ -10,7 +10,7 @@ const categories = ['Power Tools', 'Hand Tools', 'Measuring Tools', 'Safety Equi
 export default function NewToolPage() {
   const router = useRouter()
   const [form, setForm] = useState({
-    name: '', description: '', category: '', imageUrl: '',
+    name: '', description: '', category: '', imageUrl: '', type: 'TOOL',
     totalStock: '1', minStock: '2', maxStock: '10',
   })
   const [error, setError] = useState('')
@@ -58,6 +58,30 @@ export default function NewToolPage() {
         {error && (
           <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm">{error}</div>
         )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Item Type</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => update('type', 'TOOL')}
+              className={`py-3 rounded-xl text-sm font-medium border transition-colors ${
+                form.type === 'TOOL' ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Tool (reusable, returned)
+            </button>
+            <button
+              type="button"
+              onClick={() => update('type', 'MATERIAL')}
+              className={`py-3 rounded-xl text-sm font-medium border transition-colors ${
+                form.type === 'MATERIAL' ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Material (consumed, not returned)
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div className="sm:col-span-2">

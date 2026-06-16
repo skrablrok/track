@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { X, Wrench, MapPin, FileText } from 'lucide-react'
 
 interface Props {
-  tool: { id: string; name: string; currentStock: number; totalStock: number }
+  tool: { id: string; name: string; currentStock: number; totalStock: number; type?: string }
   onClose: () => void
   onSuccess: () => void
 }
 
 export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
+  const isMaterial = tool.type === 'MATERIAL'
   const [projects, setProjects] = useState<any[]>([])
   const [projectId, setProjectId] = useState('')
   const [quantity, setQuantity] = useState('1')
@@ -51,7 +52,7 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div>
-            <h2 className="font-bold text-gray-900">Check Out Tool</h2>
+            <h2 className="font-bold text-gray-900">{isMaterial ? 'Use Material' : 'Check Out Tool'}</h2>
             <p className="text-sm text-gray-500 mt-0.5">{tool.name}</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
@@ -74,6 +75,12 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
             </span>
           </div>
 
+          {isMaterial && (
+            <div className="bg-purple-50 text-purple-700 rounded-xl p-3 text-xs">
+              This is a consumable material — it will not be returned. Stock will be permanently reduced.
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               <span className="flex items-center gap-1.5"><MapPin size={14} /> Assign to Project</span>
@@ -93,7 +100,7 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Quantity</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{isMaterial ? 'Quantity to use' : 'Quantity'}</label>
             <input
               type="number"
               min="1"
@@ -130,7 +137,7 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
               disabled={loading}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-60"
             >
-              {loading ? 'Checking out…' : 'Check Out'}
+              {loading ? (isMaterial ? 'Using…' : 'Checking out…') : (isMaterial ? 'Use Material' : 'Check Out')}
             </button>
           </div>
         </form>

@@ -14,6 +14,7 @@ type Tool = {
   description?: string
   category?: string
   imageUrl?: string
+  type?: string
   totalStock: number
   currentStock: number
   minStock: number
@@ -151,7 +152,14 @@ export default function ToolsPage() {
                 <Link href={`/tools/${tool.id}`} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors text-sm leading-tight block mb-1">
                   {tool.name}
                 </Link>
-                {tool.category && <p className="text-xs text-gray-400 mb-2">{tool.category}</p>}
+                <div className="flex items-center gap-1.5 mb-2">
+                  {tool.category && <p className="text-xs text-gray-400">{tool.category}</p>}
+                  {tool.type === 'MATERIAL' && (
+                    <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
+                      {t('itemTypeMaterial')}
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center justify-between mt-2">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${stockColor(tool)}`}>
@@ -184,7 +192,7 @@ export default function ToolsPage() {
                 ) : tool.currentStock > 0 && (
                   <button onClick={() => setCheckoutTool(tool)}
                     className="w-full mt-3 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-2 rounded-xl transition-colors">
-                    {t('checkOut')}
+                    {tool.type === 'MATERIAL' ? t('useItem') : t('checkOut')}
                   </button>
                 )}
               </div>

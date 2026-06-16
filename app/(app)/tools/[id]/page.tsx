@@ -30,9 +30,10 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
   if (!tool) notFound()
 
   const activeCheckouts = tool.checkouts.filter((c) => c.status === 'ACTIVE')
-  const history = tool.checkouts.filter((c) => c.status === 'RETURNED')
+  const history = tool.checkouts.filter((c) => c.status === 'RETURNED' || c.status === 'CONSUMED')
   const isLowStock = tool.currentStock <= tool.minStock
   const isAdmin = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
+  const isMaterial = tool.type === 'MATERIAL'
 
   const stockPct = Math.round((tool.currentStock / tool.totalStock) * 100)
 
@@ -43,6 +44,9 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
           <ArrowLeft size={20} className="text-gray-600" />
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">{tool.name}</h1>
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${isMaterial ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+          {isMaterial ? 'Material' : 'Tool'}
+        </span>
         {isLowStock && (
           <span className="flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
             <AlertTriangle size={12} /> Low Stock
@@ -147,31 +151,36 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
               <p className="text-sm text-gray-400 text-center py-6">No checkout history</p>
             ) : (
               <div className="space-y-3">
-                {history.map((checkout) => (
-                  <div key={checkout.id} className="flex items-start gap-3 py-3 border-b border-gray-50 last:border-0">
-                    <div className="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Clock size={14} className="text-green-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-gray-800">{checkout.user.name}</p>
-                        {checkout.durationMins !== null && (
-                          <span className="text-xs text-gray-400 whitespace-nowrap">
-                            {formatMinutes(checkout.durationMins!)}
+                {history.map((checkout) => {
+                  const consumed = checkout.status === 'CONSUMED'
+                  return (
+                    <div key={checkout.id} className="flex items-start gap-3 py-3 border-b border-gray-50 last:border-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${consumed ? 'bg-purple-50' : 'bg-green-50'}`}>
+                        <Clock size={14} className={consumed ? 'text-purple-600' : 'text-green-600'} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-gray-800">{checkout.user.name}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${consumed ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {consumed ? `Used ${checkout.quantity}x` : checkout.durationMins !== null ? formatMinutes(checkout.durationMins!) : 'Returned'}
                           </span>
+                        </div>
+                        {checkout.project && (
+                          <p className="text-xs text-gray-500 mt-0.5">{checkout.project.name}</p>
                         )}
-                      </div>
-                      {checkout.project && (
-                        <p className="text-xs text-gray-500 mt-0.5">{checkout.project.name}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                        <span>{format(new Date(checkout.checkoutDate), 'MMM d HH:mm')}</span>
-                        <span>→</span>
-                        <span>{checkout.returnDate ? format(new Date(checkout.returnDate), 'MMM d HH:mm') : '—'}</span>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                          <span>{format(new Date(checkout.checkoutDate), 'MMM d HH:mm')}</span>
+                          {!consumed && (
+                            <>
+                              <span>→</span>
+                              <span>{checkout.returnDate ? format(new Date(checkout.returnDate), 'MMM d HH:mm') : '—'}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

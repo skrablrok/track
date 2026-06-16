@@ -57,6 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           }
 
           // Create checkout record for approved items
+          const isMaterial = tool.type === 'MATERIAL'
           await tx.checkout.create({
             data: {
               toolId: item.toolId,
@@ -65,7 +66,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
               requestId: params.id,
               quantity: qty,
               notes: `Via approved request #${params.id.slice(-6).toUpperCase()}`,
-              status: 'ACTIVE',
+              status: isMaterial ? 'CONSUMED' : 'ACTIVE',
+              ...(isMaterial && { returnDate: new Date() }),
             },
           })
         }

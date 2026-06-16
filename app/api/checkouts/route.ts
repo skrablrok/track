@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         ...(to && { checkoutDate: { lte: new Date(to) } }),
       },
       include: {
-        tool: { select: { id: true, name: true, imageUrl: true, category: true } },
+        tool: { select: { id: true, name: true, imageUrl: true, category: true, type: true } },
         user: { select: { id: true, name: true, email: true } },
         project: { select: { id: true, name: true, location: true } },
       },
@@ -54,6 +54,8 @@ export async function POST(req: NextRequest) {
     if (!tool || !tool.active) return badRequest('Tool not found or inactive')
     if (tool.currentStock < qty) return badRequest(`Insufficient stock. Available: ${tool.currentStock}`)
 
+    const isMaterial = tool.type === 'MATERIAL'
+
     const [checkout] = await db.$transaction([
       db.checkout.create({
         data: {
@@ -62,7 +64,8 @@ export async function POST(req: NextRequest) {
           projectId: projectId || null,
           quantity: qty,
           notes,
-          status: 'ACTIVE',
+          status: isMaterial ? 'CONSUMED' : 'ACTIVE',
+          ...(isMaterial && { returnDate: new Date() }),
         },
         include: {
           tool: true,
@@ -78,10 +81,10 @@ export async function POST(req: NextRequest) {
 
     await logAudit(
       user.id,
-      'CHECKOUT',
+      isMaterial ? 'USE_MATERIAL' : 'CHECKOUT',
       'Checkout',
       checkout.id,
-      `${user.name} checked out ${qty}x ${tool.name}`
+      `${user.name} ${isMaterial ? 'used' : 'checked out'} ${qty}x ${tool.name}`
     )
 
     return NextResponse.json(checkout, { status: 201 })

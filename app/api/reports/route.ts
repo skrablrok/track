@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     if (type === 'usage') {
       const checkouts = await db.checkout.findMany({
         where: {
-          status: 'RETURNED',
+          status: { in: ['RETURNED', 'CONSUMED'] },
           ...(Object.keys(dateFilter).length && { checkoutDate: dateFilter }),
         },
         include: {

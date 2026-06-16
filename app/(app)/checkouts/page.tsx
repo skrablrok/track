@@ -12,10 +12,10 @@ type Checkout = {
   checkoutDate: string
   returnDate?: string
   durationMins?: number
-  status: 'ACTIVE' | 'RETURNED'
+  status: 'ACTIVE' | 'RETURNED' | 'CONSUMED'
   quantity: number
   notes?: string
-  tool: { id: string; name: string; imageUrl?: string; category?: string }
+  tool: { id: string; name: string; imageUrl?: string; category?: string; type?: string }
   user: { id: string; name: string; email: string }
   project?: { id: string; name: string; location?: string }
 }
@@ -25,7 +25,7 @@ export default function CheckoutsPage() {
   const { t } = useLanguage()
   const [checkouts, setCheckouts] = useState<Checkout[]>([])
   const [loading, setLoading] = useState(true)
-  const [status, setStatus] = useState<'ALL' | 'ACTIVE' | 'RETURNED'>('ALL')
+  const [status, setStatus] = useState<'ALL' | 'ACTIVE' | 'RETURNED' | 'CONSUMED'>('ALL')
   const [search, setSearch] = useState('')
   const [returning, setReturning] = useState<string | null>(null)
 
@@ -63,6 +63,7 @@ export default function CheckoutsPage() {
 
   const active = filtered.filter((c) => c.status === 'ACTIVE')
   const returned = filtered.filter((c) => c.status === 'RETURNED')
+  const consumed = filtered.filter((c) => c.status === 'CONSUMED')
 
   return (
     <div className="space-y-6 fade-in">
@@ -81,12 +82,12 @@ export default function CheckoutsPage() {
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
         </div>
         <div className="flex gap-2">
-          {(['ALL', 'ACTIVE', 'RETURNED'] as const).map((s) => (
+          {(['ALL', 'ACTIVE', 'RETURNED', 'CONSUMED'] as const).map((s) => (
             <button key={s} onClick={() => setStatus(s)}
               className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
                 status === s ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600'
               }`}>
-              {s === 'ALL' ? t('all') : s === 'ACTIVE' ? t('active') : t('returned')}
+              {s === 'ALL' ? t('all') : s === 'ACTIVE' ? t('active') : s === 'RETURNED' ? t('returned') : t('consumed')}
             </button>
           ))}
         </div>
@@ -128,6 +129,20 @@ export default function CheckoutsPage() {
             </div>
           )}
 
+          {(status === 'ALL' || status === 'CONSUMED') && consumed.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                {t('consumed')} ({consumed.length})
+              </h2>
+              <div className="space-y-3">
+                {consumed.map((c) => (
+                  <CheckoutRow key={c.id} checkout={c} onReturn={handleReturn}
+                    returning={returning === c.id} session={session} isAdmin={isAdmin} t={t} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {filtered.length === 0 && (
             <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
               <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
@@ -157,10 +172,10 @@ function CheckoutRow({ checkout: c, onReturn, returning, session, isAdmin, t }: 
   return (
     <div className={`bg-white rounded-2xl border p-4 ${c.status === 'ACTIVE' ? 'border-amber-100' : 'border-gray-100'}`}>
       <div className="flex items-start gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden ${c.status === 'ACTIVE' ? 'bg-amber-50' : 'bg-gray-50'}`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden ${c.status === 'ACTIVE' ? 'bg-amber-50' : c.status === 'CONSUMED' ? 'bg-purple-50' : 'bg-gray-50'}`}>
           {c.tool.imageUrl
             ? <img src={c.tool.imageUrl} alt={c.tool.name} className="w-full h-full object-cover" />
-            : <Wrench size={16} className={c.status === 'ACTIVE' ? 'text-amber-400' : 'text-gray-400'} />}
+            : <Wrench size={16} className={c.status === 'ACTIVE' ? 'text-amber-400' : c.status === 'CONSUMED' ? 'text-purple-400' : 'text-gray-400'} />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
@@ -182,6 +197,10 @@ function CheckoutRow({ checkout: c, onReturn, returning, session, isAdmin, t }: 
               {c.status === 'ACTIVE' ? (
                 <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
                   {mins !== null ? formatMinutes(mins) : t('active')}
+                </span>
+              ) : c.status === 'CONSUMED' ? (
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                  {t('consumed')} ({c.quantity}x)
                 </span>
               ) : (
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">

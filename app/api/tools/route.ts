@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireRole(['ADMIN', 'MANAGER'])
     const body = await req.json()
-    const { name, description, category, imageUrl, totalStock, minStock, maxStock } = body
+    const { name, description, category, imageUrl, type, totalStock, minStock, maxStock } = body
 
     if (!name) return badRequest('Tool name is required')
 
@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
         description,
         category,
         imageUrl,
+        type: type === 'MATERIAL' ? 'MATERIAL' : 'TOOL',
         totalStock: stock,
         currentStock: stock,
         minStock: parseInt(minStock) || 2,

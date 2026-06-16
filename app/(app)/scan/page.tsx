@@ -13,6 +13,7 @@ type ScannedTool = {
   description?: string
   category?: string
   imageUrl?: string
+  type?: string
   currentStock: number
   totalStock: number
   minStock: number
@@ -32,13 +33,13 @@ export default function ScanPage() {
   const [error, setError] = useState('')
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [returning, setReturning] = useState(false)
-  const [returnSuccess, setReturnSuccess] = useState(false)
+  const [successInfo, setSuccessInfo] = useState<{ title: string; message: string } | null>(null)
 
   async function handleScan(code: string) {
     setScanning(false)
     setError('')
     setResult(null)
-    setReturnSuccess(false)
+    setSuccessInfo(null)
 
     try {
       const res = await fetch(`/api/tools/qr-lookup?code=${encodeURIComponent(code)}`)
@@ -59,7 +60,7 @@ export default function ScanPage() {
     const res = await fetch(`/api/checkouts/${checkoutId}/return`, { method: 'POST' })
     setReturning(false)
     if (res.ok) {
-      setReturnSuccess(true)
+      setSuccessInfo({ title: 'Tool Returned!', message: 'The tool has been marked as available.' })
       setResult(null)
     } else {
       setError('Failed to return tool')
@@ -75,7 +76,7 @@ export default function ScanPage() {
         <p className="text-sm text-gray-500 mt-0.5">Scan a tool's QR code to check out or return</p>
       </div>
 
-      {!scanning && !result && !returnSuccess && (
+      {!scanning && !result && !successInfo && (
         <div className="bg-white rounded-3xl border border-gray-100 p-8 text-center shadow-sm">
           <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <QrCode className="w-10 h-10 text-blue-500" />
@@ -123,13 +124,13 @@ export default function ScanPage() {
         </div>
       )}
 
-      {returnSuccess && (
+      {successInfo && (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
           <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
-          <h2 className="font-bold text-green-800 text-lg">Tool Returned!</h2>
-          <p className="text-sm text-green-600 mt-1 mb-4">The tool has been marked as available.</p>
+          <h2 className="font-bold text-green-800 text-lg">{successInfo.title}</h2>
+          <p className="text-sm text-green-600 mt-1 mb-4">{successInfo.message}</p>
           <button
-            onClick={() => { setReturnSuccess(false); setScanning(true) }}
+            onClick={() => { setSuccessInfo(null); setScanning(true) }}
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors"
           >
             Scan Another
@@ -191,7 +192,7 @@ export default function ScanPage() {
                 onClick={() => setCheckoutOpen(true)}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-medium transition-colors"
               >
-                Check Out This Tool
+                {result.type === 'MATERIAL' ? 'Use This Material' : 'Check Out This Tool'}
               </button>
             ) : (
               <div className="bg-red-50 rounded-2xl p-4 text-center">
@@ -215,9 +216,14 @@ export default function ScanPage() {
           tool={result}
           onClose={() => setCheckoutOpen(false)}
           onSuccess={() => {
+            const isMaterial = result.type === 'MATERIAL'
             setCheckoutOpen(false)
             setResult(null)
-            setReturnSuccess(true)
+            setSuccessInfo(
+              isMaterial
+                ? { title: 'Material Used!', message: 'Stock has been updated.' }
+                : { title: 'Tool Checked Out!', message: 'Remember to return it when you\'re done.' }
+            )
           }}
         />
       )}
