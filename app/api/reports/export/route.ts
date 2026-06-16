@@ -170,6 +170,7 @@ export async function GET(req: NextRequest) {
     }
     for (const r of requests) {
       for (const item of r.items) {
+        if (!item.tool || !item.toolId) continue
         const k = item.toolId
         if (!toolMap[k]) toolMap[k] = { name: item.tool.name, category: item.tool.category || '', checkouts: 0, totalMins: 0, requests: 0 }
         toolMap[k].requests++
@@ -205,7 +206,7 @@ export async function GET(req: NextRequest) {
       else if (r.status === 'REJECTED') reqUserMap[k].rejected++
       else reqUserMap[k].pending++
       for (const item of r.items) {
-        const tname = item.tool.name
+        const tname = item.tool?.name || item.itemName || 'Custom item'
         const existing = reqUserMap[k].tools.get(tname)
         if (existing) {
           existing.requested += item.requestedQty
@@ -400,7 +401,7 @@ export async function GET(req: NextRequest) {
           ii === 0 ? r.requester.email : '',
           ii === 0 ? (r.project?.name ?? '—') : '',
           ii === 0 ? formatD(r.createdAt) : '',
-          item.tool.name,
+          item.tool?.name || (item.itemName ? `${item.itemName} (not in inventory)` : '—'),
           item.requestedQty,
           item.approvedQty ?? '—',
           ii === 0 ? r.status : '',

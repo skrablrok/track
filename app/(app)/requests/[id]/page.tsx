@@ -24,7 +24,8 @@ type RequestDetail = {
     requestedQty: number
     approvedQty: number | null
     notes?: string
-    tool: { id: string; name: string; imageUrl?: string; category?: string; currentStock: number; minStock: number; totalStock: number }
+    itemName?: string | null
+    tool: { id: string; name: string; imageUrl?: string; category?: string; currentStock: number; minStock: number; totalStock: number } | null
   }>
 }
 
@@ -78,7 +79,7 @@ export default function RequestDetailPage() {
           adminNotes,
           items: request!.items.map((item) => ({
             requestItemId: item.id,
-            toolId: item.tool.id,
+            toolId: item.tool?.id ?? null,
             approvedQty: approvals[item.id] ?? 0,
           })),
         }),
@@ -205,24 +206,34 @@ export default function RequestDetailPage() {
 
         <div className="space-y-3">
           {request.items.map((item) => {
-            const isNeg = item.tool.currentStock < 0
-            const isLow = item.tool.currentStock >= 0 && item.tool.currentStock <= item.tool.minStock
+            const isCustom = !item.tool
+            const isNeg = !isCustom && item.tool!.currentStock < 0
+            const isLow = !isCustom && item.tool!.currentStock >= 0 && item.tool!.currentStock <= item.tool!.minStock
             const approved = approvals[item.id] ?? item.requestedQty
-            const wouldGoNeg = item.tool.currentStock - approved < 0
+            const wouldGoNeg = !isCustom && item.tool!.currentStock - approved < 0
 
             return (
               <div
                 key={item.id}
-                className={`border rounded-xl p-3 ${wouldGoNeg && isPending ? 'border-amber-200 bg-amber-50/30' : 'border-gray-100'}`}
+                className={`border rounded-xl p-3 ${isCustom ? 'border-purple-200 bg-purple-50/30' : wouldGoNeg && isPending ? 'border-amber-200 bg-amber-50/30' : 'border-gray-100'}`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                    {item.tool.imageUrl
-                      ? <img src={item.tool.imageUrl} alt={item.tool.name} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center"><Wrench size={16} className="text-gray-400" /></div>}
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {isCustom
+                      ? <AlertTriangle size={16} className="text-purple-400" />
+                      : item.tool!.imageUrl
+                        ? <img src={item.tool!.imageUrl} alt={item.tool!.name} className="w-full h-full object-cover" />
+                        : <Wrench size={16} className="text-gray-400" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm">{item.tool.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-gray-900 text-sm">{isCustom ? item.itemName : item.tool!.name}</p>
+                      {isCustom && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                          Not in inventory
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                       <span className="text-xs text-gray-500">Requested: <strong>{item.requestedQty}</strong></span>
                       {!isPending && item.approvedQty !== null && (
@@ -230,11 +241,18 @@ export default function RequestDetailPage() {
                           Approved: {item.approvedQty}
                         </span>
                       )}
-                      <span className={`text-xs ${isNeg ? 'text-red-600 font-medium' : isLow ? 'text-amber-600' : 'text-gray-400'}`}>
-                        {isNeg ? `Stock: ${item.tool.currentStock} (NEGATIVE)` : `${item.tool.currentStock}/${item.tool.totalStock} in stock`}
-                      </span>
+                      {!isCustom && (
+                        <span className={`text-xs ${isNeg ? 'text-red-600 font-medium' : isLow ? 'text-amber-600' : 'text-gray-400'}`}>
+                          {isNeg ? `Stock: ${item.tool!.currentStock} (NEGATIVE)` : `${item.tool!.currentStock}/${item.tool!.totalStock} in stock`}
+                        </span>
+                      )}
                     </div>
                     {item.notes && <p className="text-xs text-gray-400 italic mt-0.5">"{item.notes}"</p>}
+                    {isCustom && (
+                      <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                        <AlertTriangle size={11} /> Needs to be sourced — not currently tracked in inventory
+                      </p>
+                    )}
                     {wouldGoNeg && isPending && (
                       <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                         <AlertTriangle size={11} /> Approving this quantity will put stock below zero — reorder needed

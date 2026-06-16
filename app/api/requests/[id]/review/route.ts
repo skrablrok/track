@@ -44,7 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           data: { approvedQty: qty },
         })
 
-        if (qty > 0) {
+        if (qty > 0 && item.toolId) {
           const tool = await tx.tool.update({
             where: { id: item.toolId },
             data: { currentStock: { decrement: qty } },

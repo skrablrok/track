@@ -17,8 +17,9 @@ type Tool = {
 }
 
 type RequestItem = {
-  toolId: string
-  tool: Tool
+  toolId: string | null
+  tool: Tool | null
+  itemName: string
   requestedQty: number
   notes: string
 }
@@ -35,6 +36,7 @@ function NewRequestPageInner() {
   const [items, setItems] = useState<RequestItem[]>([])
   const [toolSearch, setToolSearch] = useState('')
   const [showToolPicker, setShowToolPicker] = useState(false)
+  const [customItemName, setCustomItemName] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -48,7 +50,7 @@ function NewRequestPageInner() {
       setTools(tl)
       if (preselectedToolId) {
         const found = tl.find((tool) => tool.id === preselectedToolId)
-        if (found) setItems([{ toolId: found.id, tool: found, requestedQty: 1, notes: '' }])
+        if (found) setItems([{ toolId: found.id, tool: found, itemName: '', requestedQty: 1, notes: '' }])
       }
     })
   }, [])
@@ -62,8 +64,16 @@ function NewRequestPageInner() {
   })
 
   function addTool(tool: Tool) {
-    setItems((prev) => [...prev, { toolId: tool.id, tool, requestedQty: 1, notes: '' }])
+    setItems((prev) => [...prev, { toolId: tool.id, tool, itemName: '', requestedQty: 1, notes: '' }])
     setToolSearch('')
+    setShowToolPicker(false)
+  }
+
+  function addCustomItem() {
+    const name = customItemName.trim()
+    if (!name) return
+    setItems((prev) => [...prev, { toolId: null, tool: null, itemName: name, requestedQty: 1, notes: '' }])
+    setCustomItemName('')
     setShowToolPicker(false)
   }
 
@@ -87,7 +97,7 @@ function NewRequestPageInner() {
         body: JSON.stringify({
           projectId: projectId || null,
           notes,
-          items: items.map((i) => ({ toolId: i.toolId, requestedQty: i.requestedQty, notes: i.notes })),
+          items: items.map((i) => ({ toolId: i.toolId, itemName: i.itemName, requestedQty: i.requestedQty, notes: i.notes })),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed to submit')
@@ -183,6 +193,18 @@ function NewRequestPageInner() {
                   <p className="text-sm text-gray-400 text-center py-4">{t('noToolsFound')}</p>
                 )}
               </div>
+              <div className="border-t border-blue-100 pt-2">
+                <p className="text-xs text-gray-500 mb-1.5">{t('notInInventoryHint')}</p>
+                <div className="flex gap-2">
+                  <input type="text" value={customItemName} onChange={(e) => setCustomItemName(e.target.value)}
+                    placeholder={t('customItemPlaceholder')}
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white" />
+                  <button type="button" onClick={addCustomItem} disabled={!customItemName.trim()}
+                    className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-medium disabled:opacity-50 transition-colors">
+                    {t('addCustomItem')}
+                  </button>
+                </div>
+              </div>
               <button type="button" onClick={() => setShowToolPicker(false)}
                 className="w-full text-xs text-gray-400 hover:text-gray-600 py-1">
                 {t('close')}
@@ -203,25 +225,30 @@ function NewRequestPageInner() {
 
           <div className="space-y-3">
             {items.map((item, idx) => {
-              const isOut = item.tool.currentStock <= 0
-              const exceeds = item.requestedQty > item.tool.currentStock
+              const isCustom = !item.tool
+              const isOut = !isCustom && item.tool!.currentStock <= 0
+              const exceeds = !isCustom && item.requestedQty > item.tool!.currentStock
               return (
-                <div key={item.toolId} className={`border rounded-xl p-3 ${exceeds ? 'border-amber-200 bg-amber-50/30' : 'border-gray-100'}`}>
+                <div key={item.toolId ?? `custom-${idx}`} className={`border rounded-xl p-3 ${isCustom ? 'border-purple-200 bg-purple-50/30' : exceeds ? 'border-amber-200 bg-amber-50/30' : 'border-gray-100'}`}>
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      {item.tool.imageUrl
-                        ? <img src={item.tool.imageUrl} alt={item.tool.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center"><Wrench size={16} className="text-gray-400" /></div>}
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                      {isCustom
+                        ? <AlertTriangle size={16} className="text-purple-400" />
+                        : item.tool!.imageUrl
+                          ? <img src={item.tool!.imageUrl} alt={item.tool!.name} className="w-full h-full object-cover" />
+                          : <Wrench size={16} className="text-gray-400" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium text-gray-900 text-sm">{item.tool.name}</p>
+                        <p className="font-medium text-gray-900 text-sm">{isCustom ? item.itemName : item.tool!.name}</p>
                         <button type="button" onClick={() => removeItem(idx)} className="text-gray-300 hover:text-red-400 transition-colors">
                           <Trash2 size={14} />
                         </button>
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {isOut ? t('outOfStock') : `${item.tool.currentStock}/${item.tool.totalStock} ${t('inStock')}`}
+                      <p className="text-xs mt-0.5">
+                        {isCustom
+                          ? <span className="text-purple-600 font-medium">{t('notInInventory')}</span>
+                          : <span className="text-gray-400">{isOut ? t('outOfStock') : `${item.tool!.currentStock}/${item.tool!.totalStock} ${t('inStock')}`}</span>}
                       </p>
                       {exceeds && (
                         <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">

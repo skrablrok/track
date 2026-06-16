@@ -19,7 +19,8 @@ type Request = {
     id: string
     requestedQty: number
     approvedQty?: number
-    tool: { id: string; name: string; imageUrl?: string; category?: string; currentStock: number }
+    itemName?: string | null
+    tool: { id: string; name: string; imageUrl?: string; category?: string; currentStock: number } | null
   }>
 }
 
@@ -51,7 +52,7 @@ export default function RequestsPage() {
     return (
       r.requester.name.toLowerCase().includes(q) ||
       r.project?.name.toLowerCase().includes(q) ||
-      r.items.some((i) => i.tool.name.toLowerCase().includes(q))
+      r.items.some((i) => (i.tool?.name || i.itemName || '').toLowerCase().includes(q))
     )
   })
 
@@ -161,6 +162,7 @@ function RequestRow({ request: r, isPrivileged, statusConfig, t }: {
   const Icon = s.icon
   const totalRequested = r.items.reduce((sum, i) => sum + i.requestedQty, 0)
   const totalApproved = r.items.reduce((sum, i) => sum + (i.approvedQty ?? 0), 0)
+  const hasCustomItem = r.items.some((i) => !i.tool)
 
   return (
     <Link href={`/requests/${r.id}`}
@@ -171,10 +173,15 @@ function RequestRow({ request: r, isPrivileged, statusConfig, t }: {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-gray-900 text-sm">
-            {r.items.slice(0, 2).map((i) => i.tool.name).join(', ')}
+            {r.items.slice(0, 2).map((i) => i.tool?.name || i.itemName).join(', ')}
             {r.items.length > 2 && ` +${r.items.length - 2}`}
           </span>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</span>
+          {hasCustomItem && (
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+              {t('sourcingNeeded')}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
           {isPrivileged && <span>{r.requester.name}</span>}

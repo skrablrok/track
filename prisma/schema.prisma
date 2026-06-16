@@ -13,6 +13,7 @@ datasource db {
 // RequestStatus values: PENDING, APPROVED, PARTIALLY_APPROVED, REJECTED
 // NotificationType values: REQUEST_SUBMITTED, REQUEST_REVIEWED, STOCK_LOW, STOCK_NEGATIVE
 // ToolType values: TOOL, MATERIAL
+// RequestItem.toolId is null for custom items not in inventory; itemName holds the free-text name in that case
 
 model User {
   id             String         @id @default(cuid())
@@ -99,13 +100,14 @@ model Request {
 model RequestItem {
   id           String   @id @default(cuid())
   requestId    String
-  toolId       String
+  toolId       String?
+  itemName     String?
   requestedQty Int
   approvedQty  Int?
   notes        String?
   createdAt    DateTime @default(now())
   request      Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  tool         Tool     @relation(fields: [toolId], references: [id])
+  tool         Tool?    @relation(fields: [toolId], references: [id])
 }
 
 model Notification {
