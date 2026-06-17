@@ -15,7 +15,7 @@ const dict = {
   sl: {
     // Nav
     nav_dashboard: 'Nadzorna plošča',
-    nav_tools: 'Orodja',
+    nav_tools: 'Orodja & material',
     nav_scan: 'Skeniraj QR',
     nav_requests: 'Zahtevki',
     nav_checkouts: 'Izposoje',
@@ -196,7 +196,7 @@ const dict = {
 
   sr: {
     nav_dashboard: 'Kontrolna tabla',
-    nav_tools: 'Alati',
+    nav_tools: 'Alati i materijal',
     nav_scan: 'Skeniraj QR',
     nav_requests: 'Zahtevi',
     nav_checkouts: 'Pozajmice',
@@ -368,7 +368,7 @@ const dict = {
 
   sq: {
     nav_dashboard: 'Paneli kryesor',
-    nav_tools: 'Mjete',
+    nav_tools: 'Mjete & Materiale',
     nav_scan: 'Skano QR',
     nav_requests: 'Kërkesat',
     nav_checkouts: 'Huazimet',
@@ -540,7 +540,7 @@ const dict = {
 
   tr: {
     nav_dashboard: 'Kontrol Paneli',
-    nav_tools: 'Aletler',
+    nav_tools: 'Aletler & Malzeme',
     nav_scan: 'QR Tara',
     nav_requests: 'Talepler',
     nav_checkouts: 'Teslimler',
@@ -712,7 +712,7 @@ const dict = {
 
   mk: {
     nav_dashboard: 'Контролна табла',
-    nav_tools: 'Алати',
+    nav_tools: 'Алати и материјал',
     nav_scan: 'Скенирај QR',
     nav_requests: 'Барања',
     nav_checkouts: 'Позајмувања',
@@ -884,7 +884,7 @@ const dict = {
 
   hi: {
     nav_dashboard: 'डैशबोर्ड',
-    nav_tools: 'उपकरण',
+    nav_tools: 'उपकरण और सामग्री',
     nav_scan: 'QR स्कैन',
     nav_requests: 'अनुरोध',
     nav_checkouts: 'चेकआउट',
@@ -1056,7 +1056,7 @@ const dict = {
 
   en: {
     nav_dashboard: 'Dashboard',
-    nav_tools: 'Tools',
+    nav_tools: 'Tools & Materials',
     nav_scan: 'Scan QR',
     nav_requests: 'Requests',
     nav_checkouts: 'Checkouts',
