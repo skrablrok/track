@@ -56,6 +56,7 @@ export default function RequestDetailPage() {
   const [warnings, setWarnings] = useState<string[]>([])
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   const isPrivileged = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
 
@@ -114,6 +115,18 @@ export default function RequestDetailPage() {
     const full: Record<string, number> = {}
     request?.items.forEach((i) => { full[i.id] = i.requestedQty })
     setApprovals(full)
+  }
+
+  async function handleCancel() {
+    if (!confirm('Cancel this request? This cannot be undone.')) return
+    setCancelling(true)
+    const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' })
+    setCancelling(false)
+    if (res.ok) router.push('/requests')
+    else {
+      const d = await res.json().catch(() => ({}))
+      setError(d.error || 'Failed to cancel request')
+    }
   }
 
   if (loading) return <div className="animate-pulse bg-white rounded-2xl h-64 border border-gray-100" />
@@ -330,6 +343,16 @@ export default function RequestDetailPage() {
             </button>
           </div>
         </form>
+      )}
+
+      {isPending && (isPrivileged || session?.user?.id === request.requester.id) && (
+        <button
+          onClick={handleCancel}
+          disabled={cancelling}
+          className="w-full py-3 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {cancelling ? 'Cancelling…' : 'Cancel Request'}
+        </button>
       )}
 
       {!isPending && (

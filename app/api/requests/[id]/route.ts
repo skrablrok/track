@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { requireAuth, unauthorized, serverError } from '@/lib/utils'
+import { requireAuth, logAudit, unauthorized, serverError } from '@/lib/utils'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -28,6 +28,29 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     return NextResponse.json(request)
+  } catch (e: any) {
+    if (e.message === 'Unauthorized') return unauthorized()
+    return serverError()
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const user = await requireAuth()
+    const request = await db.request.findUnique({ where: { id: params.id } })
+    if (!request) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
+
+    const isPrivileged = ['ADMIN', 'MANAGER'].includes(user.role as string)
+    if (!isPrivileged && request.requesterId !== user.id) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
+    }
+    if (request.status !== 'PENDING') {
+      return new Response(JSON.stringify({ error: 'Only pending requests can be cancelled' }), { status: 400 })
+    }
+
+    await db.request.delete({ where: { id: params.id } })
+    await logAudit(user.id, 'CANCEL_REQUEST', 'Request', params.id, `Cancelled request ${params.id}`)
+    return NextResponse.json({ success: true })
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()
     return serverError()
