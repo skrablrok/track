@@ -53,10 +53,11 @@ export default function RestockButton({ toolId }: { toolId: string }) {
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
-            type="number"
-            min={1}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))}
             placeholder="Units to add"
             className="w-28 px-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-center"
           />

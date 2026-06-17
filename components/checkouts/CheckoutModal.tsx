@@ -102,11 +102,11 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">{isMaterial ? 'Quantity to use' : 'Quantity'}</label>
             <input
-              type="number"
-              min="1"
-              max={tool.currentStock}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              onChange={(e) => setQuantity(e.target.value.replace(/[^0-9]/g, ''))}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
             />
           </div>
