@@ -264,19 +264,25 @@ function NewRequestPageInner() {
                           <AlertTriangle size={11} /> {t('exceedsStock')}
                         </p>
                       )}
-                      <div className="flex items-center gap-3 mt-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           <label className="text-xs text-gray-500">Qty:</label>
-                          <input type="number" min={1} max={isCappedTool ? item.tool!.currentStock : undefined} value={item.requestedQty}
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={item.requestedQty || ''}
                             onChange={(e) => {
-                              const raw = Math.max(1, parseInt(e.target.value) || 1)
-                              updateItem(idx, 'requestedQty', isCappedTool ? Math.min(item.tool!.currentStock, raw) : raw)
+                              const raw = e.target.value.replace(/[^0-9]/g, '')
+                              const val = raw === '' ? 0 : parseInt(raw)
+                              updateItem(idx, 'requestedQty', isCappedTool ? Math.min(item.tool!.currentStock, val) : val)
                             }}
+                            onBlur={() => { if (!item.requestedQty) updateItem(idx, 'requestedQty', 1) }}
                             className="w-16 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         </div>
                         <input type="text" placeholder={t('itemNote')} value={item.notes}
                           onChange={(e) => updateItem(idx, 'notes', e.target.value)}
-                          className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+                          className="min-w-0 flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
                       </div>
                     </div>
                   </div>
