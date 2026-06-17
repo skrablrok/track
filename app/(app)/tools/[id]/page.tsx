@@ -11,6 +11,7 @@ import {
 import Link from 'next/link'
 import ToolQRCode from '@/components/tools/ToolQRCode'
 import ReturnButton from '@/components/checkouts/ReturnButton'
+import RestockButton from '@/components/tools/RestockButton'
 
 export default async function ToolDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -101,6 +102,11 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
               <span>Min: {tool.minStock}</span>
               {!isMaterial && <span>Max: {tool.maxStock}</span>}
             </div>
+            {isMaterial && isAdmin && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <RestockButton toolId={tool.id} />
+              </div>
+            )}
           </div>
 
           {activeCheckouts.length > 0 && (
