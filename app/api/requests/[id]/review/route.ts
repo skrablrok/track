@@ -12,8 +12,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (!items || !Array.isArray(items)) return badRequest('Items are required')
 
-    const request = await db.request.findUnique({
-      where: { id: params.id },
+    const request = await db.request.findFirst({
+      where: { id: params.id, organizationId: admin.organizationId },
       include: { items: { include: { tool: true } }, requester: true },
     })
 
@@ -67,6 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
               quantity: qty,
               notes: `Via approved request #${params.id.slice(-6).toUpperCase()}`,
               status: isMaterial ? 'CONSUMED' : 'ACTIVE',
+              organizationId: request.organizationId,
               ...(isMaterial && { returnDate: new Date() }),
             },
           })
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Notify admins/managers if stock warnings exist
     if (stockWarnings.length > 0) {
       await notifyAdmins(
+        request.organizationId,
         'STOCK_NEGATIVE',
         '⚠️ Stock Replenishment Needed',
         stockWarnings.join(' | '),

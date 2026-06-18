@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       for (const row of tools) {
         const name = String(row.name || '').trim()
         if (!name) continue
-        const existing = await tx.tool.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } })
+        const existing = await tx.tool.findFirst({ where: { name: { equals: name, mode: 'insensitive' }, organizationId: user.organizationId } })
         if (existing) {
           toolsSkipped.push(name)
           continue
@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
             currentStock: quantity,
             minStock: parseInt(String(row.minStock)) || 2,
             maxStock: parseInt(String(row.maxStock)) || 10,
+            organizationId: user.organizationId,
           },
         })
         toolsCreated++
@@ -61,13 +62,13 @@ export async function POST(req: NextRequest) {
       for (const row of projects) {
         const name = String(row.name || '').trim()
         if (!name) continue
-        const existing = await tx.project.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } })
+        const existing = await tx.project.findFirst({ where: { name: { equals: name, mode: 'insensitive' }, organizationId: user.organizationId } })
         if (existing) {
           projectsSkipped.push(name)
           continue
         }
         await tx.project.create({
-          data: { name, location: row.location || null, description: row.description || null },
+          data: { name, location: row.location || null, description: row.description || null, organizationId: user.organizationId },
         })
         projectsCreated++
       }

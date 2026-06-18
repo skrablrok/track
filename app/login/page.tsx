@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Building2, Lock, Mail, AlertCircle, Eye, EyeOff, ChevronDown } from 'lucide-react'
 import { LANGUAGES, DEFAULT_LANG, t, type Lang } from '@/lib/i18n/translations'
 
@@ -132,8 +133,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
+          <div className="mt-6 pt-6 border-t border-gray-100 text-center space-y-2">
             <p className="text-xs text-gray-400">{t(lang, 'forAccess')}</p>
+            <p className="text-sm text-gray-500">
+              New company?{' '}
+              <Link href="/register" className="text-blue-600 font-medium hover:underline">
+                Register your workspace →
+              </Link>
+            </p>
           </div>
         </div>
 

@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
 
     const checkouts = await db.checkout.findMany({
       where: {
+        organizationId: user.organizationId,
         ...(status && { status: status as any }),
         ...(toolId && { toolId }),
         ...(projectId && { projectId }),
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
           quantity: qty,
           notes,
           status: isMaterial ? 'CONSUMED' : 'ACTIVE',
+          organizationId: user.organizationId,
           ...(isMaterial && { returnDate: new Date() }),
         },
         include: {

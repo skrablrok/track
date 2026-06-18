@@ -31,6 +31,11 @@ export const authOptions: NextAuthOptions = {
 
         const user = await db.user.findUnique({
           where: { email: credentials.email },
+          select: {
+            id: true, email: true, name: true, role: true,
+            password: true, active: true, setupComplete: true,
+            organizationId: true,
+          },
         })
 
         // Always run bcrypt even when user not found — prevents timing-based user enumeration
@@ -53,13 +58,6 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // Only allow company email domain
-        const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN
-        if (ALLOWED_DOMAIN && !user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-          recordFailedAttempt(ip)
-          return null
-        }
-
         clearAttempts(ip)
 
         await db.auditLog.create({
@@ -77,6 +75,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          organizationId: user.organizationId,
         }
       },
     }),
@@ -86,6 +85,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
+        token.organizationId = (user as any).organizationId
       }
       return token
     },
@@ -93,6 +93,7 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.id as string
         session.user.role = token.role as string
+        session.user.organizationId = token.organizationId as string
       }
       return session
     },

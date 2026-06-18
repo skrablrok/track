@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
 
     const requests = await db.request.findMany({
       where: {
+        organizationId: user.organizationId,
         ...(!isPrivileged && { requesterId: user.id }),
         ...(isPrivileged && requesterId && { requesterId }),
         ...(status && { status }),
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
         projectId: projectId || null,
         notes,
         status: 'PENDING',
+        organizationId: user.organizationId,
         items: {
           create: items.map((i: any) => ({
             toolId: i.toolId || null,
@@ -118,6 +120,7 @@ export async function POST(req: NextRequest) {
     const procurementCount = neverStocked.length + lowStock.length
 
     await notifyAdmins(
+      user.organizationId,
       'REQUEST_SUBMITTED',
       procurementCount > 0 ? '⚠️ Item Needed — Not In Stock' : 'New Tool Request',
       procurementCount > 0
@@ -127,7 +130,7 @@ export async function POST(req: NextRequest) {
     )
 
     if (procurementCount > 0) {
-      const admins = await db.user.findMany({ where: { active: true, role: { in: ['ADMIN', 'MANAGER'] } }, select: { email: true } })
+      const admins = await db.user.findMany({ where: { active: true, role: { in: ['ADMIN', 'MANAGER'] }, organizationId: user.organizationId }, select: { email: true } })
       await sendProcurementEmail(admins.map((a) => a.email), {
         requesterName: user.name as string,
         projectName,

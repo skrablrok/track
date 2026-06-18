@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     const allTools = await db.tool.findMany({
       where: {
         active: true,
+        organizationId: user.organizationId,
         ...(category && { category }),
         ...(search && { name: { contains: search } }),
       },
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
         currentStock: stock,
         minStock: parseInt(minStock) || 2,
         maxStock: parseInt(maxStock) || 10,
+        organizationId: user.organizationId,
       },
     })
 

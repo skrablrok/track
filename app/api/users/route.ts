@@ -6,8 +6,9 @@ import crypto from 'crypto'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireRole(['ADMIN', 'MANAGER'])
+    const admin = await requireRole(['ADMIN', 'MANAGER'])
     const users = await db.user.findMany({
+      where: { organizationId: admin.organizationId },
       select: { id: true, email: true, name: true, role: true, active: true, setupComplete: true, createdAt: true },
       orderBy: { name: 'asc' },
     })
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
       })
     } else {
       user = await db.user.create({
-        data: { email, name: '', password: '', role: role || 'EMPLOYEE', setupComplete: false, inviteToken, inviteExpiry },
+        data: { email, name: '', password: '', role: role || 'EMPLOYEE', setupComplete: false, inviteToken, inviteExpiry, organizationId: admin.organizationId },
         select: { id: true, email: true, name: true, role: true, active: true, setupComplete: true, createdAt: true },
       })
     }

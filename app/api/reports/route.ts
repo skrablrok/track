@@ -4,7 +4,7 @@ import { requireRole, unauthorized, serverError } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireRole(['ADMIN', 'MANAGER'])
+    const user = await requireRole(['ADMIN', 'MANAGER'])
     const { searchParams } = new URL(req.url)
     const type = searchParams.get('type') || 'overview'
     const from = searchParams.get('from')
@@ -18,15 +18,15 @@ export async function GET(req: NextRequest) {
     if (type === 'overview') {
       const [totalTools, totalActive, lowStockTools, activeCheckouts, totalCheckouts] =
         await Promise.all([
-          db.tool.count({ where: { active: true } }),
-          db.tool.count({ where: { active: true, currentStock: { gt: 0 } } }),
+          db.tool.count({ where: { active: true, organizationId: user.organizationId } }),
+          db.tool.count({ where: { active: true, currentStock: { gt: 0 }, organizationId: user.organizationId } }),
           db.tool.findMany({
-            where: { active: true },
+            where: { active: true, organizationId: user.organizationId },
             select: { id: true, name: true, currentStock: true, minStock: true, totalStock: true, category: true },
           }).then(tools => tools.filter(t => t.currentStock <= t.minStock)),
-          db.checkout.count({ where: { status: 'ACTIVE' } }),
+          db.checkout.count({ where: { status: 'ACTIVE', organizationId: user.organizationId } }),
           db.checkout.count({
-            where: { ...(Object.keys(dateFilter).length && { checkoutDate: dateFilter }) },
+            where: { organizationId: user.organizationId, ...(Object.keys(dateFilter).length && { checkoutDate: dateFilter }) },
           }),
         ])
 
@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
       const checkouts = await db.checkout.findMany({
         where: {
           status: { in: ['RETURNED', 'CONSUMED'] },
+          organizationId: user.organizationId,
           ...(Object.keys(dateFilter).length && { checkoutDate: dateFilter }),
         },
         include: {
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest) {
 
     if (type === 'inventory') {
       const tools = await db.tool.findMany({
-        where: { active: true },
+        where: { active: true, organizationId: user.organizationId },
         select: {
           id: true,
           name: true,
@@ -104,7 +105,7 @@ export async function GET(req: NextRequest) {
 
     if (type === 'audit') {
       const logs = await db.auditLog.findMany({
-        where: { ...(Object.keys(dateFilter).length && { createdAt: dateFilter }) },
+        where: { organizationId: user.organizationId, ...(Object.keys(dateFilter).length && { createdAt: dateFilter }) },
         include: { user: { select: { id: true, name: true, email: true } } },
         orderBy: { createdAt: 'desc' },
         take: 500,

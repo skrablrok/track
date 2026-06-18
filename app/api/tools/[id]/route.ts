@@ -4,9 +4,9 @@ import { requireAuth, requireRole, logAudit, unauthorized, serverError, badReque
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await requireAuth()
-    const tool = await db.tool.findUnique({
-      where: { id: params.id },
+    const authUser = await requireAuth()
+    const tool = await db.tool.findFirst({
+      where: { id: params.id, organizationId: authUser.organizationId },
       include: {
         checkouts: {
           include: {
@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const body = await req.json()
     const { name, description, category, imageUrl, type, totalStock, minStock, maxStock, active } = body
 
-    const existing = await db.tool.findUnique({ where: { id: params.id } })
+    const existing = await db.tool.findFirst({ where: { id: params.id, organizationId: user.organizationId } })
     if (!existing) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
 
     const stockDiff = totalStock !== undefined ? parseInt(totalStock) - existing.totalStock : 0
