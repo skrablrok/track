@@ -51,6 +51,12 @@ export default function ToolsPage() {
   useEffect(() => { loadTools() }, [search, category])
 
   const categories = Array.from(new Set(tools.map((t) => t.category).filter(Boolean)))
+  const catKeyMap: Record<string, any> = {
+    'Power Tools': 'catPowerTools', 'Hand Tools': 'catHandTools',
+    'Measuring Tools': 'catMeasuringTools', 'Safety Equipment': 'catSafetyEquipment',
+    'Lifting Equipment': 'catLiftingEquipment', 'Other': 'catOther',
+  }
+  const translateCat = (c: string) => catKeyMap[c] ? t(catKeyMap[c]) : c
 
   const filtered = tools.filter((tool) => {
     if (filter === 'available') return tool.currentStock > 0
@@ -104,7 +110,7 @@ export default function ToolsPage() {
           <select value={category} onChange={(e) => setCategory(e.target.value)}
             className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
             <option value="">{t('allCategories')}</option>
-            {categories.map((c) => <option key={c} value={c!}>{c}</option>)}
+            {categories.map((c) => <option key={c} value={c!}>{translateCat(c!)}</option>)}
           </select>
         )}
       </div>
@@ -153,7 +159,7 @@ export default function ToolsPage() {
                   {tool.name}
                 </Link>
                 <div className="flex items-center gap-1.5 mb-2">
-                  {tool.category && <p className="text-xs text-gray-400">{tool.category}</p>}
+                  {tool.category && <p className="text-xs text-gray-400">{translateCat(tool.category)}</p>}
                   {tool.type === 'MATERIAL' && (
                     <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
                       {t('itemTypeMaterial')}

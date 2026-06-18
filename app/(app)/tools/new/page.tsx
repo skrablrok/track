@@ -8,6 +8,14 @@ import PhotoInput from '@/components/tools/PhotoInput'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 const categories = ['Power Tools', 'Hand Tools', 'Measuring Tools', 'Safety Equipment', 'Lifting Equipment', 'Other']
+const categoryKeys: Record<string, any> = {
+  'Power Tools': 'catPowerTools',
+  'Hand Tools': 'catHandTools',
+  'Measuring Tools': 'catMeasuringTools',
+  'Safety Equipment': 'catSafetyEquipment',
+  'Lifting Equipment': 'catLiftingEquipment',
+  'Other': 'catOther',
+}
 
 export default function NewToolPage() {
   const { t } = useLanguage()
@@ -117,7 +125,7 @@ export default function NewToolPage() {
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
             >
               <option value="">{t('selectCategory')}</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => <option key={c} value={c}>{t(categoryKeys[c])}</option>)}
             </select>
           </div>
 

@@ -9,6 +9,14 @@ import PhotoInput from '@/components/tools/PhotoInput'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 const categories = ['Power Tools', 'Hand Tools', 'Measuring Tools', 'Safety Equipment', 'Lifting Equipment', 'Other']
+const categoryKeys: Record<string, any> = {
+  'Power Tools': 'catPowerTools',
+  'Hand Tools': 'catHandTools',
+  'Measuring Tools': 'catMeasuringTools',
+  'Safety Equipment': 'catSafetyEquipment',
+  'Lifting Equipment': 'catLiftingEquipment',
+  'Other': 'catOther',
+}
 
 export default function EditToolPage() {
   const { t } = useLanguage()
@@ -66,7 +74,7 @@ export default function EditToolPage() {
   }
 
   async function handleDelete() {
-    if (!confirm('Deactivate this tool? It will be hidden from inventory.')) return
+    if (!confirm(t('deactivateToolConfirm'))) return
     await fetch(`/api/tools/${id}`, { method: 'DELETE' })
     router.push('/tools')
   }
@@ -127,7 +135,7 @@ export default function EditToolPage() {
             <select value={form.category} onChange={(e) => update('category', e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
               <option value="">{t('selectCategory')}</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => <option key={c} value={c}>{t(categoryKeys[c])}</option>)}
             </select>
           </div>
 
@@ -158,7 +166,7 @@ export default function EditToolPage() {
           {session?.user?.role === 'ADMIN' && (
             <button type="button" onClick={handleDelete}
               className="flex items-center gap-1.5 px-4 py-3 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors">
-              <Trash2 size={14} /> Delete
+              <Trash2 size={14} /> {t('delete')}
             </button>
           )}
           <Link href={`/tools/${id}`} className="flex-1 text-center py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">

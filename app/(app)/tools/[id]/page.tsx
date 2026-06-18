@@ -10,6 +10,16 @@ import {
   ArrowLeft, Wrench, MapPin, User, Clock, Calendar,
   Package, QrCode, AlertTriangle,
 } from 'lucide-react'
+import type { TranslationKey } from '@/lib/i18n/translations'
+
+const CATEGORY_KEY_MAP: Record<string, TranslationKey> = {
+  'Power Tools': 'catPowerTools',
+  'Hand Tools': 'catHandTools',
+  'Measuring Tools': 'catMeasuringTools',
+  'Safety Equipment': 'catSafetyEquipment',
+  'Lifting Equipment': 'catLiftingEquipment',
+  'Other': 'catOther',
+}
 import Link from 'next/link'
 import ToolQRCode from '@/components/tools/ToolQRCode'
 import ReturnButton from '@/components/checkouts/ReturnButton'
@@ -72,7 +82,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
               {tool.description && <p className="text-gray-600 text-sm mb-4">{tool.description}</p>}
               {tool.category && (
                 <span className="inline-block text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-medium">
-                  {tool.category}
+                  {CATEGORY_KEY_MAP[tool.category] ? tr(lang, CATEGORY_KEY_MAP[tool.category]) : tool.category}
                 </span>
               )}
             </div>
@@ -84,7 +94,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
             </h3>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-500">
-                {tool.currentStock} of {tool.totalStock} available
+                {tool.currentStock} {tr(lang, 'of')} {tool.totalStock} {tr(lang, 'available')}
               </span>
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                 tool.currentStock === 0 ? 'bg-red-100 text-red-700' :

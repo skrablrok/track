@@ -53,9 +53,9 @@ export default function UsersPage() {
       setShowForm(false)
       if (data.emailSent === false && data.inviteUrl) {
         setInviteUrl(data.inviteUrl)
-        setSuccessMsg(`User created. Email not sent (SMTP not configured) — share this link manually:`)
+        setSuccessMsg(t('userCreatedManualShare'))
       } else {
-        setSuccessMsg(`Invite sent to ${form.email}`)
+        setSuccessMsg(`${t('inviteSentTo')} ${form.email}`)
       }
       load()
     } catch (e: any) {
@@ -121,7 +121,7 @@ export default function UsersPage() {
                 className="flex-1 bg-white border border-amber-200 rounded-lg px-3 py-1.5 text-xs font-mono text-gray-700 focus:outline-none" />
               <button onClick={() => navigator.clipboard.writeText(inviteUrl)}
                 className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-                Copy
+                {t('copy')}
               </button>
             </div>
           )}

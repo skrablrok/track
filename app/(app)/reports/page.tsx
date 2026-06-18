@@ -113,10 +113,10 @@ export default function ReportsPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Tools', value: overview.totalTools, color: 'text-blue-600 bg-blue-50' },
-                  { label: 'Active Checkouts', value: overview.activeCheckouts, color: 'text-amber-600 bg-amber-50' },
-                  { label: 'Total Transactions', value: overview.totalCheckouts, color: 'text-purple-600 bg-purple-50' },
-                  { label: 'Low Stock Alerts', value: overview.lowStockTools?.length || 0, color: 'text-red-600 bg-red-50' },
+                  { label: t('totalTools'), value: overview.totalTools, color: 'text-blue-600 bg-blue-50' },
+                  { label: t('activeCheckouts'), value: overview.activeCheckouts, color: 'text-amber-600 bg-amber-50' },
+                  { label: t('totalTransactions'), value: overview.totalCheckouts, color: 'text-purple-600 bg-purple-50' },
+                  { label: t('lowStockAlerts'), value: overview.lowStockTools?.length || 0, color: 'text-red-600 bg-red-50' },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5">
                     <p className={`text-2xl font-bold ${color.split(' ')[0]}`}>{value}</p>

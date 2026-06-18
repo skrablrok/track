@@ -266,7 +266,7 @@ function NewRequestPageInner() {
                       )}
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <div className="flex items-center gap-2 shrink-0">
-                          <label className="text-xs text-gray-500">Qty:</label>
+                          <label className="text-xs text-gray-500">{t('qty')}:</label>
                           <input
                             type="text"
                             inputMode="numeric"
