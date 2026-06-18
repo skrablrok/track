@@ -65,7 +65,7 @@ export default function ScanPage() {
     const res = await fetch(`/api/checkouts/${checkoutId}/return`, { method: 'POST' })
     setReturningId(null)
     if (res.ok) {
-      setSuccessInfo({ title: t('toolReturnedTitle'), message: t('toolReturnedMsg') })
+      setSuccessInfo({ title: t('returnRequestedTitle'), message: t('returnRequestedMsg') })
       setResult(null)
     } else {
       const d = await res.json().catch(() => ({}))

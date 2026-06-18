@@ -9,7 +9,7 @@ datasource db {
 
 // Role values: ADMIN, MANAGER, EMPLOYEE, FOREMAN
 // ProjectStatus values: ACTIVE, COMPLETED, ON_HOLD
-// CheckoutStatus values: ACTIVE, RETURNED, CONSUMED
+// CheckoutStatus values: ACTIVE, PENDING_RETURN, RETURNED, CONSUMED
 // RequestStatus values: PENDING, APPROVED, PARTIALLY_APPROVED, REJECTED
 // NotificationType values: REQUEST_SUBMITTED, REQUEST_REVIEWED, STOCK_LOW, STOCK_NEGATIVE
 // ToolType values: TOOL, MATERIAL

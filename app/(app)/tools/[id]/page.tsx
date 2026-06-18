@@ -43,7 +43,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
 
   if (!tool) notFound()
 
-  const activeCheckouts = tool.checkouts.filter((c) => c.status === 'ACTIVE')
+  const activeCheckouts = tool.checkouts.filter((c) => c.status === 'ACTIVE' || c.status === 'PENDING_RETURN')
   const history = tool.checkouts.filter((c) => c.status === 'RETURNED' || c.status === 'CONSUMED')
   const isLowStock = tool.currentStock <= tool.minStock
   const isAdmin = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
@@ -124,7 +124,14 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
 
           {activeCheckouts.length > 0 && (
             <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">
-              <h3 className="font-semibold text-amber-800 mb-3">{tr(lang, 'currentlyInUse')}</h3>
+              <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                {tr(lang, 'currentlyInUse')}
+                {activeCheckouts.some((c) => c.status === 'PENDING_RETURN') && (
+                  <span className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-medium">
+                    {activeCheckouts.filter((c) => c.status === 'PENDING_RETURN').length} {tr(lang, 'pendingReturn')}
+                  </span>
+                )}
+              </h3>
               <div className="space-y-3">
                 {activeCheckouts.map((checkout) => {
                   const mins = Math.floor((Date.now() - new Date(checkout.checkoutDate).getTime()) / 60000)
@@ -154,7 +161,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
                           </div>
                         </div>
                         {(isOwn || isAdmin) && (
-                          <ReturnButton checkoutId={checkout.id} />
+                          <ReturnButton checkoutId={checkout.id} status={checkout.status} />
                         )}
                       </div>
                     </div>

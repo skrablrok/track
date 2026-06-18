@@ -327,6 +327,14 @@ const dict = {
     qty: 'Kol.',
     inviteSentTo: 'Povabilo poslano na',
     userCreatedManualShare: 'Uporabnik ustvarjen. SMTP ni nastavljen — ročno delite to povezavo:',
+    returnRequestedTitle: 'Vrnitev zahtevana!',
+    returnRequestedMsg: 'Čaka na odobritev skrbnika.',
+    pendingReturn: 'Čaka vrnitev',
+    awaitingApproval: 'Čaka odobritev',
+    pendingReturns: 'Čakajoče vrnitve',
+    confirmReturn: 'Potrdi vrnitev',
+    rejectReturn: 'Zavrni vrnitev',
+    confirming: 'Potrjujem…',
   },
 
   sr: {
@@ -625,6 +633,14 @@ const dict = {
     qty: 'Kol.',
     inviteSentTo: 'Pozivnica poslana na',
     userCreatedManualShare: 'Korisnik kreiran. SMTP nije podešen — ručno podijelite ovaj link:',
+    returnRequestedTitle: 'Povrat zatražen!',
+    returnRequestedMsg: 'Čeka odobrenje administratora.',
+    pendingReturn: 'Čeka povrat',
+    awaitingApproval: 'Čeka odobrenje',
+    pendingReturns: 'Čekajući povrati',
+    confirmReturn: 'Potvrdi povrat',
+    rejectReturn: 'Odbij povrat',
+    confirming: 'Potvrđujem…',
   },
 
   sq: {
@@ -923,6 +939,14 @@ const dict = {
     qty: 'Sasi',
     inviteSentTo: 'Ftesa u dërgua tek',
     userCreatedManualShare: 'Përdoruesi u krijua. SMTP nuk është konfiguruar — ndajeni këtë lidhje manualisht:',
+    returnRequestedTitle: 'Kthim i kërkuar!',
+    returnRequestedMsg: 'Pret miratimin e administratorit.',
+    pendingReturn: 'Pret kthimin',
+    awaitingApproval: 'Pret miratim',
+    pendingReturns: 'Kthime në pritje',
+    confirmReturn: 'Konfirmo kthimin',
+    rejectReturn: 'Refuzo kthimin',
+    confirming: 'Konfirmoj…',
   },
 
   tr: {
@@ -1221,6 +1245,14 @@ const dict = {
     qty: 'Miktar',
     inviteSentTo: 'Davet gönderildi:',
     userCreatedManualShare: 'Kullanıcı oluşturuldu. SMTP yapılandırılmamış — bu bağlantıyı manuel paylaşın:',
+    returnRequestedTitle: 'İade Talep Edildi!',
+    returnRequestedMsg: 'Yönetici onayı bekleniyor.',
+    pendingReturn: 'İade Bekliyor',
+    awaitingApproval: 'Onay Bekliyor',
+    pendingReturns: 'Bekleyen İadeler',
+    confirmReturn: 'İadeyi Onayla',
+    rejectReturn: 'İadeyi Reddet',
+    confirming: 'Onaylanıyor…',
   },
 
   mk: {
@@ -1519,6 +1551,14 @@ const dict = {
     qty: 'Кол.',
     inviteSentTo: 'Покана испратена до',
     userCreatedManualShare: 'Корисникот е создаден. SMTP не е конфигуриран — рачно споделете ја оваа врска:',
+    returnRequestedTitle: 'Враќање побарано!',
+    returnRequestedMsg: 'Чека одобрување од администраторот.',
+    pendingReturn: 'Чека враќање',
+    awaitingApproval: 'Чека одобрување',
+    pendingReturns: 'Чекачки враќања',
+    confirmReturn: 'Потврди враќање',
+    rejectReturn: 'Одбиј враќање',
+    confirming: 'Потврдувам…',
   },
 
   hi: {
@@ -1817,6 +1857,14 @@ const dict = {
     qty: 'मात्रा',
     inviteSentTo: 'आमंत्रण भेजा गया:',
     userCreatedManualShare: 'उपयोगकर्ता बनाया गया। SMTP कॉन्फ़िगर नहीं है — इस लिंक को मैन्युअली शेयर करें:',
+    returnRequestedTitle: 'वापसी अनुरोधित!',
+    returnRequestedMsg: 'व्यवस्थापक अनुमोदन की प्रतीक्षा में।',
+    pendingReturn: 'वापसी लंबित',
+    awaitingApproval: 'अनुमोदन की प्रतीक्षा',
+    pendingReturns: 'लंबित वापसी',
+    confirmReturn: 'वापसी की पुष्टि करें',
+    rejectReturn: 'वापसी अस्वीकार करें',
+    confirming: 'पुष्टि हो रही है…',
   },
 
   en: {
@@ -2115,6 +2163,14 @@ const dict = {
     qty: 'Qty',
     inviteSentTo: 'Invite sent to',
     userCreatedManualShare: 'User created. Email not sent (SMTP not configured) — share this link manually:',
+    returnRequestedTitle: 'Return Requested!',
+    returnRequestedMsg: 'Awaiting admin approval to confirm the return.',
+    pendingReturn: 'Pending Return',
+    awaitingApproval: 'Awaiting Approval',
+    pendingReturns: 'Pending Returns',
+    confirmReturn: 'Confirm Return',
+    rejectReturn: 'Reject Return',
+    confirming: 'Confirming…',
   },
 } as const
 

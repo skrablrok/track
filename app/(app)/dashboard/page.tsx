@@ -14,13 +14,13 @@ export default async function DashboardPage() {
 
   const [toolCount, activeCheckouts, lowStockTools, recentActivity] = await Promise.all([
     db.tool.count({ where: { active: true } }),
-    db.checkout.count({ where: { status: 'ACTIVE' } }),
+    db.checkout.count({ where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] } } }),
     db.tool.findMany({
       where: { active: true },
       select: { id: true, name: true, currentStock: true, minStock: true, maxStock: true, totalStock: true },
     }).then((ts) => ts.filter((t) => t.currentStock <= t.minStock)),
     db.checkout.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] } },
       include: {
         tool: { select: { id: true, name: true, imageUrl: true, category: true } },
         user: { select: { id: true, name: true } },

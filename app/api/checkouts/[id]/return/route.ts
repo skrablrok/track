@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { requireAuth, logAudit, unauthorized, serverError, calcDurationMins } from '@/lib/utils'
+import { requireAuth, logAudit, unauthorized, serverError } from '@/lib/utils'
+import { notifyAdmins } from '@/lib/notifications'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -15,41 +16,38 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (!checkout) return new Response(JSON.stringify({ error: 'Checkout not found' }), { status: 404 })
     if (checkout.status === 'RETURNED') return new Response(JSON.stringify({ error: 'Already returned' }), { status: 400 })
+    if (checkout.status === 'PENDING_RETURN') return new Response(JSON.stringify({ error: 'Return already requested' }), { status: 400 })
 
     const isOwnerOrAdmin =
       checkout.userId === user.id || ['ADMIN', 'MANAGER'].includes(user.role as string)
     if (!isOwnerOrAdmin) return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
 
-    const returnDate = new Date()
-    const durationMins = calcDurationMins(checkout.checkoutDate, returnDate)
-
-    const [updated] = await db.$transaction([
-      db.checkout.update({
-        where: { id: params.id },
-        data: {
-          status: 'RETURNED',
-          returnDate,
-          durationMins,
-          ...(notes && { notes }),
-        },
-        include: {
-          tool: true,
-          user: { select: { id: true, name: true, email: true } },
-          project: true,
-        },
-      }),
-      db.tool.update({
-        where: { id: checkout.toolId },
-        data: { currentStock: { increment: checkout.quantity } },
-      }),
-    ])
+    const updated = await db.checkout.update({
+      where: { id: params.id },
+      data: {
+        status: 'PENDING_RETURN',
+        ...(notes && { notes }),
+      },
+      include: {
+        tool: true,
+        user: { select: { id: true, name: true, email: true } },
+        project: true,
+      },
+    })
 
     await logAudit(
       user.id,
-      'RETURN',
+      'RETURN_REQUESTED',
       'Checkout',
       checkout.id,
-      `${user.name} returned ${checkout.quantity}x ${checkout.tool.name} after ${durationMins}min`
+      `${user.name} requested return of ${checkout.quantity}x ${checkout.tool.name}`
+    )
+
+    await notifyAdmins(
+      'RETURN_REQUESTED',
+      'Tool Return Requested',
+      `${user.name} requested to return ${checkout.tool.name}. Please confirm the return.`,
+      `/checkouts`
     )
 
     return NextResponse.json(updated)
