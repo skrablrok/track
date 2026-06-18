@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireRole, unauthorized, serverError } from '@/lib/utils'
 import ExcelJS from 'exceljs'
 
-// ─── Palette ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const C = {
   navyBg:   '1E3A5F',
   navyText: 'FFFFFF',
@@ -97,12 +97,12 @@ function formatD(d: Date | null | undefined): string {
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 function hrs(mins: number | null | undefined): string {
-  if (!mins) return '—'
+  if (!mins) return 'â€”'
   const h = Math.floor(mins / 60), m = mins % 60
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-// ─── Route ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Route â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function GET(req: NextRequest) {
   try {
     await requireRole(['ADMIN', 'MANAGER'])
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
     const monthLabel = from.toLocaleString('en', { month: 'long', year: 'numeric' })
     const generated  = new Date().toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })
 
-    // ── Fetch all data ──
+    // â”€â”€ Fetch all data â”€â”€
     const [checkouts, requests, tools, auditLogs] = await Promise.all([
       db.checkout.findMany({
         where: { checkoutDate: { gte: from, lte: to } },
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
     const returned = checkouts.filter(c => c.status === 'RETURNED')
     const activeOuts = checkouts.filter(c => c.status === 'ACTIVE')
 
-    // ── Aggregate stats ──
+    // â”€â”€ Aggregate stats â”€â”€
     // per user
     const userMap: Record<string, { name: string; email: string; role: string; checkouts: number; returned: number; active: number; totalMins: number; tools: Set<string> }> = {}
     for (const c of checkouts) {
@@ -217,37 +217,37 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // ── Build workbook ──
+    // â”€â”€ Build workbook â”€â”€
     const wb = new ExcelJS.Workbook()
-    wb.creator  = 'ToolTrack'
-    wb.lastModifiedBy = 'ToolTrack'
+    wb.creator  = 'BuildFlow'
+    wb.lastModifiedBy = 'BuildFlow'
     wb.created  = new Date()
     wb.modified = new Date()
 
-    // ════════════════════════════════════════
-    // SHEET 1 — Summary
-    // ════════════════════════════════════════
-    const ws1 = wb.addWorksheet('📊 Summary', { views: [{ state: 'frozen', ySplit: 1 }] })
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SHEET 1 â€” Summary
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    const ws1 = wb.addWorksheet('đź“Š Summary', { views: [{ state: 'frozen', ySplit: 1 }] })
     ws1.columns = [{ width: 34 }, { width: 22 }, { width: 22 }, { width: 22 }, { width: 22 }]
 
-    titleRow(ws1, `ToolTrack — Monthly Report  |  ${monthLabel}`, 5, 1)
+    titleRow(ws1, `BuildFlow â€” Monthly Report  |  ${monthLabel}`, 5, 1)
     ws1.getRow(2).height = 16
     ws1.getCell('A2').value = `Generated: ${generated}`
     ws1.getCell('A2').font = { italic: true, size: 9, color: { argb: 'FF' + C.grayFg } }
 
     ws1.getRow(3).height = 12
 
-    subheader(ws1, '▸  KEY METRICS', 5, 4)
+    subheader(ws1, 'â–¸  KEY METRICS', 5, 4)
     headerRow(ws1, ['Metric', 'Value', '', '', ''], 5)
     const metrics: [string, string | number][] = [
       ['Total Checkouts This Month', checkouts.length],
-      ['  — Returned', returned.length],
-      ['  — Still Out (Active)', activeOuts.length],
+      ['  â€” Returned', returned.length],
+      ['  â€” Still Out (Active)', activeOuts.length],
       ['Tool Reservations (Requests)', requests.length],
       ['Unique Tools Used', new Set(checkouts.map(c => c.toolId)).size],
       ['Unique Users Active', new Set(checkouts.map(c => c.userId)).size],
       ['Projects Involved', new Set(checkouts.filter(c => c.projectId).map(c => c.projectId)).size],
-      ['Avg Checkout Duration', returned.length ? hrs(Math.round(returned.reduce((s, c) => s + (c.durationMins || 0), 0) / returned.length)) : '—'],
+      ['Avg Checkout Duration', returned.length ? hrs(Math.round(returned.reduce((s, c) => s + (c.durationMins || 0), 0) / returned.length)) : 'â€”'],
       ['Total Tool-Hours Used', hrs(returned.reduce((s, c) => s + (c.durationMins || 0), 0))],
       ['Tools Out of Stock Now', tools.filter(t => t.currentStock === 0).length],
       ['Tools at Low Stock Now', tools.filter(t => t.currentStock > 0 && t.currentStock <= t.minStock).length],
@@ -261,7 +261,7 @@ export async function GET(req: NextRequest) {
 
     ws1.getRow(6 + metrics.length).height = 12
 
-    subheader(ws1, '▸  TOP 5 MOST USED TOOLS', 5, 6 + metrics.length + 1)
+    subheader(ws1, 'â–¸  TOP 5 MOST USED TOOLS', 5, 6 + metrics.length + 1)
     headerRow(ws1, ['Tool', 'Category', 'Checkouts', 'Total Hours Used', 'Reservations'], 6 + metrics.length + 2)
     Object.values(toolMap)
       .sort((a, b) => b.checkouts - a.checkouts)
@@ -272,7 +272,7 @@ export async function GET(req: NextRequest) {
       })
 
     const topUserStart = 6 + metrics.length + 9
-    subheader(ws1, '▸  TOP 5 MOST ACTIVE USERS', 5, topUserStart)
+    subheader(ws1, 'â–¸  TOP 5 MOST ACTIVE USERS', 5, topUserStart)
     headerRow(ws1, ['Name', 'Email', 'Checkouts', 'Items Returned', 'Hrs Used'], topUserStart + 1)
     Object.values(userMap)
       .sort((a, b) => b.checkouts - a.checkouts)
@@ -282,15 +282,15 @@ export async function GET(req: NextRequest) {
         ;[3, 4, 5].forEach(col => { ws1.getRow(topUserStart + 2 + i).getCell(col).alignment = centre })
       })
 
-    // ════════════════════════════════════════
-    // SHEET 2 — Checkouts
-    // ════════════════════════════════════════
-    const ws2 = wb.addWorksheet('📦 Checkouts', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SHEET 2 â€” Checkouts
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    const ws2 = wb.addWorksheet('đź“¦ Checkouts', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws2.columns = [
       { width: 28 }, { width: 16 }, { width: 22 }, { width: 24 }, { width: 18 },
       { width: 18 }, { width: 14 }, { width: 10 }, { width: 16 },
     ]
-    titleRow(ws2, `Checkouts — ${monthLabel}  (${checkouts.length} total)`, 9, 1)
+    titleRow(ws2, `Checkouts â€” ${monthLabel}  (${checkouts.length} total)`, 9, 1)
     headerRow(ws2, ['Tool', 'Category', 'Employee', 'Email', 'Project', 'Checked Out', 'Returned', 'Duration', 'Status'], 2)
     checkouts.forEach((c, i) => {
       const st = c.status
@@ -298,18 +298,18 @@ export async function GET(req: NextRequest) {
       const sfont: Partial<ExcelJS.Font> = { bold: true, color: { argb: 'FF' + (st === 'RETURNED' ? C.greenFg : C.amberFg) } }
       dataRow(ws2, [
         c.tool.name, c.tool.category || '', c.user.name, c.user.email,
-        c.project?.name || '—', formatDT(c.checkoutDate), c.returnDate ? formatDT(c.returnDate) : '—',
+        c.project?.name || 'â€”', formatDT(c.checkoutDate), c.returnDate ? formatDT(c.returnDate) : 'â€”',
         hrs(c.durationMins), st,
       ], i + 3, i % 2 === 0, { 8: { fill: sfill, font: sfont } })
       ws2.getRow(i + 3).getCell(9).alignment = centre
     })
 
-    // ════════════════════════════════════════
-    // SHEET 3 — User Activity
-    // ════════════════════════════════════════
-    const ws3 = wb.addWorksheet('👷 User Activity', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SHEET 3 â€” User Activity
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    const ws3 = wb.addWorksheet('đź‘· User Activity', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws3.columns = [{ width: 24 }, { width: 28 }, { width: 14 }, { width: 13 }, { width: 13 }, { width: 12 }, { width: 14 }, { width: 50 }]
-    titleRow(ws3, `User Activity — ${monthLabel}`, 8, 1)
+    titleRow(ws3, `User Activity â€” ${monthLabel}`, 8, 1)
     headerRow(ws3, ['Name', 'Email', 'Role', 'Checkouts', 'Returned', 'Still Out', 'Total Hrs', 'Tools Used'], 2)
     Object.values(userMap)
       .sort((a, b) => b.checkouts - a.checkouts)
@@ -321,12 +321,12 @@ export async function GET(req: NextRequest) {
         ;[4, 5, 6, 7].forEach(col => { ws3.getRow(i + 3).getCell(col).alignment = centre })
       })
 
-    // ════════════════════════════════════════
-    // SHEET 4 — Tool Usage
-    // ════════════════════════════════════════
-    const ws4 = wb.addWorksheet('🔧 Tool Usage', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SHEET 4 â€” Tool Usage
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    const ws4 = wb.addWorksheet('đź”§ Tool Usage', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws4.columns = [{ width: 28 }, { width: 18 }, { width: 14 }, { width: 16 }, { width: 14 }, { width: 12 }, { width: 10 }, { width: 14 }]
-    titleRow(ws4, `Tool Usage — ${monthLabel}`, 8, 1)
+    titleRow(ws4, `Tool Usage â€” ${monthLabel}`, 8, 1)
     headerRow(ws4, ['Tool', 'Category', 'Checkouts', 'Total Hrs Used', 'Reservations', 'In Stock Now', 'Total Stock', 'Status'], 2)
     const toolStock: Record<string, { currentStock: number; totalStock: number; minStock: number }> = {}
     tools.forEach(t => { toolStock[t.name] = { currentStock: t.currentStock, totalStock: t.totalStock, minStock: t.minStock } })
@@ -338,17 +338,17 @@ export async function GET(req: NextRequest) {
         const sfill = statusFill(st)
         dataRow(ws4, [
           t.name, t.category, t.checkouts, hrs(t.totalMins), t.requests,
-          stock?.currentStock ?? '—', stock?.totalStock ?? '—', st,
+          stock?.currentStock ?? 'â€”', stock?.totalStock ?? 'â€”', st,
         ], i + 3, i % 2 === 0, { 7: { fill: sfill } })
         ;[3, 4, 5, 6, 7].forEach(col => { ws4.getRow(i + 3).getCell(col).alignment = centre })
       })
 
-    // ════════════════════════════════════════
-    // SHEET 5 — Projects
-    // ════════════════════════════════════════
-    const ws5 = wb.addWorksheet('🏗️ Projects', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SHEET 5 â€” Projects
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    const ws5 = wb.addWorksheet('đźŹ—ď¸Ź Projects', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws5.columns = [{ width: 28 }, { width: 22 }, { width: 14 }, { width: 16 }, { width: 28 }, { width: 14 }, { width: 14 }]
-    titleRow(ws5, `Projects & Materials Used — ${monthLabel}`, 7, 1)
+    titleRow(ws5, `Projects & Materials Used â€” ${monthLabel}`, 7, 1)
     headerRow(ws5, ['Project', 'Location', 'Checkouts', 'Total Hrs', 'Tool / Material', 'Times Used', 'Hours'], 2)
     let projRow = 3
     Object.values(projMap)
@@ -358,11 +358,11 @@ export async function GET(req: NextRequest) {
         const rowCount = Math.max(toolList.length, 1)
         const alt = pi % 2 === 0
 
-        // First row — project info + first tool
+        // First row â€” project info + first tool
         const first = toolList[0]
         dataRow(ws5, [
           p.name, p.location, p.checkouts, hrs(p.totalMins),
-          first?.name ?? '—', first?.qty ?? '', first ? first.hrs.toFixed(1) + 'h' : '',
+          first?.name ?? 'â€”', first?.qty ?? '', first ? first.hrs.toFixed(1) + 'h' : '',
         ], projRow, alt)
         ws5.getRow(projRow).getCell(1).font = { bold: true, size: 10, name: 'Calibri' }
         ;[3, 4, 6, 7].forEach(col => { ws5.getRow(projRow).getCell(col).alignment = centre })
@@ -384,12 +384,12 @@ export async function GET(req: NextRequest) {
         projRow += rowCount
       })
 
-    // ════════════════════════════════════════
-    // SHEET 6 — Reservations / Requests
-    // ════════════════════════════════════════
-    const ws6 = wb.addWorksheet('📋 Reservations', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SHEET 6 â€” Reservations / Requests
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    const ws6 = wb.addWorksheet('đź“‹ Reservations', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws6.columns = [{ width: 22 }, { width: 26 }, { width: 24 }, { width: 18 }, { width: 28 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 32 }]
-    titleRow(ws6, `Tool Reservations / Requests — ${monthLabel}  (${requests.length} total)`, 9, 1)
+    titleRow(ws6, `Tool Reservations / Requests â€” ${monthLabel}  (${requests.length} total)`, 9, 1)
     headerRow(ws6, ['Requested By', 'Email', 'Project', 'Date', 'Tool / Material', 'Qty Requested', 'Qty Approved', 'Status', 'Notes'], 2)
     let reqRow = 3
     requests.forEach((r, ri) => {
@@ -399,11 +399,11 @@ export async function GET(req: NextRequest) {
         dataRow(ws6, [
           ii === 0 ? r.requester.name : '',
           ii === 0 ? r.requester.email : '',
-          ii === 0 ? (r.project?.name ?? '—') : '',
+          ii === 0 ? (r.project?.name ?? 'â€”') : '',
           ii === 0 ? formatD(r.createdAt) : '',
-          item.tool?.name || (item.itemName ? `${item.itemName} (not in inventory)` : '—'),
+          item.tool?.name || (item.itemName ? `${item.itemName} (not in inventory)` : 'â€”'),
           item.requestedQty,
-          item.approvedQty ?? '—',
+          item.approvedQty ?? 'â€”',
           ii === 0 ? r.status : '',
           ii === 0 ? (r.notes ?? '') : (item.notes ?? ''),
         ], reqRow, alt, { 7: { fill: ii === 0 ? sfill : (alt ? C.altRow : C.white) } })
@@ -411,17 +411,17 @@ export async function GET(req: NextRequest) {
         reqRow++
       })
       if (r.items.length === 0) {
-        dataRow(ws6, [r.requester.name, r.requester.email, r.project?.name ?? '—', formatD(r.createdAt), '(no items)', '', '', r.status, r.notes ?? ''], reqRow, alt, { 7: { fill: statusFill(r.status) } })
+        dataRow(ws6, [r.requester.name, r.requester.email, r.project?.name ?? 'â€”', formatD(r.createdAt), '(no items)', '', '', r.status, r.notes ?? ''], reqRow, alt, { 7: { fill: statusFill(r.status) } })
         reqRow++
       }
     })
 
-    // ════════════════════════════════════════
-    // SHEET 7 — Reservation Summary by Person
-    // ════════════════════════════════════════
-    const ws7 = wb.addWorksheet('👤 Who Reserved What', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SHEET 7 â€” Reservation Summary by Person
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    const ws7 = wb.addWorksheet('đź‘¤ Who Reserved What', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws7.columns = [{ width: 24 }, { width: 28 }, { width: 13 }, { width: 13 }, { width: 13 }, { width: 30 }, { width: 14 }, { width: 14 }]
-    titleRow(ws7, `Reservation Summary by Person — ${monthLabel}`, 8, 1)
+    titleRow(ws7, `Reservation Summary by Person â€” ${monthLabel}`, 8, 1)
     headerRow(ws7, ['Name', 'Email', 'Requests', 'Approved', 'Rejected / Pending', 'Tool / Material', 'Qty Requested', 'Qty Approved'], 2)
 
     let ws7Row = 3
@@ -432,7 +432,7 @@ export async function GET(req: NextRequest) {
         const rowCount = Math.max(toolList.length, 1)
         const alt = pi % 2 === 0
 
-        const rejPend = [u.rejected > 0 ? `${u.rejected} rejected` : '', u.pending > 0 ? `${u.pending} pending` : ''].filter(Boolean).join(', ') || '—'
+        const rejPend = [u.rejected > 0 ? `${u.rejected} rejected` : '', u.pending > 0 ? `${u.pending} pending` : ''].filter(Boolean).join(', ') || 'â€”'
 
         toolList.forEach((t, ti) => {
           dataRow(ws7, [
@@ -443,7 +443,7 @@ export async function GET(req: NextRequest) {
             ti === 0 ? rejPend : '',
             t.name,
             t.requested,
-            t.approved || '—',
+            t.approved || 'â€”',
           ], ws7Row + ti, alt)
           ;[3, 4, 7, 8].forEach(col => { ws7.getRow(ws7Row + ti).getCell(col).alignment = centre })
         })
@@ -469,12 +469,12 @@ export async function GET(req: NextRequest) {
         ws7Row += rowCount
       })
 
-    // ════════════════════════════════════════
-    // SHEET 8 — Inventory
-    // ════════════════════════════════════════
-    const ws8 = wb.addWorksheet('📦 Inventory', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SHEET 8 â€” Inventory
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    const ws8 = wb.addWorksheet('đź“¦ Inventory', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws8.columns = [{ width: 30 }, { width: 18 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 14 }]
-    titleRow(ws8, `Inventory Status — ${monthLabel}`, 7, 1)
+    titleRow(ws8, `Inventory Status â€” ${monthLabel}`, 7, 1)
     headerRow(ws8, ['Tool', 'Category', 'In Stock', 'Total', 'Min Stock', 'Max Stock', 'Status'], 2)
     tools.forEach((t, i) => {
       const st = t.currentStock === 0 ? 'Out of Stock' : t.currentStock <= t.minStock ? 'Low Stock' : 'OK'
@@ -482,20 +482,20 @@ export async function GET(req: NextRequest) {
       ;[3, 4, 5, 6, 7].forEach(col => { ws8.getRow(i + 3).getCell(col).alignment = centre })
     })
 
-    // ════════════════════════════════════════
-    // SHEET 9 — Audit Log
-    // ════════════════════════════════════════
-    const ws9 = wb.addWorksheet('📝 Audit Log', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SHEET 9 â€” Audit Log
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    const ws9 = wb.addWorksheet('đź“ť Audit Log', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws9.columns = [{ width: 20 }, { width: 22 }, { width: 28 }, { width: 18 }, { width: 60 }]
-    titleRow(ws9, `Audit Log — ${monthLabel}  (${auditLogs.length} entries)`, 5, 1)
+    titleRow(ws9, `Audit Log â€” ${monthLabel}  (${auditLogs.length} entries)`, 5, 1)
     headerRow(ws9, ['Date & Time', 'User', 'Email', 'Action', 'Details'], 2)
     auditLogs.forEach((l, i) => {
       dataRow(ws9, [formatDT(l.createdAt), l.user?.name ?? 'System', l.user?.email ?? '', l.action, l.details ?? ''], i + 3, i % 2 === 0)
     })
 
-    // ── Write & respond ──
+    // â”€â”€ Write & respond â”€â”€
     const buf = await wb.xlsx.writeBuffer()
-    const filename = `ToolTrack_Report_${month}.xlsx`
+    const filename = `BuildFlow_Report_${month}.xlsx`
 
     return new NextResponse(new Uint8Array(buf as ArrayBuffer), {
       status: 200,

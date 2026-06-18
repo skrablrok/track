@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Wrench, QrCode, ClipboardList,
-  FolderOpen, BarChart3, Users, LogOut, ClipboardCheck, ShoppingCart, FileSpreadsheet,
+  FolderOpen, BarChart3, Users, LogOut, ClipboardCheck, ShoppingCart, FileSpreadsheet, Building2,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
@@ -33,9 +33,9 @@ export default function Sidebar({ role }: { role: string }) {
     <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 h-screen">
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <Wrench className="w-4 h-4 text-white" />
+          <Building2 className="w-4 h-4 text-white" />
         </div>
-        <span className="font-bold text-gray-900 text-lg">ToolTrack</span>
+        <span className="font-bold text-gray-900 text-lg">BuildFlow</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">

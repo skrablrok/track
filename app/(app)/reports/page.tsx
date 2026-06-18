@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { BarChart3, TrendingUp, Package, Users, AlertTriangle, Download, Clock } from 'lucide-react'
@@ -30,7 +30,7 @@ export default function ReportsPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `ToolTrack_Report_${exportMonth}.xlsx`
+      a.download = `BuildFlow_Report_${exportMonth}.xlsx`
       a.click()
       URL.revokeObjectURL(url)
     } catch {}
@@ -77,7 +77,7 @@ export default function ReportsPage() {
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm"
           >
             <Download size={15} />
-            {exporting ? 'Exporting…' : 'Export Excel'}
+            {exporting ? 'Exportingâ€¦' : 'Export Excel'}
           </button>
         </div>
       </div>
@@ -225,7 +225,7 @@ export default function ReportsPage() {
                       return (
                         <tr key={tool.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                           <td className="px-5 py-3 font-medium text-gray-900">{tool.name}</td>
-                          <td className="px-5 py-3 text-gray-500">{tool.category || '—'}</td>
+                          <td className="px-5 py-3 text-gray-500">{tool.category || 'â€”'}</td>
                           <td className="px-5 py-3 text-center">{tool.currentStock}</td>
                           <td className="px-5 py-3 text-center">{tool.totalStock}</td>
                           <td className="px-5 py-3 text-center">{tool.minStock}</td>

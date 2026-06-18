@@ -7,10 +7,10 @@ import { Toaster } from '@/components/ui/toaster'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ToolTrack — Inventory Management',
-  description: 'Internal tool inventory and checkout management system',
+  title: 'BuildFlow — Construction Inventory',
+  description: 'Construction site inventory and tool management system',
   manifest: '/manifest.json',
-  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'ToolTrack' },
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'BuildFlow' },
 }
 
 export const viewport: Viewport = {

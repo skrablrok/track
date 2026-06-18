@@ -96,7 +96,7 @@ export default function Header({ user }: Props) {
 
   return (
     <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 flex-shrink-0">
-      <div className="md:hidden text-lg font-bold text-gray-900">ToolTrack</div>
+      <div className="md:hidden text-lg font-bold text-gray-900">BuildFlow</div>
       <div className="hidden md:block" />
 
       <div className="flex items-center gap-1.5">

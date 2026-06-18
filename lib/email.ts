@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer'
+﻿import nodemailer from 'nodemailer'
 
 function createTransporter() {
   return nodemailer.createTransport({
@@ -20,16 +20,16 @@ export async function sendInviteEmail(to: string, token: string) {
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
-    subject: 'You have been invited to ToolTrack',
+    subject: 'You have been invited to BuildFlow',
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#f8fafc;padding:32px;border-radius:12px;">
         <div style="background:#1e40af;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
-          <h1 style="color:white;margin:0;font-size:22px;">ToolTrack</h1>
-          <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">Internal Tool Inventory System</p>
+          <h1 style="color:white;margin:0;font-size:22px;">BuildFlow</h1>
+          <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">Construction Inventory Management</p>
         </div>
         <div style="background:white;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
           <h2 style="color:#1e293b;margin:0 0 12px;">You've been invited!</h2>
-          <p style="color:#475569;margin:0 0 20px;">You have been invited to join the ToolTrack tool inventory system. Click the button below to complete your registration.</p>
+          <p style="color:#475569;margin:0 0 20px;">You have been invited to join the BuildFlow tool inventory system. Click the button below to complete your registration.</p>
           <p style="color:#64748b;font-size:13px;margin:0 0 24px;">This link expires in <strong>7 days</strong>.</p>
           <div style="text-align:center;margin-bottom:24px;">
             <a href="${inviteUrl}" style="display:inline-block;background:#2563eb;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
@@ -69,14 +69,14 @@ export async function sendProcurementEmail(
   const html = `
     <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#f8fafc;padding:32px;border-radius:12px;">
       <div style="background:#1e40af;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
-        <h1 style="color:white;margin:0;font-size:22px;">ToolTrack</h1>
-        <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">Internal Tool Inventory System</p>
+        <h1 style="color:white;margin:0;font-size:22px;">BuildFlow</h1>
+        <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">Construction Inventory Management</p>
       </div>
       <div style="background:white;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
-        <h2 style="color:#1e293b;margin:0 0 12px;">⚠️ Items need to be purchased</h2>
+        <h2 style="color:#1e293b;margin:0 0 12px;">âš ď¸Ź Items need to be purchased</h2>
         <p style="color:#475569;margin:0 0 8px;"><strong>${requesterName}</strong> requested items for <strong>${projectName}</strong> that need procurement.</p>
-        ${renderSection('New items to source (never in warehouse)', neverStocked.map((i) => `${i.name} — qty ${i.qty}`))}
-        ${renderSection('Reorder — running low', lowStock.map((i) => `${i.name} — need ${i.qty}, only ${i.currentStock} on hand`))}
+        ${renderSection('New items to source (never in warehouse)', neverStocked.map((i) => `${i.name} â€” qty ${i.qty}`))}
+        ${renderSection('Reorder â€” running low', lowStock.map((i) => `${i.name} â€” need ${i.qty}, only ${i.currentStock} on hand`))}
         <div style="text-align:center;margin:24px 0 0;">
           <a href="${appUrl}${details.linkUrl}" style="display:inline-block;background:#2563eb;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
             View Request
@@ -92,7 +92,7 @@ export async function sendProcurementEmail(
       transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: recipient,
-        subject: '⚠️ ToolTrack — Items need to be purchased',
+        subject: 'âš ď¸Ź BuildFlow â€” Items need to be purchased',
         html,
       })
     )

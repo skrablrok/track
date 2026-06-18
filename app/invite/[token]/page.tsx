@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Wrench, Eye, EyeOff, Check, X } from 'lucide-react'
+import { Building2, Eye, EyeOff, Check, X } from 'lucide-react'
 
 function req(rule: boolean) {
   return rule
@@ -71,10 +71,10 @@ export default function InvitePage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-2xl mb-4 shadow-xl">
-            <Wrench className="w-8 h-8 text-white" />
+            <Building2 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">ToolTrack</h1>
-          <p className="text-blue-300 mt-1 text-sm">Internal Tool Inventory System</p>
+          <h1 className="text-3xl font-bold text-white">BuildFlow</h1>
+          <p className="text-blue-300 mt-1 text-sm">Construction Inventory Management</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl p-8">

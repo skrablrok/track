@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Wrench, Lock, Mail, AlertCircle, Eye, EyeOff, ChevronDown } from 'lucide-react'
+import { Building2, Lock, Mail, AlertCircle, Eye, EyeOff, ChevronDown } from 'lucide-react'
 import { LANGUAGES, DEFAULT_LANG, t, type Lang } from '@/lib/i18n/translations'
 
 export default function LoginPage() {
@@ -81,9 +81,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-2xl mb-4 shadow-xl">
-            <Wrench className="w-8 h-8 text-white" />
+            <Building2 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">ToolTrack</h1>
+          <h1 className="text-3xl font-bold text-white">BuildFlow</h1>
           <p className="text-blue-300 mt-1 text-sm">{t(lang, 'internalSystem')}</p>
         </div>
 
@@ -138,7 +138,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-blue-400 text-xs mt-6">
-          © {new Date().getFullYear()} ToolTrack — Internal Use Only
+          © {new Date().getFullYear()} BuildFlow — Internal Use Only
         </p>
       </div>
     </div>

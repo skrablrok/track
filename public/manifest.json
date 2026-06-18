@@ -1,7 +1,7 @@
 {
-  "name": "ToolTrack — Inventory Management",
-  "short_name": "ToolTrack",
-  "description": "Internal tool inventory and checkout management system",
+  "name": "BuildFlow — Construction Inventory",
+  "short_name": "BuildFlow",
+  "description": "Construction site inventory and tool management system",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
