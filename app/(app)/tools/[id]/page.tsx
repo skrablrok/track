@@ -28,9 +28,8 @@ import RestockButton from '@/components/tools/RestockButton'
 export default async function ToolDetailPage({ params }: { params: { id: string } }) {
   const lang = ((await cookies()).get('lang')?.value || DEFAULT_LANG) as Lang
   const session = await getServerSession(authOptions)
-  const orgId = (session?.user as any)?.organizationId as string | undefined
-  const tool = await db.tool.findFirst({
-    where: { id: params.id, ...(orgId && { organizationId: orgId }) },
+  const tool = await db.tool.findUnique({
+    where: { id: params.id },
     include: {
       checkouts: {
         include: {

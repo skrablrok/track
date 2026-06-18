@@ -11,17 +11,16 @@ import { t } from '@/lib/i18n/translations'
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)!
   const lang = cookies().get('lang')?.value || 'sl'
-  const orgId = (session?.user as any)?.organizationId as string
 
   const [toolCount, activeCheckouts, lowStockTools, recentActivity] = await Promise.all([
-    db.tool.count({ where: { active: true, organizationId: orgId } }),
-    db.checkout.count({ where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] }, organizationId: orgId } }),
+    db.tool.count({ where: { active: true } }),
+    db.checkout.count({ where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] } } }),
     db.tool.findMany({
-      where: { active: true, organizationId: orgId },
+      where: { active: true },
       select: { id: true, name: true, currentStock: true, minStock: true, maxStock: true, totalStock: true },
     }).then((ts) => ts.filter((t) => t.currentStock <= t.minStock)),
     db.checkout.findMany({
-      where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] }, organizationId: orgId },
+      where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] } },
       include: {
         tool: { select: { id: true, name: true, imageUrl: true, category: true } },
         user: { select: { id: true, name: true } },

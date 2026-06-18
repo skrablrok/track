@@ -4,12 +4,12 @@ import { requireAuth, requireRole, logAudit, unauthorized, serverError, badReque
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await requireAuth()
+    await requireAuth()
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
 
     const projects = await db.project.findMany({
-      where: { organizationId: user.organizationId, ...(status && { status: status as any }) },
+      where: { ...(status && { status: status as any }) },
       include: {
         _count: { select: { checkouts: { where: { status: 'ACTIVE' } } } },
       },
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     if (!name) return badRequest('Project name is required')
 
     const project = await db.project.create({
-      data: { name, location, description, organizationId: user.organizationId },
+      data: { name, location, description },
     })
 
     await logAudit(user.id, 'CREATE_PROJECT', 'Project', project.id, `Created project: ${name}`)
