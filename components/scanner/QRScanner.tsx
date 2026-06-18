@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Camera, Flashlight } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Props {
   onScan: (result: string) => void
 }
 
 export default function QRScanner({ onScan }: Props) {
+  const { t } = useLanguage()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const intervalRef = useRef<any>(null)
@@ -31,7 +33,7 @@ export default function QRScanner({ onScan }: Props) {
         startScanning()
       }
     } catch (e) {
-      setError('Camera access denied. Please allow camera permissions.')
+      setError(t('cameraPermissionDenied'))
     }
   }
 
@@ -78,7 +80,7 @@ export default function QRScanner({ onScan }: Props) {
         <Camera className="w-12 h-12 text-gray-300 mb-3" />
         <p className="text-sm text-gray-600 font-medium">{error}</p>
         <p className="text-xs text-gray-400 mt-2">
-          You can also enter the QR code manually below
+          {t('cameraHint')}
         </p>
         <ManualInput onScan={onScan} />
       </div>
@@ -108,13 +110,14 @@ export default function QRScanner({ onScan }: Props) {
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-        <p className="text-white text-sm text-center opacity-90">Point camera at a QR code</p>
+        <p className="text-white text-sm text-center opacity-90">{t('pointCameraAtQR')}</p>
       </div>
     </div>
   )
 }
 
 function ManualInput({ onScan }: { onScan: (v: string) => void }) {
+  const { t } = useLanguage()
   const [value, setValue] = useState('')
 
   return (
@@ -124,7 +127,7 @@ function ManualInput({ onScan }: { onScan: (v: string) => void }) {
           type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Enter QR code manually…"
+          placeholder={t('manualEntry')}
           className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           onKeyDown={(e) => e.key === 'Enter' && value && onScan(value)}
         />
@@ -132,7 +135,7 @@ function ManualInput({ onScan }: { onScan: (v: string) => void }) {
           onClick={() => value && onScan(value)}
           className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
         >
-          Go
+          {t('go')}
         </button>
       </div>
     </div>

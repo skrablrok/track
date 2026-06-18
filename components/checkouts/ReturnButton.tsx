@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CornerDownLeft, Check } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export default function ReturnButton({ checkoutId }: { checkoutId: string }) {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [armed, setArmed] = useState(false)
   const [error, setError] = useState('')
@@ -43,7 +45,7 @@ export default function ReturnButton({ checkoutId }: { checkoutId: string }) {
         }`}
       >
         {armed ? <Check size={12} /> : <CornerDownLeft size={12} />}
-        {loading ? 'Returning…' : armed ? 'Confirm?' : 'Return'}
+        {loading ? t('returning') : armed ? t('confirmQuestion') : t('returnTool')}
       </button>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>

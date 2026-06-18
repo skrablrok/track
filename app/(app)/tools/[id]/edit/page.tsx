@@ -6,10 +6,12 @@ import { ArrowLeft, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import PhotoInput from '@/components/tools/PhotoInput'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 const categories = ['Power Tools', 'Hand Tools', 'Measuring Tools', 'Safety Equipment', 'Lifting Equipment', 'Other']
 
 export default function EditToolPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const { id } = useParams() as { id: string }
   const { data: session } = useSession()
@@ -77,14 +79,14 @@ export default function EditToolPage() {
         <Link href={`/tools/${id}`} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
           <ArrowLeft size={20} className="text-gray-600" />
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Edit Tool</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('editToolTitle')}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
         {error && <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm">{error}</div>}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Item Type</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('itemType')}</label>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -93,7 +95,7 @@ export default function EditToolPage() {
                 form.type === 'TOOL' ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              Tool (reusable, returned)
+              {t('toolReusable')}
             </button>
             <button
               type="button"
@@ -102,29 +104,29 @@ export default function EditToolPage() {
                 form.type === 'MATERIAL' ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              Material (consumed, not returned)
+              {t('materialConsumable')}
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tool Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('toolNameReq')}</label>
             <input required value={form.name} onChange={(e) => update('name', e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('descriptionOpt')}</label>
             <textarea value={form.description} onChange={(e) => update('description', e.target.value)}
               rows={3} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 resize-none" />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('colCategory')}</label>
             <select value={form.category} onChange={(e) => update('category', e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
-              <option value="">Select category</option>
+              <option value="">{t('selectCategory')}</option>
               {categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -135,12 +137,12 @@ export default function EditToolPage() {
         </div>
 
         <div className="border-t border-gray-100 pt-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Stock Settings</h3>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">{t('stockSettings')}</h3>
           <div className={`grid gap-4 ${form.type === 'MATERIAL' ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {[
-              { key: 'totalStock', label: 'Total Stock', min: 1 },
-              { key: 'minStock', label: 'Min Level', min: 1 },
-              ...(form.type === 'MATERIAL' ? [] : [{ key: 'maxStock', label: 'Max Level', min: 1 }]),
+              { key: 'totalStock', label: t('totalStockLabel'), min: 1 },
+              { key: 'minStock', label: t('minLevelLabel'), min: 1 },
+              ...(form.type === 'MATERIAL' ? [] : [{ key: 'maxStock', label: t('maxLevelLabel'), min: 1 }]),
             ].map(({ key, label, min }) => (
               <div key={key}>
                 <label className="block text-xs font-medium text-gray-600 mb-1.5">{label}</label>
@@ -160,11 +162,11 @@ export default function EditToolPage() {
             </button>
           )}
           <Link href={`/tools/${id}`} className="flex-1 text-center py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-            Cancel
+            {t('cancel')}
           </Link>
           <button type="submit" disabled={saving}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-60">
-            {saving ? 'Saving…' : 'Save Changes'}
+            {saving ? '…' : t('saveChanges')}
           </button>
         </div>
       </form>

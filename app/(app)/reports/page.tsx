@@ -6,10 +6,12 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import { format } from 'date-fns'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 const COLORS = ['#2563eb', '#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444']
 
 export default function ReportsPage() {
+  const { t } = useLanguage()
   const [overview, setOverview] = useState<any>(null)
   const [usage, setUsage] = useState<any>(null)
   const [inventory, setInventory] = useState<any[]>([])
@@ -51,18 +53,18 @@ export default function ReportsPage() {
   }
 
   const tabs = [
-    { key: 'overview', label: 'Overview', icon: BarChart3 },
-    { key: 'usage', label: 'Usage', icon: TrendingUp },
-    { key: 'inventory', label: 'Inventory', icon: Package },
-    { key: 'audit', label: 'Audit Log', icon: Users },
+    { key: 'overview', label: t('tabOverview'), icon: BarChart3 },
+    { key: 'usage', label: t('tabUsage'), icon: TrendingUp },
+    { key: 'inventory', label: t('tabInventory'), icon: Package },
+    { key: 'audit', label: t('tabAuditLog'), icon: Users },
   ] as const
 
   return (
     <div className="space-y-6 fade-in">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Analytics and usage statistics</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('nav_reports')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('analyticsSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -77,7 +79,7 @@ export default function ReportsPage() {
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm"
           >
             <Download size={15} />
-            {exporting ? 'Exportingâ€¦' : 'Export Excel'}
+            {exporting ? t('exporting') : t('exportExcel')}
           </button>
         </div>
       </div>
@@ -127,7 +129,7 @@ export default function ReportsPage() {
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">
                   <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <AlertTriangle size={16} className="text-amber-500" />
-                    Low Stock Tools
+                    {t('lowStockTools')}
                   </h2>
                   <div className="space-y-2">
                     {overview.lowStockTools.map((tool: any) => {
@@ -154,7 +156,7 @@ export default function ReportsPage() {
             <div className="space-y-6">
               <div className="grid lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                  <h2 className="font-semibold text-gray-800 mb-4">Most Used Tools</h2>
+                  <h2 className="font-semibold text-gray-800 mb-4">{t('mostUsedTools')}</h2>
                   {usage.byTool?.length > 0 ? (
                     <ResponsiveContainer width="100%" height={240}>
                       <BarChart data={usage.byTool.slice(0, 8)}>
@@ -167,11 +169,11 @@ export default function ReportsPage() {
                         <Bar dataKey="count" fill="#2563eb" radius={[6, 6, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
-                  ) : <p className="text-sm text-gray-400 text-center py-8">No data yet</p>}
+                  ) : <p className="text-sm text-gray-400 text-center py-8">{t('noData')}</p>}
                 </div>
 
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                  <h2 className="font-semibold text-gray-800 mb-4">Checkouts by Project</h2>
+                  <h2 className="font-semibold text-gray-800 mb-4">{t('checkoutsByProject')}</h2>
                   {usage.byProject?.length > 0 ? (
                     <ResponsiveContainer width="100%" height={240}>
                       <PieChart>
@@ -184,19 +186,19 @@ export default function ReportsPage() {
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
-                  ) : <p className="text-sm text-gray-400 text-center py-8">No data yet</p>}
+                  ) : <p className="text-sm text-gray-400 text-center py-8">{t('noData')}</p>}
                 </div>
               </div>
 
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                <h2 className="font-semibold text-gray-800 mb-4">Top Users</h2>
+                <h2 className="font-semibold text-gray-800 mb-4">{t('topUsers')}</h2>
                 <div className="space-y-2">
                   {usage.byUser?.slice(0, 10).map((u: any, i: number) => (
                     <div key={u.name} className="flex items-center gap-3">
                       <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
                       <span className="text-sm text-gray-700 flex-1">{u.name}</span>
                       <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                        {u.count} checkouts
+                        {u.count} {t('checkoutsCount')}
                       </span>
                     </div>
                   ))}
@@ -211,12 +213,12 @@ export default function ReportsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
-                      <th className="text-left px-5 py-3 font-medium text-gray-600">Tool</th>
-                      <th className="text-left px-5 py-3 font-medium text-gray-600">Category</th>
-                      <th className="text-center px-5 py-3 font-medium text-gray-600">In Stock</th>
-                      <th className="text-center px-5 py-3 font-medium text-gray-600">Total</th>
-                      <th className="text-center px-5 py-3 font-medium text-gray-600">Min</th>
-                      <th className="text-center px-5 py-3 font-medium text-gray-600">Status</th>
+                      <th className="text-left px-5 py-3 font-medium text-gray-600">{t('colTool')}</th>
+                      <th className="text-left px-5 py-3 font-medium text-gray-600">{t('colCategory')}</th>
+                      <th className="text-center px-5 py-3 font-medium text-gray-600">{t('colInStock')}</th>
+                      <th className="text-center px-5 py-3 font-medium text-gray-600">{t('colTotal')}</th>
+                      <th className="text-center px-5 py-3 font-medium text-gray-600">{t('colMin')}</th>
+                      <th className="text-center px-5 py-3 font-medium text-gray-600">{t('status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -225,7 +227,7 @@ export default function ReportsPage() {
                       return (
                         <tr key={tool.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                           <td className="px-5 py-3 font-medium text-gray-900">{tool.name}</td>
-                          <td className="px-5 py-3 text-gray-500">{tool.category || 'â€”'}</td>
+                          <td className="px-5 py-3 text-gray-500">{tool.category || '—'}</td>
                           <td className="px-5 py-3 text-center">{tool.currentStock}</td>
                           <td className="px-5 py-3 text-center">{tool.totalStock}</td>
                           <td className="px-5 py-3 text-center">{tool.minStock}</td>
@@ -234,7 +236,7 @@ export default function ReportsPage() {
                               tool.currentStock === 0 ? 'bg-red-100 text-red-700' :
                               isLow ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
                             }`}>
-                              {tool.currentStock === 0 ? 'Empty' : isLow ? 'Low' : 'OK'}
+                              {tool.currentStock === 0 ? t('statusEmpty') : isLow ? t('statusLow') : t('statusOk')}
                             </span>
                           </td>
                         </tr>
@@ -252,10 +254,10 @@ export default function ReportsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
-                      <th className="text-left px-5 py-3 font-medium text-gray-600">Time</th>
-                      <th className="text-left px-5 py-3 font-medium text-gray-600">User</th>
-                      <th className="text-left px-5 py-3 font-medium text-gray-600">Action</th>
-                      <th className="text-left px-5 py-3 font-medium text-gray-600">Details</th>
+                      <th className="text-left px-5 py-3 font-medium text-gray-600">{t('colTime')}</th>
+                      <th className="text-left px-5 py-3 font-medium text-gray-600">{t('name')}</th>
+                      <th className="text-left px-5 py-3 font-medium text-gray-600">{t('colAction')}</th>
+                      <th className="text-left px-5 py-3 font-medium text-gray-600">{t('colDetails')}</th>
                     </tr>
                   </thead>
                   <tbody>

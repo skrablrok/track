@@ -3,8 +3,10 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Check, X } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export default function RestockButton({ toolId }: { toolId: string }) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,7 +30,7 @@ export default function RestockButton({ toolId }: { toolId: string }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const qty = parseInt(amount)
-    if (!qty || qty <= 0) { setError('Enter a valid amount'); return }
+    if (!qty || qty <= 0) { setError(t('enterValidAmount')); return }
     setError('')
     setLoading(true)
     const res = await fetch(`/api/tools/${toolId}/restock`, {
@@ -58,7 +60,7 @@ export default function RestockButton({ toolId }: { toolId: string }) {
             pattern="[0-9]*"
             value={amount}
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))}
-            placeholder="Units to add"
+            placeholder={t('unitsToAdd')}
             className="w-28 px-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-center"
           />
           <button
@@ -67,7 +69,7 @@ export default function RestockButton({ toolId }: { toolId: string }) {
             className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-xl transition-colors disabled:opacity-60"
           >
             <Check size={12} />
-            {loading ? 'Saving…' : 'Add'}
+            {loading ? '…' : t('restockAdd')}
           </button>
           <button
             type="button"
@@ -88,7 +90,7 @@ export default function RestockButton({ toolId }: { toolId: string }) {
       className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium rounded-xl transition-colors"
     >
       <Plus size={13} />
-      Restock
+      {t('restock')}
     </button>
   )
 }

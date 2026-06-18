@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { QrCode, Download } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Props {
   toolId: string
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function ToolQRCode({ toolId, toolName, qrCode }: Props) {
+  const { t } = useLanguage()
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -31,7 +33,7 @@ export default function ToolQRCode({ toolId, toolName, qrCode }: Props) {
     <div className="bg-white rounded-2xl border border-gray-100 p-5 text-center">
       <div className="flex items-center gap-2 mb-4 justify-center">
         <QrCode size={16} className="text-gray-400" />
-        <h3 className="font-semibold text-gray-800 text-sm">QR Code</h3>
+        <h3 className="font-semibold text-gray-800 text-sm">{t('qrCode')}</h3>
       </div>
 
       {loading ? (
@@ -45,11 +47,11 @@ export default function ToolQRCode({ toolId, toolName, qrCode }: Props) {
             className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
           >
             <Download size={14} />
-            Download QR
+            {t('downloadQR')}
           </button>
         </div>
       ) : (
-        <p className="text-sm text-gray-400">Unable to load QR code</p>
+        <p className="text-sm text-gray-400">{t('qrLoadError')}</p>
       )}
     </div>
   )

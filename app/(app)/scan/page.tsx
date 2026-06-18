@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { QrCode, CheckCircle2, XCircle, Wrench, MapPin, User, ArrowRight } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import CheckoutModal from '@/components/checkouts/CheckoutModal'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 const QRScanner = dynamic(() => import('@/components/scanner/QRScanner'), { ssr: false })
 
@@ -29,6 +30,7 @@ type ScannedTool = {
 }
 
 export default function ScanPage() {
+  const { t } = useLanguage()
   const { data: session } = useSession()
   const isAdmin = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
   const [scanning, setScanning] = useState(false)
@@ -63,7 +65,7 @@ export default function ScanPage() {
     const res = await fetch(`/api/checkouts/${checkoutId}/return`, { method: 'POST' })
     setReturningId(null)
     if (res.ok) {
-      setSuccessInfo({ title: 'Tool Returned!', message: 'The tool has been marked as available.' })
+      setSuccessInfo({ title: t('toolReturnedTitle'), message: t('toolReturnedMsg') })
       setResult(null)
     } else {
       const d = await res.json().catch(() => ({}))
@@ -77,8 +79,8 @@ export default function ScanPage() {
   return (
     <div className="max-w-lg mx-auto space-y-6 fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">QR Scanner</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Scan a tool's QR code to check out or return</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('scanQR')}</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{t('scannerSubtitle')}</p>
       </div>
 
       {!scanning && !result && !successInfo && (
@@ -86,15 +88,15 @@ export default function ScanPage() {
           <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <QrCode className="w-10 h-10 text-blue-500" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">Ready to Scan</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">{t('readyToScan')}</h2>
           <p className="text-sm text-gray-500 mb-6">
-            Point your camera at any tool QR code to check it out or return it.
+            {t('readyToScanDesc')}
           </p>
           <button
             onClick={() => setScanning(true)}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-medium transition-colors shadow-sm"
           >
-            Start Scanning
+            {t('startScanning')}
           </button>
         </div>
       )}
@@ -102,12 +104,12 @@ export default function ScanPage() {
       {scanning && (
         <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-800">Scanning…</h2>
+            <h2 className="font-semibold text-gray-800">{t('scanningDots')}</h2>
             <button
               onClick={() => setScanning(false)}
               className="text-sm text-gray-500 hover:text-gray-700"
             >
-              Cancel
+              {t('cancel')}
             </button>
           </div>
           <QRScanner onScan={handleScan} />
@@ -123,7 +125,7 @@ export default function ScanPage() {
               onClick={() => { setError(''); setScanning(true) }}
               className="text-xs text-red-600 hover:underline mt-1"
             >
-              Try again
+              {t('tryAgain')}
             </button>
           </div>
         </div>
@@ -138,7 +140,7 @@ export default function ScanPage() {
             onClick={() => { setSuccessInfo(null); setScanning(true) }}
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors"
           >
-            Scan Another
+            {t('scanAnother')}
           </button>
         </div>
       )}
@@ -160,7 +162,7 @@ export default function ScanPage() {
             </div>
 
             <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
-              <span className="text-sm text-gray-600">Stock</span>
+              <span className="text-sm text-gray-600">{t('stockLabel')}</span>
               <span className={`text-sm font-semibold ${
                 result.currentStock === 0 ? 'text-red-600' :
                 result.currentStock <= result.minStock ? 'text-amber-600' : 'text-green-600'
@@ -172,7 +174,7 @@ export default function ScanPage() {
             {ownCheckout && (
               <div className="space-y-3">
                 <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
-                  <p className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-2">You Currently Have This</p>
+                  <p className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-2">{t('youCurrentlyHaveThis')}</p>
                   {ownCheckout.project && (
                     <div className="flex items-center gap-2 text-sm text-gray-700">
                       <MapPin size={14} className="text-gray-400" />
@@ -185,7 +187,7 @@ export default function ScanPage() {
                   disabled={returningId === ownCheckout.id}
                   className="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 rounded-2xl font-medium transition-colors disabled:opacity-60"
                 >
-                  {returningId === ownCheckout.id ? 'Returning…' : 'Return This Tool'}
+                  {returningId === ownCheckout.id ? t('returning') : t('returnThisTool')}
                 </button>
               </div>
             )}
@@ -215,7 +217,7 @@ export default function ScanPage() {
                         disabled={returningId === c.id}
                         className="flex-shrink-0 text-xs bg-green-50 hover:bg-green-100 text-green-700 font-medium px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-60"
                       >
-                        {returningId === c.id ? '…' : 'Return'}
+                        {returningId === c.id ? '…' : t('returnTool')}
                       </button>
                     )}
                   </div>
@@ -228,14 +230,14 @@ export default function ScanPage() {
                 onClick={() => setCheckoutOpen(true)}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-medium transition-colors"
               >
-                {result.type === 'MATERIAL' ? 'Use This Material' : 'Check Out This Tool'}
+                {result.type === 'MATERIAL' ? t('useThisMaterial') : t('checkOutThisTool')}
               </button>
             )}
 
             {!ownCheckout && result.currentStock === 0 && (
               <div className="bg-red-50 rounded-2xl p-4 text-center">
-                <p className="text-sm font-medium text-red-700">Out of Stock</p>
-                <p className="text-xs text-red-500 mt-0.5">All units are currently checked out</p>
+                <p className="text-sm font-medium text-red-700">{t('outOfStock')}</p>
+                <p className="text-xs text-red-500 mt-0.5">{t('allUnitsCheckedOut')}</p>
               </div>
             )}
 
@@ -243,7 +245,7 @@ export default function ScanPage() {
               onClick={() => { setResult(null); setScanning(true) }}
               className="w-full text-gray-500 hover:text-gray-700 text-sm py-2"
             >
-              Scan Another
+              {t('scanAnother')}
             </button>
           </div>
         </div>
@@ -259,8 +261,8 @@ export default function ScanPage() {
             setResult(null)
             setSuccessInfo(
               isMaterial
-                ? { title: 'Material Used!', message: 'Stock has been updated.' }
-                : { title: 'Tool Checked Out!', message: 'Remember to return it when you\'re done.' }
+                ? { title: t('materialUsedTitle'), message: t('materialUsedMsg') }
+                : { title: t('toolCheckedOutTitle'), message: t('toolCheckedOutMsg') }
             )
           }}
         />

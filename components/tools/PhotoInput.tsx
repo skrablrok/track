@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { Camera, Upload, X, Loader2 } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Props {
   value: string
@@ -44,6 +45,7 @@ function compressImage(file: File): Promise<string> {
 }
 
 export default function PhotoInput({ value, onChange }: Props) {
+  const { t } = useLanguage()
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [processing, setProcessing] = useState(false)
@@ -65,7 +67,7 @@ export default function PhotoInput({ value, onChange }: Props) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">Photo</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('photo')}</label>
 
       {value && (
         <div className="relative rounded-xl overflow-hidden h-40 bg-gray-50 border border-gray-100 mb-3">
@@ -88,7 +90,7 @@ export default function PhotoInput({ value, onChange }: Props) {
           className="flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-60"
         >
           {processing ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-          Take Photo
+          {t('takePhoto')}
         </button>
         <button
           type="button"
@@ -97,7 +99,7 @@ export default function PhotoInput({ value, onChange }: Props) {
           className="flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-60"
         >
           {processing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-          Upload Photo
+          {t('uploadPhoto')}
         </button>
       </div>
 

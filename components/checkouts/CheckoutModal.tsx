@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Wrench, MapPin, FileText } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Props {
   tool: { id: string; name: string; currentStock: number; totalStock: number; type?: string }
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
+  const { t } = useLanguage()
   const isMaterial = tool.type === 'MATERIAL'
   const [projects, setProjects] = useState<any[]>([])
   const [projectId, setProjectId] = useState('')
@@ -52,7 +54,7 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div>
-            <h2 className="font-bold text-gray-900">{isMaterial ? 'Use Material' : 'Check Out Tool'}</h2>
+            <h2 className="font-bold text-gray-900">{isMaterial ? t('useMaterial') : t('checkOutTool')}</h2>
             <p className="text-sm text-gray-500 mt-0.5">{tool.name}</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
@@ -71,26 +73,26 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
               <span className="text-sm font-medium text-blue-800">{tool.name}</span>
             </div>
             <span className="text-xs text-blue-600 font-medium">
-              {tool.currentStock}/{tool.totalStock} available
+              {tool.currentStock}/{tool.totalStock} {t('available')}
             </span>
           </div>
 
           {isMaterial && (
             <div className="bg-purple-50 text-purple-700 rounded-xl p-3 text-xs">
-              This is a consumable material — it will not be returned. Stock will be permanently reduced.
+              {t('materialConsumableWarning')}
             </div>
           )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              <span className="flex items-center gap-1.5"><MapPin size={14} /> Assign to Project</span>
+              <span className="flex items-center gap-1.5"><MapPin size={14} /> {t('assignToProject')}</span>
             </label>
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
             >
-              <option value="">— No project / Personal use —</option>
+              <option value="">{t('noProjectOption')}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}{p.location ? ` (${p.location})` : ''}
@@ -100,7 +102,7 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">{isMaterial ? 'Quantity to use' : 'Quantity'}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{isMaterial ? t('quantityToUse') : t('quantity')}</label>
             <input
               type="text"
               inputMode="numeric"
@@ -113,12 +115,12 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              <span className="flex items-center gap-1.5"><FileText size={14} /> Notes (optional)</span>
+              <span className="flex items-center gap-1.5"><FileText size={14} /> {t('notesOptional')}</span>
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any additional notes…"
+              placeholder={t('anyAdditionalNotes')}
               rows={2}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 resize-none"
             />
@@ -130,14 +132,14 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
               onClick={onClose}
               className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-60"
             >
-              {loading ? (isMaterial ? 'Using…' : 'Checking out…') : (isMaterial ? 'Use Material' : 'Check Out')}
+              {loading ? (isMaterial ? t('using') : t('checkingOut')) : (isMaterial ? t('useMaterial') : t('checkOut'))}
             </button>
           </div>
         </form>

@@ -9,6 +9,7 @@ import {
   ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle,
   User, MapPin, Calendar, Wrench, AlertTriangle, Package,
 } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 type RequestDetail = {
   id: string
@@ -31,20 +32,21 @@ type RequestDetail = {
 }
 
 const STATUS_CONFIG = {
-  PENDING:            { label: 'Pending Review',     color: 'bg-amber-100 text-amber-800 border-amber-200',  icon: Clock },
-  APPROVED:           { label: 'Approved',           color: 'bg-green-100 text-green-800 border-green-200',  icon: CheckCircle2 },
-  PARTIALLY_APPROVED: { label: 'Partially Approved', color: 'bg-blue-100 text-blue-800 border-blue-200',     icon: AlertCircle },
-  REJECTED:           { label: 'Rejected',           color: 'bg-red-100 text-red-800 border-red-200',        icon: XCircle },
+  PENDING:            { tKey: 'pendingReview' as const,        color: 'bg-amber-100 text-amber-800 border-amber-200',  icon: Clock },
+  APPROVED:           { tKey: 'approved' as const,             color: 'bg-green-100 text-green-800 border-green-200',  icon: CheckCircle2 },
+  PARTIALLY_APPROVED: { tKey: 'partiallyApproved' as const,    color: 'bg-blue-100 text-blue-800 border-blue-200',     icon: AlertCircle },
+  REJECTED:           { tKey: 'rejected' as const,             color: 'bg-red-100 text-red-800 border-red-200',        icon: XCircle },
 }
 
-const PROCUREMENT_BADGE: Record<string, { label: string; color: string }> = {
-  PENDING_PURCHASE: { label: 'Pending Purchase', color: 'bg-amber-100 text-amber-700' },
-  ORDERED:          { label: 'Ordered',          color: 'bg-blue-100 text-blue-700' },
-  RECEIVED:         { label: 'Received',         color: 'bg-purple-100 text-purple-700' },
-  COMPLETED:        { label: 'Completed',        color: 'bg-green-100 text-green-700' },
+const PROCUREMENT_BADGE: Record<string, { tKey: 'procurementPending' | 'procurementOrdered' | 'procurementReceived' | 'procurementCompleted'; color: string }> = {
+  PENDING_PURCHASE: { tKey: 'procurementPending',  color: 'bg-amber-100 text-amber-700' },
+  ORDERED:          { tKey: 'procurementOrdered',  color: 'bg-blue-100 text-blue-700' },
+  RECEIVED:         { tKey: 'procurementReceived', color: 'bg-purple-100 text-purple-700' },
+  COMPLETED:        { tKey: 'procurementCompleted',color: 'bg-green-100 text-green-700' },
 }
 
 export default function RequestDetailPage() {
+  const { t } = useLanguage()
   const { id } = useParams() as { id: string }
   const { data: session } = useSession()
   const router = useRouter()
@@ -130,7 +132,7 @@ export default function RequestDetailPage() {
   }
 
   if (loading) return <div className="animate-pulse bg-white rounded-2xl h-64 border border-gray-100" />
-  if (!request) return <div className="text-center py-16 text-gray-400">Request not found</div>
+  if (!request) return <div className="text-center py-16 text-gray-400">{t('requestNotFound')}</div>
 
   const cfg = STATUS_CONFIG[request.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.PENDING
   const StatusIcon = cfg.icon
@@ -143,7 +145,7 @@ export default function RequestDetailPage() {
           <ArrowLeft size={20} className="text-gray-600" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Request Details</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('requestDetails')}</h1>
           <p className="text-sm text-gray-500 font-mono">#{id.slice(-8).toUpperCase()}</p>
         </div>
       </div>
@@ -152,7 +154,7 @@ export default function RequestDetailPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={16} className="text-amber-600" />
-            <p className="font-semibold text-amber-800 text-sm">Stock Replenishment Needed</p>
+            <p className="font-semibold text-amber-800 text-sm">{t('stockReplenishmentNeeded')}</p>
           </div>
           <ul className="space-y-1">
             {warnings.map((w, i) => (
@@ -167,7 +169,7 @@ export default function RequestDetailPage() {
       {done && !warnings.length && (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-green-500" />
-          <p className="text-green-800 text-sm font-medium">Request reviewed successfully. The requester has been notified.</p>
+          <p className="text-green-800 text-sm font-medium">{t('reviewedSuccessfully')}</p>
         </div>
       )}
 
@@ -175,9 +177,9 @@ export default function RequestDetailPage() {
       <div className={`flex items-center gap-3 border rounded-2xl p-4 ${cfg.color}`}>
         <StatusIcon size={20} />
         <div>
-          <p className="font-semibold text-sm">{cfg.label}</p>
+          <p className="font-semibold text-sm">{t(cfg.tKey)}</p>
           <p className="text-xs opacity-75">
-            Submitted {format(new Date(request.createdAt), 'MMMM d, yyyy · HH:mm')}
+            {t('submitted')} {format(new Date(request.createdAt), 'MMMM d, yyyy · HH:mm')}
           </p>
         </div>
       </div>
@@ -203,24 +205,24 @@ export default function RequestDetailPage() {
         )}
         {request.adminNotes && !isPending && (
           <div className="bg-blue-50 rounded-xl p-3 text-sm text-blue-700">
-            <span className="font-medium">Admin note:</span> {request.adminNotes}
+            <span className="font-medium">{t('adminNote')}</span> {request.adminNotes}
           </div>
         )}
       </div>
 
       {/* Items */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
-        <h2 className="font-semibold text-gray-800">Requested Items</h2>
+        <h2 className="font-semibold text-gray-800">{t('requestedItems')}</h2>
 
         {isPrivileged && isPending && (
           <div className="flex gap-2">
             <button type="button" onClick={approveAll}
               className="text-xs bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1.5 rounded-lg font-medium transition-colors">
-              Approve All
+              {t('approveAll')}
             </button>
             <button type="button" onClick={rejectAll}
               className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-lg font-medium transition-colors">
-              Reject All
+              {t('rejectAll')}
             </button>
           </div>
         )}
@@ -251,44 +253,44 @@ export default function RequestDetailPage() {
                       <p className="font-medium text-gray-900 text-sm">{isCustom ? item.itemName : item.tool!.name}</p>
                       {isCustom && (
                         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                          Not in inventory
+                          {t('notInInventory')}
                         </span>
                       )}
                       {item.procurementStatus && PROCUREMENT_BADGE[item.procurementStatus] && (
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PROCUREMENT_BADGE[item.procurementStatus].color}`}>
-                          {PROCUREMENT_BADGE[item.procurementStatus].label}
+                          {t(PROCUREMENT_BADGE[item.procurementStatus].tKey)}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                      <span className="text-xs text-gray-500">Requested: <strong>{item.requestedQty}</strong></span>
+                      <span className="text-xs text-gray-500">{t('requestedQtyLabel')} <strong>{item.requestedQty}</strong></span>
                       {!isPending && item.approvedQty !== null && (
                         <span className={`text-xs font-medium ${item.approvedQty === 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          Approved: {item.approvedQty}
+                          {t('approvedQtyLabel')} {item.approvedQty}
                         </span>
                       )}
                       {!isCustom && (
                         <span className={`text-xs ${isNeg ? 'text-red-600 font-medium' : isLow ? 'text-amber-600' : 'text-gray-400'}`}>
-                          {isNeg ? `Stock: ${item.tool!.currentStock} (NEGATIVE)` : `${item.tool!.currentStock}/${item.tool!.totalStock} in stock`}
+                          {isNeg ? `${t('stockLabel')}: ${item.tool!.currentStock} (-)` : `${item.tool!.currentStock}/${item.tool!.totalStock} ${t('inStock')}`}
                         </span>
                       )}
                     </div>
                     {item.notes && <p className="text-xs text-gray-400 italic mt-0.5">"{item.notes}"</p>}
                     {isCustom && (
                       <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
-                        <AlertTriangle size={11} /> Needs to be sourced — not currently tracked in inventory
+                        <AlertTriangle size={11} /> {t('needsSourcingNote')}
                       </p>
                     )}
                     {wouldGoNeg && isPending && (
                       <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                        <AlertTriangle size={11} /> Approving this quantity will put stock below zero — reorder needed
+                        <AlertTriangle size={11} /> {t('stockWillGoNeg')}
                       </p>
                     )}
                   </div>
 
                   {isPrivileged && isPending && (
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <label className="text-xs text-gray-500">Approve qty</label>
+                      <label className="text-xs text-gray-500">{t('approveQty')}</label>
                       <input
                         type="number"
                         min={0}
@@ -313,14 +315,14 @@ export default function RequestDetailPage() {
 
       {isPrivileged && isPending && (
         <form onSubmit={handleReview} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-          <h2 className="font-semibold text-gray-800">Review Decision</h2>
+          <h2 className="font-semibold text-gray-800">{t('reviewDecision')}</h2>
           {error && <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm">{error}</div>}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Admin Notes (visible to requester)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('adminNotesLabel')}</label>
             <textarea
               value={adminNotes}
               onChange={(e) => setAdminNotes(e.target.value)}
-              placeholder="Reason for partial approval, expected delivery date, instructions…"
+              placeholder={t('adminNotesPlaceholder')}
               rows={2}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 resize-none"
             />
@@ -332,14 +334,14 @@ export default function RequestDetailPage() {
               disabled={submitting}
               className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 py-3 rounded-xl text-sm font-semibold transition-colors border border-red-200 disabled:opacity-50"
             >
-              Reject All
+              {t('rejectAll')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="flex-2 flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
             >
-              {submitting ? 'Submitting…' : 'Submit Review'}
+              {submitting ? '…' : t('submitReview')}
             </button>
           </div>
         </form>
@@ -351,13 +353,13 @@ export default function RequestDetailPage() {
           disabled={cancelling}
           className="w-full py-3 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
         >
-          {cancelling ? 'Cancelling…' : 'Cancel Request'}
+          {cancelling ? t('cancelling') : t('cancelRequest')}
         </button>
       )}
 
       {!isPending && (
         <Link href="/requests" className="block text-center py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-          Back to Requests
+          {t('backToRequests')}
         </Link>
       )}
     </div>
