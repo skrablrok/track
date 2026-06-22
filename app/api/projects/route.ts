@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
     const projects = await db.project.findMany({
       where: { ...(status && { status: status as any }) },
       include: {
+        foreman: { select: { id: true, name: true } },
         _count: { select: { checkouts: { where: { status: 'ACTIVE' } } } },
       },
       orderBy: { name: 'asc' },
@@ -27,11 +28,12 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireRole(['ADMIN', 'MANAGER'])
     const body = await req.json()
-    const { name, location, description } = body
+    const { name, location, description, foremanId } = body
     if (!name) return badRequest('Project name is required')
 
     const project = await db.project.create({
-      data: { name, location, description },
+      data: { name, location, description, ...(foremanId && { foremanId }) },
+      include: { foreman: { select: { id: true, name: true } } },
     })
 
     await logAudit(user.id, 'CREATE_PROJECT', 'Project', project.id, `Created project: ${name}`)

@@ -31,6 +31,7 @@ model User {
   auditLogs      AuditLog[]
   requests       Request[]
   notifications  Notification[]
+  ledProjects    Project[]      @relation("ProjectForeman")
 }
 
 model Tool {
@@ -53,13 +54,15 @@ model Tool {
 }
 
 model Project {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   name        String
   location    String?
   description String?
-  status      String    @default("ACTIVE")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  status      String     @default("ACTIVE")
+  foremanId   String?
+  foreman     User?      @relation("ProjectForeman", fields: [foremanId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   checkouts   Checkout[]
   requests    Request[]
 }

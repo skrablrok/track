@@ -8,6 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const project = await db.project.findUnique({
       where: { id: params.id },
       include: {
+        foreman: { select: { id: true, name: true } },
         checkouts: {
           include: {
             tool: { select: { id: true, name: true, imageUrl: true } },
@@ -36,6 +37,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         ...(body.location !== undefined && { location: body.location }),
         ...(body.description !== undefined && { description: body.description }),
         ...(body.status && { status: body.status }),
+        ...(body.foremanId !== undefined && { foremanId: body.foremanId || null }),
       },
     })
     await logAudit(user.id, 'UPDATE_PROJECT', 'Project', project.id, `Updated project: ${project.name}`)

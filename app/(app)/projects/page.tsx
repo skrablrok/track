@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { FolderOpen, Plus, MapPin, X } from 'lucide-react'
+import { FolderOpen, Plus, MapPin, X, User } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
@@ -12,8 +12,11 @@ type Project = {
   location?: string
   description?: string
   status: 'ACTIVE' | 'COMPLETED' | 'ON_HOLD'
+  foreman?: { id: string; name: string } | null
   _count: { checkouts: number }
 }
+
+type UserOption = { id: string; name: string; role: string }
 
 export default function ProjectsPage() {
   const { data: session } = useSession()
@@ -21,7 +24,8 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', location: '', description: '' })
+  const [form, setForm] = useState({ name: '', location: '', description: '', foremanId: '' })
+  const [users, setUsers] = useState<UserOption[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -35,6 +39,15 @@ export default function ProjectsPage() {
     setLoading(false)
   }
 
+  async function openForm() {
+    setShowForm(true)
+    if (users.length === 0) {
+      const res = await fetch('/api/users')
+      const data = await res.json()
+      setUsers(Array.isArray(data) ? data : [])
+    }
+  }
+
   useEffect(() => { load() }, [])
 
   async function handleCreate(e: React.FormEvent) {
@@ -45,10 +58,15 @@ export default function ProjectsPage() {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.name,
+          location: form.location,
+          description: form.description,
+          foremanId: form.foremanId || undefined,
+        }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
-      setForm({ name: '', location: '', description: '' })
+      setForm({ name: '', location: '', description: '', foremanId: '' })
       setShowForm(false)
       load()
     } catch (e: any) {
@@ -72,7 +90,7 @@ export default function ProjectsPage() {
           <p className="text-sm text-gray-500 mt-0.5">{t('sitesAndAssignments')}</p>
         </div>
         {isAdmin && (
-          <button onClick={() => setShowForm(!showForm)}
+          <button onClick={openForm}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
             <Plus size={16} /> {t('newProject')}
           </button>
@@ -97,6 +115,23 @@ export default function ProjectsPage() {
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               rows={2}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 resize-none" />
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('projectLeader')}</label>
+              <select value={form.foremanId}
+                onChange={(e) => setForm((f) => ({ ...f, foremanId: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
+                <option value="">{t('selectLeader')}</option>
+                {users.filter((u) => u.role === 'FOREMAN').map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+                {users.filter((u) => u.role !== 'FOREMAN').length > 0 && users.filter((u) => u.role === 'FOREMAN').length > 0 && (
+                  <option disabled>──────────</option>
+                )}
+                {users.filter((u) => u.role !== 'FOREMAN').map((u) => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.role.toLowerCase()})</option>
+                ))}
+              </select>
+            </div>
             <div className="flex gap-3">
               <button type="button" onClick={() => setShowForm(false)}
                 className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600">
@@ -140,6 +175,13 @@ export default function ProjectsPage() {
                     <MapPin size={12} />{project.location}
                   </div>
                 )}
+                <div className="flex items-center gap-1.5 text-xs mt-1.5">
+                  <User size={12} className="text-gray-400 flex-shrink-0" />
+                  {project.foreman
+                    ? <span className="font-medium text-gray-700">{project.foreman.name}</span>
+                    : <span className="text-gray-400 italic">{t('noLeader')}</span>
+                  }
+                </div>
                 {project.description && (
                   <p className="text-xs text-gray-400 mt-2 line-clamp-2">{project.description}</p>
                 )}
