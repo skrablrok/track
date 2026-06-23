@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
 import MobileBottomNav from '@/components/layout/MobileBottomNav'
+import HelpButton from '@/components/HelpButton'
 import { LanguageProvider } from '@/lib/i18n/LanguageContext'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </main>
         </div>
         <MobileBottomNav role={session.user.role} />
+        <HelpButton />
       </div>
     </LanguageProvider>
   )
