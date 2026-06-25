@@ -30,6 +30,7 @@ export default function ToolsPage() {
   const [tools, setTools] = useState<Tool[]>([])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
+  const [warehouseFilter, setWarehouseFilter] = useState('')
   const [filter, setFilter] = useState<'all' | 'available' | 'inuse' | 'lowstock'>('all')
   const [loading, setLoading] = useState(true)
   const [checkoutTool, setCheckoutTool] = useState<Tool | null>(null)
@@ -52,6 +53,7 @@ export default function ToolsPage() {
   useEffect(() => { loadTools() }, [search, category])
 
   const categories = Array.from(new Set(tools.map((t) => t.category).filter(Boolean)))
+  const warehouses = Array.from(new Set(tools.map((t) => t.warehouse).filter(Boolean))) as string[]
   const catKeyMap: Record<string, any> = {
     'Power Tools': 'catPowerTools', 'Hand Tools': 'catHandTools',
     'Measuring Tools': 'catMeasuringTools', 'Safety Equipment': 'catSafetyEquipment',
@@ -60,6 +62,7 @@ export default function ToolsPage() {
   const translateCat = (c: string) => catKeyMap[c] ? t(catKeyMap[c]) : c
 
   const filtered = tools.filter((tool) => {
+    if (warehouseFilter && tool.warehouse !== warehouseFilter) return false
     if (filter === 'available') return tool.currentStock > 0
     if (filter === 'inuse') return tool.checkouts.length > 0
     if (filter === 'lowstock') return tool.currentStock <= tool.minStock
@@ -112,6 +115,13 @@ export default function ToolsPage() {
             className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
             <option value="">{t('allCategories')}</option>
             {categories.map((c) => <option key={c} value={c!}>{translateCat(c!)}</option>)}
+          </select>
+        )}
+        {warehouses.length > 0 && (
+          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)}
+            className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">{t('allWarehouses')}</option>
+            {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
           </select>
         )}
       </div>
