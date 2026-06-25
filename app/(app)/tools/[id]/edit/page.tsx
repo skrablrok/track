@@ -30,6 +30,11 @@ export default function EditToolPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [warehouses, setWarehouses] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/tools/warehouses').then((r) => r.json()).then((d) => Array.isArray(d) && setWarehouses(d))
+  }, [])
 
   useEffect(() => {
     fetch(`/api/tools/${id}`)
@@ -143,11 +148,15 @@ export default function EditToolPage() {
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('warehouse')}</label>
             <input
+              list="warehouse-options"
               value={form.warehouse}
               onChange={(e) => update('warehouse', e.target.value)}
               placeholder={t('warehouse') + '…'}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
             />
+            <datalist id="warehouse-options">
+              {warehouses.map((w) => <option key={w} value={w} />)}
+            </datalist>
           </div>
 
           <div className="sm:col-span-2">
