@@ -10,6 +10,7 @@ type ToolRow = {
   minStock?: number
   maxStock?: number
   description?: string
+  warehouse?: string
 }
 
 type ProjectRow = {
@@ -32,15 +33,16 @@ export async function POST(req: NextRequest) {
     const result = await db.$transaction(async (tx) => {
       const toolsSkipped: string[] = []
       let toolsCreated = 0
+
       for (const row of tools) {
         const name = String(row.name || '').trim()
         if (!name) continue
         const existing = await tx.tool.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } })
-        if (existing) {
-          toolsSkipped.push(name)
-          continue
-        }
+        if (existing) { toolsSkipped.push(name); continue }
+
         const quantity = Math.max(0, parseInt(String(row.quantity)) || 0)
+        const warehouse = row.warehouse?.trim() || null
+
         await tx.tool.create({
           data: {
             name,
@@ -51,6 +53,11 @@ export async function POST(req: NextRequest) {
             currentStock: quantity,
             minStock: parseInt(String(row.minStock)) || 2,
             maxStock: parseInt(String(row.maxStock)) || 10,
+            ...(warehouse && quantity > 0 && {
+              warehouseStocks: {
+                create: [{ warehouse, quantity }],
+              },
+            }),
           },
         })
         toolsCreated++
@@ -58,14 +65,12 @@ export async function POST(req: NextRequest) {
 
       const projectsSkipped: string[] = []
       let projectsCreated = 0
+
       for (const row of projects) {
         const name = String(row.name || '').trim()
         if (!name) continue
         const existing = await tx.project.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } })
-        if (existing) {
-          projectsSkipped.push(name)
-          continue
-        }
+        if (existing) { projectsSkipped.push(name); continue }
         await tx.project.create({
           data: { name, location: row.location || null, description: row.description || null },
         })
@@ -77,7 +82,8 @@ export async function POST(req: NextRequest) {
 
     await logAudit(
       user.id, 'BULK_IMPORT', 'Tool', undefined,
-      `${user.name} imported ${result.toolsCreated} tool(s)/material(s) and ${result.projectsCreated} project(s) from Excel (${result.toolsSkipped.length} tool duplicate(s), ${result.projectsSkipped.length} project duplicate(s) skipped)`
+      `Imported ${result.toolsCreated} tool(s)/material(s) and ${result.projectsCreated} project(s) ` +
+      `(${result.toolsSkipped.length} tool duplicate(s), ${result.projectsSkipped.length} project duplicate(s) skipped)`
     )
 
     return NextResponse.json({
