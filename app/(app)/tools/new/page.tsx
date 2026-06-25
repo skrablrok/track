@@ -22,7 +22,7 @@ export default function NewToolPage() {
   const router = useRouter()
   const [form, setForm] = useState({
     name: '', description: '', category: '', imageUrl: '', type: 'TOOL',
-    totalStock: '1', minStock: '2', maxStock: '10',
+    totalStock: '1', minStock: '2', maxStock: '10', warehouse: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -127,6 +127,16 @@ export default function NewToolPage() {
               <option value="">{t('selectCategory')}</option>
               {categories.map((c) => <option key={c} value={c}>{t(categoryKeys[c])}</option>)}
             </select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('warehouse')}</label>
+            <input
+              value={form.warehouse}
+              onChange={(e) => update('warehouse', e.target.value)}
+              placeholder={t('warehouse') + '…'}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+            />
           </div>
 
           <div className="sm:col-span-2">

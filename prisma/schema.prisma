@@ -45,6 +45,7 @@ model Tool {
   currentStock Int           @default(1)
   minStock     Int           @default(2)
   maxStock     Int           @default(10)
+  warehouse    String?
   qrCode       String        @unique @default(cuid())
   active       Boolean       @default(true)
   createdAt    DateTime      @default(now())

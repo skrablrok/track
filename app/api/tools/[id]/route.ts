@@ -29,7 +29,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     const user = await requireRole(['ADMIN', 'MANAGER'])
     const body = await req.json()
-    const { name, description, category, imageUrl, type, totalStock, minStock, maxStock, active } = body
+    const { name, description, category, imageUrl, type, totalStock, minStock, maxStock, active, warehouse } = body
 
     const existing = await db.tool.findUnique({ where: { id: params.id } })
     if (!existing) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
@@ -49,6 +49,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         ...(minStock !== undefined && { minStock: parseInt(minStock) }),
         ...(maxStock !== undefined && { maxStock: parseInt(maxStock) }),
         ...(active !== undefined && { active }),
+        ...(warehouse !== undefined && { warehouse: warehouse || null }),
       },
     })
 

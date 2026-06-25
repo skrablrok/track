@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Search, Plus, Wrench, AlertTriangle } from 'lucide-react'
+import { Search, Plus, Wrench, AlertTriangle, Warehouse } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import CheckoutModal from '@/components/checkouts/CheckoutModal'
 import { useRouter } from 'next/navigation'
@@ -19,6 +19,7 @@ type Tool = {
   currentStock: number
   minStock: number
   maxStock: number
+  warehouse?: string
   qrCode: string
   checkouts: Array<{ id: string; user: { name: string }; project?: { name: string; location?: string } }>
 }
@@ -158,7 +159,7 @@ export default function ToolsPage() {
                 <Link href={`/tools/${tool.id}`} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors text-sm leading-tight block mb-1">
                   {tool.name}
                 </Link>
-                <div className="flex items-center gap-1.5 mb-2">
+                <div className="flex items-center gap-1.5 mb-1">
                   {tool.category && <p className="text-xs text-gray-400">{translateCat(tool.category)}</p>}
                   {tool.type === 'MATERIAL' && (
                     <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
@@ -166,6 +167,12 @@ export default function ToolsPage() {
                     </span>
                   )}
                 </div>
+                {tool.warehouse && (
+                  <div className="flex items-center gap-1 mb-2">
+                    <Warehouse size={11} className="text-gray-400 flex-shrink-0" />
+                    <span className="text-xs text-gray-500 truncate">{tool.warehouse}</span>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between mt-2">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${stockColor(tool)}`}>
