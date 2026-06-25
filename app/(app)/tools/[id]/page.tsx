@@ -8,7 +8,7 @@ import { formatMinutes } from '@/lib/utils'
 import { t as tr, DEFAULT_LANG, type Lang } from '@/lib/i18n/translations'
 import {
   ArrowLeft, Wrench, MapPin, User, Clock, Calendar,
-  Package, QrCode, AlertTriangle,
+  Package, QrCode, AlertTriangle, Warehouse,
 } from 'lucide-react'
 import type { TranslationKey } from '@/lib/i18n/translations'
 
@@ -38,6 +38,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
         },
         orderBy: { checkoutDate: 'desc' },
       },
+      warehouseStocks: { orderBy: { warehouse: 'asc' } },
     },
   })
 
@@ -121,6 +122,22 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
               </div>
             )}
           </div>
+
+          {tool.warehouseStocks.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <Warehouse size={16} /> {tr(lang, 'warehouse')}
+              </h3>
+              <div className="space-y-2">
+                {tool.warehouseStocks.map((ws) => (
+                  <div key={ws.warehouse} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                    <span className="text-sm text-gray-700">{ws.warehouse}</span>
+                    <span className="text-sm font-semibold text-gray-900">{ws.quantity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {activeCheckouts.length > 0 && (
             <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">

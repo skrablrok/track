@@ -44,14 +44,24 @@ model Tool {
   totalStock   Int           @default(1)
   currentStock Int           @default(1)
   minStock     Int           @default(2)
-  maxStock     Int           @default(10)
-  warehouse    String?
-  qrCode       String        @unique @default(cuid())
-  active       Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  checkouts    Checkout[]
-  requestItems RequestItem[]
+  maxStock        Int                  @default(10)
+  qrCode          String               @unique @default(cuid())
+  active          Boolean              @default(true)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  checkouts       Checkout[]
+  requestItems    RequestItem[]
+  warehouseStocks ToolWarehouseStock[]
+}
+
+model ToolWarehouseStock {
+  id        String @id @default(cuid())
+  toolId    String
+  tool      Tool   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  warehouse String
+  quantity  Int    @default(0)
+
+  @@unique([toolId, warehouse])
 }
 
 model Project {

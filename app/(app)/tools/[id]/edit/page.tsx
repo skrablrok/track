@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, Trash2, Plus, X } from 'lucide-react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import PhotoInput from '@/components/tools/PhotoInput'
@@ -18,6 +18,8 @@ const categoryKeys: Record<string, any> = {
   'Other': 'catOther',
 }
 
+type WarehouseRow = { warehouse: string; quantity: string }
+
 export default function EditToolPage() {
   const { t } = useLanguage()
   const router = useRouter()
@@ -25,15 +27,16 @@ export default function EditToolPage() {
   const { data: session } = useSession()
   const [form, setForm] = useState({
     name: '', description: '', category: '', imageUrl: '', type: 'TOOL',
-    totalStock: '1', minStock: '2', maxStock: '10', warehouse: '',
+    totalStock: '1', minStock: '2', maxStock: '10',
   })
+  const [warehouseStocks, setWarehouseStocks] = useState<WarehouseRow[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [warehouses, setWarehouses] = useState<string[]>([])
+  const [knownWarehouses, setKnownWarehouses] = useState<string[]>([])
 
   useEffect(() => {
-    fetch('/api/tools/warehouses').then((r) => r.json()).then((d) => Array.isArray(d) && setWarehouses(d))
+    fetch('/api/tools/warehouses').then((r) => r.json()).then((d) => Array.isArray(d) && setKnownWarehouses(d))
   }, [])
 
   useEffect(() => {
@@ -49,8 +52,13 @@ export default function EditToolPage() {
           totalStock: String(tool.totalStock),
           minStock: String(tool.minStock),
           maxStock: String(tool.maxStock),
-          warehouse: tool.warehouse || '',
         })
+        if (Array.isArray(tool.warehouseStocks)) {
+          setWarehouseStocks(tool.warehouseStocks.map((ws: any) => ({
+            warehouse: ws.warehouse,
+            quantity: String(ws.quantity),
+          })))
+        }
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -60,6 +68,24 @@ export default function EditToolPage() {
     setForm((f) => ({ ...f, [k]: v }))
   }
 
+  function addWarehouseRow() {
+    setWarehouseStocks((rows) => [...rows, { warehouse: '', quantity: '1' }])
+  }
+
+  function removeWarehouseRow(i: number) {
+    setWarehouseStocks((rows) => rows.filter((_, j) => j !== i))
+  }
+
+  function updateWarehouseRow(i: number, key: keyof WarehouseRow, val: string) {
+    setWarehouseStocks((rows) => {
+      const next = [...rows]
+      next[i] = { ...next[i], [key]: val }
+      return next
+    })
+  }
+
+  const computedTotal = warehouseStocks.reduce((s, w) => s + (parseInt(w.quantity) || 0), 0)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -68,7 +94,7 @@ export default function EditToolPage() {
       const res = await fetch(`/api/tools/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, warehouseStocks }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       router.push(`/tools/${id}`)
@@ -147,15 +173,42 @@ export default function EditToolPage() {
 
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('warehouse')}</label>
-            <input
-              list="warehouse-options"
-              value={form.warehouse}
-              onChange={(e) => update('warehouse', e.target.value)}
-              placeholder={t('warehouse') + '…'}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-            />
+            <div className="space-y-2">
+              {warehouseStocks.map((row, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    list="warehouse-options"
+                    value={row.warehouse}
+                    onChange={(e) => updateWarehouseRow(i, 'warehouse', e.target.value)}
+                    placeholder={t('warehouse') + '…'}
+                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    value={row.quantity}
+                    onChange={(e) => updateWarehouseRow(i, 'quantity', e.target.value)}
+                    className="w-24 px-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-center"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeWarehouseRow(i)}
+                    className="p-3 border border-gray-200 rounded-xl text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addWarehouseRow}
+                className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium py-1"
+              >
+                <Plus size={14} /> {t('addWarehouse')}
+              </button>
+            </div>
             <datalist id="warehouse-options">
-              {warehouses.map((w) => <option key={w} value={w} />)}
+              {knownWarehouses.map((w) => <option key={w} value={w} />)}
             </datalist>
           </div>
 
@@ -166,9 +219,19 @@ export default function EditToolPage() {
 
         <div className="border-t border-gray-100 pt-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">{t('stockSettings')}</h3>
-          <div className={`grid gap-4 ${form.type === 'MATERIAL' ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {warehouseStocks.length > 0 ? (
+            <p className="text-xs text-gray-500 bg-blue-50 rounded-xl p-3 mb-4">
+              {t('totalStockLabel')}: <span className="font-semibold text-blue-700">{computedTotal}</span>
+              {' '}({t('warehouse').toLowerCase()} {t('stockLevel').toLowerCase()})
+            </p>
+          ) : null}
+          <div className={`grid gap-4 ${
+            warehouseStocks.length > 0
+              ? (form.type === 'MATERIAL' ? 'grid-cols-1' : 'grid-cols-2')
+              : (form.type === 'MATERIAL' ? 'grid-cols-2' : 'grid-cols-3')
+          }`}>
             {[
-              { key: 'totalStock', label: t('totalStockLabel'), min: 1 },
+              ...(warehouseStocks.length === 0 ? [{ key: 'totalStock', label: t('totalStockLabel'), min: 1 }] : []),
               { key: 'minStock', label: t('minLevelLabel'), min: 1 },
               ...(form.type === 'MATERIAL' ? [] : [{ key: 'maxStock', label: t('maxLevelLabel'), min: 1 }]),
             ].map(({ key, label, min }) => (

@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
             project: { select: { id: true, name: true, location: true } },
           },
         },
+        warehouseStocks: { orderBy: { warehouse: 'asc' } },
       },
       orderBy: { name: 'asc' },
     })
@@ -40,11 +41,17 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireRole(['ADMIN', 'MANAGER'])
     const body = await req.json()
-    const { name, description, category, imageUrl, type, totalStock, minStock, maxStock, warehouse } = body
+    const { name, description, category, imageUrl, type, totalStock, minStock, maxStock, warehouseStocks } = body
 
     if (!name) return badRequest('Tool name is required')
 
-    const stock = parseInt(totalStock) || 1
+    const stocks = Array.isArray(warehouseStocks)
+      ? warehouseStocks.filter((w: any) => w.warehouse?.trim() && parseInt(w.quantity) > 0)
+      : []
+    const computedTotal = stocks.length > 0
+      ? stocks.reduce((sum: number, w: any) => sum + parseInt(w.quantity), 0)
+      : parseInt(totalStock) || 1
+
     const tool = await db.tool.create({
       data: {
         name,
@@ -52,12 +59,20 @@ export async function POST(req: NextRequest) {
         category,
         imageUrl,
         type: type === 'MATERIAL' ? 'MATERIAL' : 'TOOL',
-        totalStock: stock,
-        currentStock: stock,
+        totalStock: computedTotal,
+        currentStock: computedTotal,
         minStock: parseInt(minStock) || 2,
         maxStock: parseInt(maxStock) || 10,
-        ...(warehouse && { warehouse }),
+        ...(stocks.length > 0 && {
+          warehouseStocks: {
+            create: stocks.map((w: any) => ({
+              warehouse: w.warehouse.trim(),
+              quantity: parseInt(w.quantity),
+            })),
+          },
+        }),
       },
+      include: { warehouseStocks: true },
     })
 
     await logAudit(user.id, 'CREATE_TOOL', 'Tool', tool.id, `Created tool: ${name}`)

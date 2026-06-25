@@ -8,6 +8,8 @@ import CheckoutModal from '@/components/checkouts/CheckoutModal'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
+type WarehouseStock = { warehouse: string; quantity: number }
+
 type Tool = {
   id: string
   name: string
@@ -19,7 +21,7 @@ type Tool = {
   currentStock: number
   minStock: number
   maxStock: number
-  warehouse?: string
+  warehouseStocks: WarehouseStock[]
   qrCode: string
   checkouts: Array<{ id: string; user: { name: string }; project?: { name: string; location?: string } }>
 }
@@ -53,7 +55,7 @@ export default function ToolsPage() {
   useEffect(() => { loadTools() }, [search, category])
 
   const categories = Array.from(new Set(tools.map((t) => t.category).filter(Boolean)))
-  const warehouses = Array.from(new Set(tools.map((t) => t.warehouse).filter(Boolean))) as string[]
+  const warehouses = Array.from(new Set(tools.flatMap((t) => t.warehouseStocks.map((ws) => ws.warehouse))))
   const catKeyMap: Record<string, any> = {
     'Power Tools': 'catPowerTools', 'Hand Tools': 'catHandTools',
     'Measuring Tools': 'catMeasuringTools', 'Safety Equipment': 'catSafetyEquipment',
@@ -62,7 +64,7 @@ export default function ToolsPage() {
   const translateCat = (c: string) => catKeyMap[c] ? t(catKeyMap[c]) : c
 
   const filtered = tools.filter((tool) => {
-    if (warehouseFilter && tool.warehouse !== warehouseFilter) return false
+    if (warehouseFilter && !tool.warehouseStocks.some((ws) => ws.warehouse === warehouseFilter)) return false
     if (filter === 'available') return tool.currentStock > 0
     if (filter === 'inuse') return tool.checkouts.length > 0
     if (filter === 'lowstock') return tool.currentStock <= tool.minStock
@@ -177,10 +179,14 @@ export default function ToolsPage() {
                     </span>
                   )}
                 </div>
-                {tool.warehouse && (
-                  <div className="flex items-center gap-1 mb-2">
-                    <Warehouse size={11} className="text-gray-400 flex-shrink-0" />
-                    <span className="text-xs text-gray-500 truncate">{tool.warehouse}</span>
+                {tool.warehouseStocks.length > 0 && (
+                  <div className="flex flex-col gap-0.5 mb-2">
+                    {tool.warehouseStocks.map((ws) => (
+                      <div key={ws.warehouse} className="flex items-center gap-1">
+                        <Warehouse size={11} className="text-gray-400 flex-shrink-0" />
+                        <span className="text-xs text-gray-500 truncate">{ws.warehouse}: <span className="font-medium">{ws.quantity}</span></span>
+                      </div>
+                    ))}
                   </div>
                 )}
 
