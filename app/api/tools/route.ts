@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         type: type === 'MATERIAL' ? 'MATERIAL' : 'TOOL',
         totalStock: computedTotal,
         currentStock: computedTotal,
-        minStock: parseInt(minStock) || 2,
+        minStock: parseInt(minStock) || (type === 'MATERIAL' ? 5 : 2),
         maxStock: parseInt(maxStock) || 10,
         ...(stocks.length > 0 && {
           warehouseStocks: {

@@ -230,7 +230,7 @@ export function parseRows(
         type: parseType(get(row, 'type')),
         category: get(row, 'category') || undefined,
         quantity: isNaN(qty) ? 1 : Math.max(0, qty),
-        minStock: parseInt(get(row, 'minStock')) || 2,
+        minStock: parseInt(get(row, 'minStock')) || (type === 'MATERIAL' ? 5 : 2),
         maxStock: parseInt(get(row, 'maxStock')) || 10,
         description: get(row, 'description') || undefined,
         warehouse: get(row, 'warehouse') || undefined,

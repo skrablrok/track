@@ -130,7 +130,7 @@ export default function EditToolPage() {
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => update('type', 'TOOL')}
+              onClick={() => setForm((f) => ({ ...f, type: 'TOOL', minStock: f.minStock === '5' ? '2' : f.minStock }))}
               className={`py-3 rounded-xl text-sm font-medium border transition-colors ${
                 form.type === 'TOOL' ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
@@ -139,7 +139,7 @@ export default function EditToolPage() {
             </button>
             <button
               type="button"
-              onClick={() => update('type', 'MATERIAL')}
+              onClick={() => setForm((f) => ({ ...f, type: 'MATERIAL', minStock: f.minStock === '2' ? '5' : f.minStock }))}
               className={`py-3 rounded-xl text-sm font-medium border transition-colors ${
                 form.type === 'MATERIAL' ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
