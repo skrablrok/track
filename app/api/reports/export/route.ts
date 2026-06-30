@@ -1,9 +1,9 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireRole, unauthorized, serverError } from '@/lib/utils'
 import ExcelJS from 'exceljs'
 
-// â”€â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Palette
 const C = {
   navyBg:   '1E3A5F',
   navyText: 'FFFFFF',
@@ -83,26 +83,26 @@ function dataRow(ws: ExcelJS.Worksheet, values: (string | number | null)[], rowN
 
 function statusFill(status: string): string {
   if (status === 'RETURNED' || status === 'APPROVED' || status === 'OK') return C.greenBg
-  if (status === 'ACTIVE' || status === 'PENDING' || status === 'Low') return C.amberBg
-  if (status === 'Out of Stock' || status === 'REJECTED') return C.redBg
+  if (status === 'ACTIVE' || status === 'PENDING' || status === 'Nizka zaloga') return C.amberBg
+  if (status === 'Ni na zalogi' || status === 'REJECTED') return C.redBg
   return C.grayBg
 }
 
 function formatDT(d: Date | null | undefined): string {
   if (!d) return ''
-  return new Date(d).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return new Date(d).toLocaleString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 function formatD(d: Date | null | undefined): string {
   if (!d) return ''
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date(d).toLocaleDateString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 function hrs(mins: number | null | undefined): string {
-  if (!mins) return 'â€”'
+  if (!mins) return '-'
   const h = Math.floor(mins / 60), m = mins % 60
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-// â”€â”€â”€ Route â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Route
 export async function GET(req: NextRequest) {
   try {
     await requireRole(['ADMIN', 'MANAGER'])
@@ -112,10 +112,10 @@ export async function GET(req: NextRequest) {
     const [year, mon] = month.split('-').map(Number)
     const from = new Date(year, mon - 1, 1)
     const to   = new Date(year, mon, 0, 23, 59, 59)
-    const monthLabel = from.toLocaleString('en', { month: 'long', year: 'numeric' })
-    const generated  = new Date().toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })
+    const monthLabel = from.toLocaleString('sl-SI', { month: 'long', year: 'numeric' })
+    const generated  = new Date().toLocaleString('sl-SI', { dateStyle: 'full', timeStyle: 'short' })
 
-    // â”€â”€ Fetch all data â”€â”€
+    // Fetch all data
     const [checkouts, requests, tools, auditLogs] = await Promise.all([
       db.checkout.findMany({
         where: { checkoutDate: { gte: from, lte: to } },
@@ -144,11 +144,10 @@ export async function GET(req: NextRequest) {
       }),
     ])
 
-    const returned = checkouts.filter(c => c.status === 'RETURNED')
+    const returned   = checkouts.filter(c => c.status === 'RETURNED')
     const activeOuts = checkouts.filter(c => c.status === 'ACTIVE')
 
-    // â”€â”€ Aggregate stats â”€â”€
-    // per user
+    // Aggregate stats - per user
     const userMap: Record<string, { name: string; email: string; role: string; checkouts: number; returned: number; active: number; totalMins: number; tools: Set<string> }> = {}
     for (const c of checkouts) {
       const k = c.userId
@@ -206,7 +205,7 @@ export async function GET(req: NextRequest) {
       else if (r.status === 'REJECTED') reqUserMap[k].rejected++
       else reqUserMap[k].pending++
       for (const item of r.items) {
-        const tname = item.tool?.name || item.itemName || 'Custom item'
+        const tname = item.tool?.name || item.itemName || 'Postavka po meri'
         const existing = reqUserMap[k].tools.get(tname)
         if (existing) {
           existing.requested += item.requestedQty
@@ -217,40 +216,38 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // â”€â”€ Build workbook â”€â”€
+    // Build workbook
     const wb = new ExcelJS.Workbook()
     wb.creator  = 'BuildFlow'
     wb.lastModifiedBy = 'BuildFlow'
     wb.created  = new Date()
     wb.modified = new Date()
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SHEET 1 â€” Summary
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    const ws1 = wb.addWorksheet('đź“Š Summary', { views: [{ state: 'frozen', ySplit: 1 }] })
+    // SHEET 1 - Povzetek
+    const ws1 = wb.addWorksheet('Povzetek', { views: [{ state: 'frozen', ySplit: 1 }] })
     ws1.columns = [{ width: 34 }, { width: 22 }, { width: 22 }, { width: 22 }, { width: 22 }]
 
-    titleRow(ws1, `BuildFlow â€” Monthly Report  |  ${monthLabel}`, 5, 1)
+    titleRow(ws1, `BuildFlow – Mesecno porocilo  |  ${monthLabel}`, 5, 1)
     ws1.getRow(2).height = 16
-    ws1.getCell('A2').value = `Generated: ${generated}`
+    ws1.getCell('A2').value = `Generirano: ${generated}`
     ws1.getCell('A2').font = { italic: true, size: 9, color: { argb: 'FF' + C.grayFg } }
 
     ws1.getRow(3).height = 12
 
-    subheader(ws1, 'â–¸  KEY METRICS', 5, 4)
-    headerRow(ws1, ['Metric', 'Value', '', '', ''], 5)
+    subheader(ws1, 'KLJUCNE METRIKE', 5, 4)
+    headerRow(ws1, ['Metrika', 'Vrednost', '', '', ''], 5)
     const metrics: [string, string | number][] = [
-      ['Total Checkouts This Month', checkouts.length],
-      ['  â€” Returned', returned.length],
-      ['  â€” Still Out (Active)', activeOuts.length],
-      ['Tool Reservations (Requests)', requests.length],
-      ['Unique Tools Used', new Set(checkouts.map(c => c.toolId)).size],
-      ['Unique Users Active', new Set(checkouts.map(c => c.userId)).size],
-      ['Projects Involved', new Set(checkouts.filter(c => c.projectId).map(c => c.projectId)).size],
-      ['Avg Checkout Duration', returned.length ? hrs(Math.round(returned.reduce((s, c) => s + (c.durationMins || 0), 0) / returned.length)) : 'â€”'],
-      ['Total Tool-Hours Used', hrs(returned.reduce((s, c) => s + (c.durationMins || 0), 0))],
-      ['Tools Out of Stock Now', tools.filter(t => t.currentStock === 0).length],
-      ['Tools at Low Stock Now', tools.filter(t => t.currentStock > 0 && t.currentStock <= t.minStock).length],
+      ['Skupaj izposoj ta mesec', checkouts.length],
+      ['  – Vrnjeno', returned.length],
+      ['  – Se zunaj (aktivno)', activeOuts.length],
+      ['Rezervacije orodij', requests.length],
+      ['Razlicnih orodij uporabljenih', new Set(checkouts.map(c => c.toolId)).size],
+      ['Aktivnih zaposlenih', new Set(checkouts.map(c => c.userId)).size],
+      ['Vkljucenih projektov', new Set(checkouts.filter(c => c.projectId).map(c => c.projectId)).size],
+      ['Povprecno trajanje izposoje', returned.length ? hrs(Math.round(returned.reduce((s, c) => s + (c.durationMins || 0), 0) / returned.length)) : '-'],
+      ['Skupaj ur uporabe orodij', hrs(returned.reduce((s, c) => s + (c.durationMins || 0), 0))],
+      ['Orodij brez zaloge (zdaj)', tools.filter(t => t.currentStock === 0).length],
+      ['Orodij z nizko zalogo (zdaj)', tools.filter(t => t.currentStock > 0 && t.currentStock <= t.minStock).length],
     ]
     metrics.forEach(([label, val], i) => {
       const r = 6 + i
@@ -261,8 +258,8 @@ export async function GET(req: NextRequest) {
 
     ws1.getRow(6 + metrics.length).height = 12
 
-    subheader(ws1, 'â–¸  TOP 5 MOST USED TOOLS', 5, 6 + metrics.length + 1)
-    headerRow(ws1, ['Tool', 'Category', 'Checkouts', 'Total Hours Used', 'Reservations'], 6 + metrics.length + 2)
+    subheader(ws1, 'TOP 5 NAJPOGOSTEJSIH ORODIJ', 5, 6 + metrics.length + 1)
+    headerRow(ws1, ['Orodje', 'Kategorija', 'Izposoje', 'Skupaj ur', 'Rezervacije'], 6 + metrics.length + 2)
     Object.values(toolMap)
       .sort((a, b) => b.checkouts - a.checkouts)
       .slice(0, 5)
@@ -272,8 +269,8 @@ export async function GET(req: NextRequest) {
       })
 
     const topUserStart = 6 + metrics.length + 9
-    subheader(ws1, 'â–¸  TOP 5 MOST ACTIVE USERS', 5, topUserStart)
-    headerRow(ws1, ['Name', 'Email', 'Checkouts', 'Items Returned', 'Hrs Used'], topUserStart + 1)
+    subheader(ws1, 'TOP 5 NAJAKTIVNEJSIH ZAPOSLENIH', 5, topUserStart)
+    headerRow(ws1, ['Ime', 'E-posta', 'Izposoje', 'Vrnjeno', 'Ure'], topUserStart + 1)
     Object.values(userMap)
       .sort((a, b) => b.checkouts - a.checkouts)
       .slice(0, 5)
@@ -282,35 +279,31 @@ export async function GET(req: NextRequest) {
         ;[3, 4, 5].forEach(col => { ws1.getRow(topUserStart + 2 + i).getCell(col).alignment = centre })
       })
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SHEET 2 â€” Checkouts
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    const ws2 = wb.addWorksheet('đź“¦ Checkouts', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // SHEET 2 - Izposoje
+    const ws2 = wb.addWorksheet('Izposoje', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws2.columns = [
       { width: 28 }, { width: 16 }, { width: 22 }, { width: 24 }, { width: 18 },
       { width: 18 }, { width: 14 }, { width: 10 }, { width: 16 },
     ]
-    titleRow(ws2, `Checkouts â€” ${monthLabel}  (${checkouts.length} total)`, 9, 1)
-    headerRow(ws2, ['Tool', 'Category', 'Employee', 'Email', 'Project', 'Checked Out', 'Returned', 'Duration', 'Status'], 2)
+    titleRow(ws2, `Izposoje – ${monthLabel}  (skupaj: ${checkouts.length})`, 9, 1)
+    headerRow(ws2, ['Orodje', 'Kategorija', 'Zaposleni', 'E-posta', 'Projekt', 'Datum izposoje', 'Vrnjeno', 'Trajanje', 'Status'], 2)
     checkouts.forEach((c, i) => {
       const st = c.status
       const sfill = st === 'RETURNED' ? C.greenBg : C.amberBg
       const sfont: Partial<ExcelJS.Font> = { bold: true, color: { argb: 'FF' + (st === 'RETURNED' ? C.greenFg : C.amberFg) } }
       dataRow(ws2, [
         c.tool.name, c.tool.category || '', c.user.name, c.user.email,
-        c.project?.name || 'â€”', formatDT(c.checkoutDate), c.returnDate ? formatDT(c.returnDate) : 'â€”',
+        c.project?.name || '-', formatDT(c.checkoutDate), c.returnDate ? formatDT(c.returnDate) : '-',
         hrs(c.durationMins), st,
       ], i + 3, i % 2 === 0, { 8: { fill: sfill, font: sfont } })
       ws2.getRow(i + 3).getCell(9).alignment = centre
     })
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SHEET 3 â€” User Activity
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    const ws3 = wb.addWorksheet('đź‘· User Activity', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // SHEET 3 - Aktivnost
+    const ws3 = wb.addWorksheet('Aktivnost', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws3.columns = [{ width: 24 }, { width: 28 }, { width: 14 }, { width: 13 }, { width: 13 }, { width: 12 }, { width: 14 }, { width: 50 }]
-    titleRow(ws3, `User Activity â€” ${monthLabel}`, 8, 1)
-    headerRow(ws3, ['Name', 'Email', 'Role', 'Checkouts', 'Returned', 'Still Out', 'Total Hrs', 'Tools Used'], 2)
+    titleRow(ws3, `Aktivnost zaposlenih – ${monthLabel}`, 8, 1)
+    headerRow(ws3, ['Ime', 'E-posta', 'Vloga', 'Izposoje', 'Vrnjeno', 'Se zunaj', 'Ure', 'Uporabljena orodja'], 2)
     Object.values(userMap)
       .sort((a, b) => b.checkouts - a.checkouts)
       .forEach((u, i) => {
@@ -321,35 +314,31 @@ export async function GET(req: NextRequest) {
         ;[4, 5, 6, 7].forEach(col => { ws3.getRow(i + 3).getCell(col).alignment = centre })
       })
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SHEET 4 â€” Tool Usage
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    const ws4 = wb.addWorksheet('đź”§ Tool Usage', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // SHEET 4 - Orodja
+    const ws4 = wb.addWorksheet('Orodja', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws4.columns = [{ width: 28 }, { width: 18 }, { width: 14 }, { width: 16 }, { width: 14 }, { width: 12 }, { width: 10 }, { width: 14 }]
-    titleRow(ws4, `Tool Usage â€” ${monthLabel}`, 8, 1)
-    headerRow(ws4, ['Tool', 'Category', 'Checkouts', 'Total Hrs Used', 'Reservations', 'In Stock Now', 'Total Stock', 'Status'], 2)
+    titleRow(ws4, `Uporaba orodij – ${monthLabel}`, 8, 1)
+    headerRow(ws4, ['Orodje', 'Kategorija', 'Izposoje', 'Skupaj ur', 'Rezervacije', 'Na zalogi', 'Skupaj', 'Status'], 2)
     const toolStock: Record<string, { currentStock: number; totalStock: number; minStock: number }> = {}
     tools.forEach(t => { toolStock[t.name] = { currentStock: t.currentStock, totalStock: t.totalStock, minStock: t.minStock } })
     Object.values(toolMap)
       .sort((a, b) => b.checkouts - a.checkouts)
       .forEach((t, i) => {
         const stock = toolStock[t.name]
-        const st = !stock ? '' : stock.currentStock === 0 ? 'Out of Stock' : stock.currentStock <= stock.minStock ? 'Low Stock' : 'OK'
+        const st = !stock ? '' : stock.currentStock === 0 ? 'Ni na zalogi' : stock.currentStock <= stock.minStock ? 'Nizka zaloga' : 'OK'
         const sfill = statusFill(st)
         dataRow(ws4, [
           t.name, t.category, t.checkouts, hrs(t.totalMins), t.requests,
-          stock?.currentStock ?? 'â€”', stock?.totalStock ?? 'â€”', st,
+          stock?.currentStock ?? '-', stock?.totalStock ?? '-', st,
         ], i + 3, i % 2 === 0, { 7: { fill: sfill } })
         ;[3, 4, 5, 6, 7].forEach(col => { ws4.getRow(i + 3).getCell(col).alignment = centre })
       })
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SHEET 5 â€” Projects
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    const ws5 = wb.addWorksheet('đźŹ—ď¸Ź Projects', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // SHEET 5 - Projekti
+    const ws5 = wb.addWorksheet('Projekti', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws5.columns = [{ width: 28 }, { width: 22 }, { width: 14 }, { width: 16 }, { width: 28 }, { width: 14 }, { width: 14 }]
-    titleRow(ws5, `Projects & Materials Used â€” ${monthLabel}`, 7, 1)
-    headerRow(ws5, ['Project', 'Location', 'Checkouts', 'Total Hrs', 'Tool / Material', 'Times Used', 'Hours'], 2)
+    titleRow(ws5, `Projekti in uporabljena orodja – ${monthLabel}`, 7, 1)
+    headerRow(ws5, ['Projekt', 'Lokacija', 'Izposoje', 'Skupaj ur', 'Orodje / Material', 'Krat', 'Ure'], 2)
     let projRow = 3
     Object.values(projMap)
       .sort((a, b) => b.checkouts - a.checkouts)
@@ -358,22 +347,19 @@ export async function GET(req: NextRequest) {
         const rowCount = Math.max(toolList.length, 1)
         const alt = pi % 2 === 0
 
-        // First row â€” project info + first tool
         const first = toolList[0]
         dataRow(ws5, [
           p.name, p.location, p.checkouts, hrs(p.totalMins),
-          first?.name ?? 'â€”', first?.qty ?? '', first ? first.hrs.toFixed(1) + 'h' : '',
+          first?.name ?? '-', first?.qty ?? '', first ? first.hrs.toFixed(1) + 'h' : '',
         ], projRow, alt)
         ws5.getRow(projRow).getCell(1).font = { bold: true, size: 10, name: 'Calibri' }
         ;[3, 4, 6, 7].forEach(col => { ws5.getRow(projRow).getCell(col).alignment = centre })
 
-        // Remaining tools
         toolList.slice(1).forEach((t, ti) => {
           dataRow(ws5, ['', '', '', '', t.name, t.qty, t.hrs.toFixed(1) + 'h'], projRow + 1 + ti, alt)
           ;[6, 7].forEach(col => { ws5.getRow(projRow + 1 + ti).getCell(col).alignment = centre })
         })
 
-        // Merge project columns across rows if multiple tools
         if (rowCount > 1) {
           [1, 2, 3, 4].forEach(col => {
             ws5.mergeCells(projRow, col, projRow + rowCount - 1, col)
@@ -384,13 +370,11 @@ export async function GET(req: NextRequest) {
         projRow += rowCount
       })
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SHEET 6 â€” Reservations / Requests
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    const ws6 = wb.addWorksheet('đź“‹ Reservations', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // SHEET 6 - Rezervacije
+    const ws6 = wb.addWorksheet('Rezervacije', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws6.columns = [{ width: 22 }, { width: 26 }, { width: 24 }, { width: 18 }, { width: 28 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 32 }]
-    titleRow(ws6, `Tool Reservations / Requests â€” ${monthLabel}  (${requests.length} total)`, 9, 1)
-    headerRow(ws6, ['Requested By', 'Email', 'Project', 'Date', 'Tool / Material', 'Qty Requested', 'Qty Approved', 'Status', 'Notes'], 2)
+    titleRow(ws6, `Rezervacije – ${monthLabel}  (skupaj: ${requests.length})`, 9, 1)
+    headerRow(ws6, ['Zahteval', 'E-posta', 'Projekt', 'Datum', 'Orodje / Material', 'Zahtevano', 'Odobreno', 'Status', 'Opombe'], 2)
     let reqRow = 3
     requests.forEach((r, ri) => {
       const alt = ri % 2 === 0
@@ -399,11 +383,11 @@ export async function GET(req: NextRequest) {
         dataRow(ws6, [
           ii === 0 ? r.requester.name : '',
           ii === 0 ? r.requester.email : '',
-          ii === 0 ? (r.project?.name ?? 'â€”') : '',
+          ii === 0 ? (r.project?.name ?? '-') : '',
           ii === 0 ? formatD(r.createdAt) : '',
-          item.tool?.name || (item.itemName ? `${item.itemName} (not in inventory)` : 'â€”'),
+          item.tool?.name || (item.itemName ? `${item.itemName} (ni v inventarju)` : '-'),
           item.requestedQty,
-          item.approvedQty ?? 'â€”',
+          item.approvedQty ?? '-',
           ii === 0 ? r.status : '',
           ii === 0 ? (r.notes ?? '') : (item.notes ?? ''),
         ], reqRow, alt, { 7: { fill: ii === 0 ? sfill : (alt ? C.altRow : C.white) } })
@@ -411,18 +395,16 @@ export async function GET(req: NextRequest) {
         reqRow++
       })
       if (r.items.length === 0) {
-        dataRow(ws6, [r.requester.name, r.requester.email, r.project?.name ?? 'â€”', formatD(r.createdAt), '(no items)', '', '', r.status, r.notes ?? ''], reqRow, alt, { 7: { fill: statusFill(r.status) } })
+        dataRow(ws6, [r.requester.name, r.requester.email, r.project?.name ?? '-', formatD(r.createdAt), '(ni postavk)', '', '', r.status, r.notes ?? ''], reqRow, alt, { 7: { fill: statusFill(r.status) } })
         reqRow++
       }
     })
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SHEET 7 â€” Reservation Summary by Person
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    const ws7 = wb.addWorksheet('đź‘¤ Who Reserved What', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // SHEET 7 - Rezervacije po osebi
+    const ws7 = wb.addWorksheet('Rezervacije po osebi', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws7.columns = [{ width: 24 }, { width: 28 }, { width: 13 }, { width: 13 }, { width: 13 }, { width: 30 }, { width: 14 }, { width: 14 }]
-    titleRow(ws7, `Reservation Summary by Person â€” ${monthLabel}`, 8, 1)
-    headerRow(ws7, ['Name', 'Email', 'Requests', 'Approved', 'Rejected / Pending', 'Tool / Material', 'Qty Requested', 'Qty Approved'], 2)
+    titleRow(ws7, `Rezervacije po osebi – ${monthLabel}`, 8, 1)
+    headerRow(ws7, ['Ime', 'E-posta', 'Zahtevki', 'Odobreno', 'Zavrnjeno / V obdelavi', 'Orodje / Material', 'Zahtevano', 'Odobreno'], 2)
 
     let ws7Row = 3
     Object.values(reqUserMap)
@@ -432,7 +414,7 @@ export async function GET(req: NextRequest) {
         const rowCount = Math.max(toolList.length, 1)
         const alt = pi % 2 === 0
 
-        const rejPend = [u.rejected > 0 ? `${u.rejected} rejected` : '', u.pending > 0 ? `${u.pending} pending` : ''].filter(Boolean).join(', ') || 'â€”'
+        const rejPend = [u.rejected > 0 ? `${u.rejected} zavrnjenih` : '', u.pending > 0 ? `${u.pending} v obdelavi` : ''].filter(Boolean).join(', ') || '-'
 
         toolList.forEach((t, ti) => {
           dataRow(ws7, [
@@ -443,22 +425,20 @@ export async function GET(req: NextRequest) {
             ti === 0 ? rejPend : '',
             t.name,
             t.requested,
-            t.approved || 'â€”',
+            t.approved || '-',
           ], ws7Row + ti, alt)
           ;[3, 4, 7, 8].forEach(col => { ws7.getRow(ws7Row + ti).getCell(col).alignment = centre })
         })
 
         if (toolList.length === 0) {
-          dataRow(ws7, [u.name, u.email, u.requests, u.approved, rejPend, '(no items)', '', ''], ws7Row, alt)
+          dataRow(ws7, [u.name, u.email, u.requests, u.approved, rejPend, '(ni postavk)', '', ''], ws7Row, alt)
           ;[3, 4, 5].forEach(col => { ws7.getRow(ws7Row).getCell(col).alignment = centre })
         }
 
-        // Colour totals cells
         const summaryRow = ws7.getRow(ws7Row)
         if (u.approved > 0) { summaryRow.getCell(4).fill = fill(C.greenBg); summaryRow.getCell(4).font = { bold: true, size: 10, color: { argb: 'FF' + C.greenFg } } }
         if (u.rejected > 0 || u.pending > 0) { summaryRow.getCell(5).fill = fill(C.amberBg); summaryRow.getCell(5).font = { bold: true, size: 10, color: { argb: 'FF' + C.amberFg } } }
 
-        // Merge person columns if multiple tool rows
         if (rowCount > 1) {
           [1, 2, 3, 4, 5].forEach(col => {
             ws7.mergeCells(ws7Row, col, ws7Row + rowCount - 1, col)
@@ -469,33 +449,29 @@ export async function GET(req: NextRequest) {
         ws7Row += rowCount
       })
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SHEET 8 â€” Inventory
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    const ws8 = wb.addWorksheet('đź“¦ Inventory', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // SHEET 8 - Inventar
+    const ws8 = wb.addWorksheet('Inventar', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws8.columns = [{ width: 30 }, { width: 18 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 14 }]
-    titleRow(ws8, `Inventory Status â€” ${monthLabel}`, 7, 1)
-    headerRow(ws8, ['Tool', 'Category', 'In Stock', 'Total', 'Min Stock', 'Max Stock', 'Status'], 2)
+    titleRow(ws8, `Stanje zalog – ${monthLabel}`, 7, 1)
+    headerRow(ws8, ['Orodje', 'Kategorija', 'Na zalogi', 'Skupaj', 'Min. zaloga', 'Maks. zaloga', 'Status'], 2)
     tools.forEach((t, i) => {
-      const st = t.currentStock === 0 ? 'Out of Stock' : t.currentStock <= t.minStock ? 'Low Stock' : 'OK'
+      const st = t.currentStock === 0 ? 'Ni na zalogi' : t.currentStock <= t.minStock ? 'Nizka zaloga' : 'OK'
       dataRow(ws8, [t.name, t.category || '', t.currentStock, t.totalStock, t.minStock, t.maxStock, st], i + 3, i % 2 === 0, { 6: { fill: statusFill(st) } })
       ;[3, 4, 5, 6, 7].forEach(col => { ws8.getRow(i + 3).getCell(col).alignment = centre })
     })
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SHEET 9 â€” Audit Log
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    const ws9 = wb.addWorksheet('đź“ť Audit Log', { views: [{ state: 'frozen', ySplit: 2 }] })
+    // SHEET 9 - Revizijska sled
+    const ws9 = wb.addWorksheet('Revizijska sled', { views: [{ state: 'frozen', ySplit: 2 }] })
     ws9.columns = [{ width: 20 }, { width: 22 }, { width: 28 }, { width: 18 }, { width: 60 }]
-    titleRow(ws9, `Audit Log â€” ${monthLabel}  (${auditLogs.length} entries)`, 5, 1)
-    headerRow(ws9, ['Date & Time', 'User', 'Email', 'Action', 'Details'], 2)
+    titleRow(ws9, `Revizijska sled – ${monthLabel}  (${auditLogs.length} vnosov)`, 5, 1)
+    headerRow(ws9, ['Datum in cas', 'Uporabnik', 'E-posta', 'Dejanje', 'Podrobnosti'], 2)
     auditLogs.forEach((l, i) => {
-      dataRow(ws9, [formatDT(l.createdAt), l.user?.name ?? 'System', l.user?.email ?? '', l.action, l.details ?? ''], i + 3, i % 2 === 0)
+      dataRow(ws9, [formatDT(l.createdAt), l.user?.name ?? 'Sistem', l.user?.email ?? '', l.action, l.details ?? ''], i + 3, i % 2 === 0)
     })
 
-    // â”€â”€ Write & respond â”€â”€
+    // Write & respond
     const buf = await wb.xlsx.writeBuffer()
-    const filename = `BuildFlow_Report_${month}.xlsx`
+    const filename = `BuildFlow_Porocilo_${month}.xlsx`
 
     return new NextResponse(new Uint8Array(buf as ArrayBuffer), {
       status: 200,
