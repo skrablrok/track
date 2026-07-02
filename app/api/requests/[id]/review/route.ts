@@ -33,7 +33,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     else if (fullyApproved && approvedItems.length === totalItems) status = 'APPROVED'
     else status = 'PARTIALLY_APPROVED'
 
-    // Update each request item + adjust stock
     const stockWarnings: string[] = []
 
     await db.$transaction(async (tx) => {
@@ -44,32 +43,80 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           data: { approvedQty: qty },
         })
 
-        if (qty > 0 && item.toolId) {
-          const tool = await tx.tool.update({
-            where: { id: item.toolId },
-            data: { currentStock: { decrement: qty } },
-          })
+        // Resolve the original request item for toolId and reservedQty
+        const requestItem = request.items.find((ri) => ri.id === item.requestItemId)
+        if (!requestItem?.toolId) continue
 
-          if (tool.currentStock < 0) {
-            stockWarnings.push(`${tool.name}: stock is now ${tool.currentStock} (needs reorder)`)
-          } else if (tool.currentStock <= tool.minStock) {
-            stockWarnings.push(`${tool.name}: stock is low (${tool.currentStock} remaining)`)
+        const toolId = requestItem.toolId
+
+        if (requestItem.reservedQty > 0) {
+          // Stock was already reduced when the request was submitted.
+          // Restore any amount that was reserved but not approved.
+          const restoreQty = Math.max(0, requestItem.reservedQty - qty)
+          if (restoreQty > 0) {
+            await tx.tool.update({
+              where: { id: toolId },
+              data: { currentStock: { increment: restoreQty } },
+            })
           }
 
-          // Create checkout record for approved items
-          const isMaterial = tool.type === 'MATERIAL'
-          await tx.checkout.create({
-            data: {
-              toolId: item.toolId,
-              userId: request.requesterId,
-              projectId: request.projectId,
-              requestId: params.id,
-              quantity: qty,
-              notes: `Via approved request #${params.id.slice(-6).toUpperCase()}`,
-              status: isMaterial ? 'CONSUMED' : 'ACTIVE',
-              ...(isMaterial && { returnDate: new Date() }),
-            },
+          // Create checkout for the approved quantity (no further stock deduction needed)
+          if (qty > 0) {
+            const isMaterial = requestItem.tool?.type === 'MATERIAL'
+            await tx.checkout.create({
+              data: {
+                toolId,
+                userId: request.requesterId,
+                projectId: request.projectId,
+                requestId: params.id,
+                quantity: qty,
+                notes: `Via approved request #${params.id.slice(-6).toUpperCase()}`,
+                status: isMaterial ? 'CONSUMED' : 'ACTIVE',
+                ...(isMaterial && { returnDate: new Date() }),
+              },
+            })
+          }
+
+          // Check stock level after the restore and warn if low
+          const updatedTool = await tx.tool.findUnique({
+            where: { id: toolId },
+            select: { name: true, currentStock: true, minStock: true },
           })
+          if (updatedTool) {
+            if (updatedTool.currentStock < 0) {
+              stockWarnings.push(`${updatedTool.name}: stock is now ${updatedTool.currentStock} (needs reorder)`)
+            } else if (updatedTool.currentStock <= updatedTool.minStock) {
+              stockWarnings.push(`${updatedTool.name}: stock is low (${updatedTool.currentStock} remaining)`)
+            }
+          }
+        } else {
+          // Legacy path: request predates the reservation feature — use old deduct-on-approval behavior
+          if (qty > 0) {
+            const tool = await tx.tool.update({
+              where: { id: toolId },
+              data: { currentStock: { decrement: qty } },
+            })
+
+            if (tool.currentStock < 0) {
+              stockWarnings.push(`${tool.name}: stock is now ${tool.currentStock} (needs reorder)`)
+            } else if (tool.currentStock <= tool.minStock) {
+              stockWarnings.push(`${tool.name}: stock is low (${tool.currentStock} remaining)`)
+            }
+
+            const isMaterial = tool.type === 'MATERIAL'
+            await tx.checkout.create({
+              data: {
+                toolId,
+                userId: request.requesterId,
+                projectId: request.projectId,
+                requestId: params.id,
+                quantity: qty,
+                notes: `Via approved request #${params.id.slice(-6).toUpperCase()}`,
+                status: isMaterial ? 'CONSUMED' : 'ACTIVE',
+                ...(isMaterial && { returnDate: new Date() }),
+              },
+            })
+          }
         }
       }
 

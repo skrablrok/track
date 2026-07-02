@@ -46,7 +46,6 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireAuth()
 
-    // Only FOREMAN, EMPLOYEE, MANAGER, ADMIN can create requests
     const body = await req.json()
     const { projectId, notes, items } = body
 
@@ -54,8 +53,7 @@ export async function POST(req: NextRequest) {
       return badRequest('At least one item is required')
     }
 
-    // Look up current stock for any referenced tools, to flag insufficient-stock items for procurement
-    // and to enforce the "can't request more tool units than the warehouse has" cap
+    // Fetch current stock for validation and procurement flagging
     const toolIds = items.filter((i: any) => i.toolId).map((i: any) => i.toolId)
     const tools = toolIds.length
       ? await db.tool.findMany({ where: { id: { in: toolIds } }, select: { id: true, name: true, type: true, currentStock: true } })
@@ -82,28 +80,60 @@ export async function POST(req: NextRequest) {
       return !!tool && parseInt(i.requestedQty) > tool.currentStock
     }
 
-    const request = await db.request.create({
-      data: {
-        requesterId: user.id,
-        projectId: projectId || null,
-        notes,
-        status: 'PENDING',
-        items: {
-          create: items.map((i: any) => ({
-            toolId: i.toolId || null,
-            itemName: i.toolId ? null : String(i.itemName).trim(),
-            requestedQty: parseInt(i.requestedQty),
-            notes: i.notes || null,
-            procurementStatus: needsProcurement(i) ? 'PENDING_PURCHASE' : null,
-            procurementUpdatedAt: needsProcurement(i) ? new Date() : null,
-          })),
+    // Create request and immediately reserve stock in one transaction
+    const request = await db.$transaction(async (tx) => {
+      const created = await tx.request.create({
+        data: {
+          requesterId: user.id,
+          projectId: projectId || null,
+          notes,
+          status: 'PENDING',
+          items: {
+            create: items.map((i: any) => ({
+              toolId: i.toolId || null,
+              itemName: i.toolId ? null : String(i.itemName).trim(),
+              requestedQty: parseInt(i.requestedQty),
+              notes: i.notes || null,
+              procurementStatus: needsProcurement(i) ? 'PENDING_PURCHASE' : null,
+              procurementUpdatedAt: needsProcurement(i) ? new Date() : null,
+              reservedQty: 0,
+            })),
+          },
         },
-      },
-      include: {
-        requester: { select: { id: true, name: true } },
-        project: { select: { id: true, name: true } },
-        items: { include: { tool: { select: { id: true, name: true } } } },
-      },
+        include: {
+          requester: { select: { id: true, name: true } },
+          project: { select: { id: true, name: true } },
+          items: { include: { tool: { select: { id: true, name: true } } } },
+        },
+      })
+
+      // Deduct stock for each tool/material item and record the amount reserved
+      for (const createdItem of created.items) {
+        if (!createdItem.toolId) continue
+
+        // Read fresh stock inside the transaction to avoid race conditions
+        const freshTool = await tx.tool.findUnique({
+          where: { id: createdItem.toolId },
+          select: { currentStock: true },
+        })
+
+        const available = freshTool?.currentStock ?? 0
+        if (available <= 0) continue
+
+        const deductQty = Math.min(createdItem.requestedQty, available)
+
+        await tx.tool.update({
+          where: { id: createdItem.toolId },
+          data: { currentStock: { decrement: deductQty } },
+        })
+
+        await tx.requestItem.update({
+          where: { id: createdItem.id },
+          data: { reservedQty: deductQty },
+        })
+      }
+
+      return created
     })
 
     await logAudit(user.id, 'CREATE_REQUEST', 'Request', request.id,

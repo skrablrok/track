@@ -37,7 +37,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await requireAuth()
-    const request = await db.request.findUnique({ where: { id: params.id } })
+
+    const request = await db.request.findUnique({
+      where: { id: params.id },
+      include: { items: true },
+    })
     if (!request) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
 
     const isPrivileged = ['ADMIN', 'MANAGER'].includes(user.role as string)
@@ -48,7 +52,18 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return new Response(JSON.stringify({ error: 'Only pending requests can be cancelled' }), { status: 400 })
     }
 
-    await db.request.delete({ where: { id: params.id } })
+    // Restore reserved stock for each item, then delete the request
+    await db.$transaction(async (tx) => {
+      for (const item of request.items) {
+        if (!item.toolId || item.reservedQty <= 0) continue
+        await tx.tool.update({
+          where: { id: item.toolId },
+          data: { currentStock: { increment: item.reservedQty } },
+        })
+      }
+      await tx.request.delete({ where: { id: params.id } })
+    })
+
     await logAudit(user.id, 'CANCEL_REQUEST', 'Request', params.id, `Cancelled request ${params.id}`)
     return NextResponse.json({ success: true })
   } catch (e: any) {
