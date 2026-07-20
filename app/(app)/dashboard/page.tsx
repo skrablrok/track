@@ -12,15 +12,9 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)!
   const lang = cookies().get('lang')?.value || 'sl'
 
-  const [toolStockAgg, materialStockAgg, activeCheckouts, lowStockTools, recentActivity] = await Promise.all([
-    db.tool.aggregate({
-      where: { active: true, type: 'TOOL' },
-      _sum: { currentStock: true },
-    }),
-    db.tool.aggregate({
-      where: { active: true, type: 'MATERIAL' },
-      _sum: { currentStock: true },
-    }),
+  const [toolCount, materialCount, activeCheckouts, lowStockTools, recentActivity] = await Promise.all([
+    db.tool.count({ where: { active: true, type: 'TOOL' } }),
+    db.tool.count({ where: { active: true, type: 'MATERIAL' } }),
     db.checkout.count({ where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] } } }),
     db.tool.findMany({
       where: { active: true },
@@ -38,12 +32,9 @@ export default async function DashboardPage() {
     }),
   ])
 
-  const toolsInStock = toolStockAgg._sum.currentStock ?? 0
-  const materialsInStock = materialStockAgg._sum.currentStock ?? 0
-
   const stats = [
-    { label: t(lang, 'toolsInStock'),      value: toolsInStock,         icon: Wrench,       color: 'bg-blue-50 text-blue-600',   border: 'border-blue-100' },
-    { label: t(lang, 'materialsInStock'),  value: materialsInStock,     icon: Package,      color: 'bg-purple-50 text-purple-600', border: 'border-purple-100' },
+    { label: t(lang, 'toolsInStock'),      value: toolCount,        icon: Wrench,        color: 'bg-blue-50 text-blue-600',     border: 'border-blue-100' },
+    { label: t(lang, 'materialsInStock'),  value: materialCount,    icon: Package,       color: 'bg-purple-50 text-purple-600', border: 'border-purple-100' },
     { label: t(lang, 'activeCheckouts'),   value: activeCheckouts,      icon: ClipboardList, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
     { label: t(lang, 'lowStockAlerts'),    value: lowStockTools.length, icon: AlertTriangle, color: 'bg-red-50 text-red-600',     border: 'border-red-100' },
   ]
