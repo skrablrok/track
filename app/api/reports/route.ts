@@ -16,10 +16,10 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'overview') {
-      const [totalTools, totalActive, lowStockTools, activeCheckouts, totalCheckouts] =
+      const [toolCount, materialCount, lowStockTools, activeCheckouts, totalCheckouts] =
         await Promise.all([
-          db.tool.count({ where: { active: true } }),
-          db.tool.count({ where: { active: true, currentStock: { gt: 0 } } }),
+          db.tool.count({ where: { active: true, type: 'TOOL' } }),
+          db.tool.count({ where: { active: true, type: 'MATERIAL' } }),
           db.tool.findMany({
             where: { active: true },
             select: { id: true, name: true, currentStock: true, minStock: true, totalStock: true, category: true },
@@ -31,8 +31,8 @@ export async function GET(req: NextRequest) {
         ])
 
       return NextResponse.json({
-        totalTools,
-        totalActive,
+        toolCount,
+        materialCount,
         lowStockTools,
         activeCheckouts,
         totalCheckouts,

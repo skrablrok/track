@@ -111,12 +111,13 @@ export default function ReportsPage() {
         <>
           {tab === 'overview' && overview && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
-                  { label: t('totalTools'), value: overview.totalTools, color: 'text-blue-600 bg-blue-50' },
-                  { label: t('activeCheckouts'), value: overview.activeCheckouts, color: 'text-amber-600 bg-amber-50' },
-                  { label: t('totalTransactions'), value: overview.totalCheckouts, color: 'text-purple-600 bg-purple-50' },
-                  { label: t('lowStockAlerts'), value: overview.lowStockTools?.length || 0, color: 'text-red-600 bg-red-50' },
+                  { label: t('toolsInStock'),      value: overview.toolCount,                    color: 'text-blue-600 bg-blue-50' },
+                  { label: t('materialsInStock'),   value: overview.materialCount,                color: 'text-purple-600 bg-purple-50' },
+                  { label: t('activeCheckouts'),    value: overview.activeCheckouts,              color: 'text-amber-600 bg-amber-50' },
+                  { label: t('totalTransactions'),  value: overview.totalCheckouts,               color: 'text-indigo-600 bg-indigo-50' },
+                  { label: t('lowStockAlerts'),     value: overview.lowStockTools?.length || 0,  color: 'text-red-600 bg-red-50' },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5">
                     <p className={`text-2xl font-bold ${color.split(' ')[0]}`}>{value}</p>
