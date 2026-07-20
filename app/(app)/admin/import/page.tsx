@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
-import { FileSpreadsheet, Download, Upload, CheckCircle2, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
+import { FileSpreadsheet, FileText, Download, Upload, CheckCircle2, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import {
   type ColumnRole, type ParsedTool, type ParsedProject,
@@ -72,17 +72,34 @@ export default function ImportPage() {
     setParsing(true)
     try {
       const buf = await file.arrayBuffer()
-      const wb = XLSX.read(buf, { type: 'array' })
-      const allSheets: Record<string, any[][]> = {}
-      for (const name of wb.SheetNames) {
-        const ws = wb.Sheets[name]
-        allSheets[name] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[][]
+      const isPdf = file.name.toLowerCase().endsWith('.pdf')
+
+      if (isPdf) {
+        const { parsePdfToSheets } = await import('@/lib/pdf-parser')
+        const pdfSheets = await parsePdfToSheets(buf)
+        if (pdfSheets.length === 0) {
+          setError('V tej datoteki PDF ni bilo najdenega besedila. Datoteka je verjetno skeniran dokument — uporabite PDF z besedilom.')
+          return
+        }
+        const allSheets: Record<string, any[][]> = {}
+        for (const { name, rows } of pdfSheets) allSheets[name] = rows
+        const firstSheet = pdfSheets[0].name
+        setSheets(pdfSheets.map((s) => s.name))
+        setSheetData(allSheets)
+        setActiveSheet(firstSheet)
+        applyDetection(allSheets[firstSheet] ?? [])
+      } else {
+        const wb = XLSX.read(buf, { type: 'array' })
+        const allSheets: Record<string, any[][]> = {}
+        for (const name of wb.SheetNames) {
+          allSheets[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' }) as any[][]
+        }
+        const firstSheet = wb.SheetNames[0] ?? ''
+        setSheets(wb.SheetNames)
+        setSheetData(allSheets)
+        setActiveSheet(firstSheet)
+        applyDetection(allSheets[firstSheet] ?? [])
       }
-      const firstSheet = wb.SheetNames[0] ?? ''
-      setSheets(wb.SheetNames)
-      setSheetData(allSheets)
-      setActiveSheet(firstSheet)
-      applyDetection(allSheets[firstSheet] ?? [])
     } catch (e: any) {
       setError(e.message || 'Could not read this file')
     } finally {
@@ -160,7 +177,7 @@ export default function ImportPage() {
           {parsing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
           {hasFile ? t('uploadFile') + ' (replace)' : t('uploadFile')}
         </button>
-        <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden"
+        <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.pdf" className="hidden"
           onChange={(e) => handleFile(e.target.files?.[0])} />
       </div>
 
@@ -191,17 +208,21 @@ export default function ImportPage() {
           {/* Sheet tabs */}
           {sheets.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
-              {sheets.map((s) => (
-                <button key={s} onClick={() => switchSheet(s)}
-                  className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                    s === activeSheet
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
-                  }`}>
-                  <FileSpreadsheet size={13} className="inline mr-1.5 -mt-0.5" />
-                  {s}
-                </button>
-              ))}
+              {sheets.map((s) => {
+                const isPdfPage = s.startsWith('Stran ')
+                const SheetIcon = isPdfPage ? FileText : FileSpreadsheet
+                return (
+                  <button key={s} onClick={() => switchSheet(s)}
+                    className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                      s === activeSheet
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}>
+                    <SheetIcon size={13} className="inline mr-1.5 -mt-0.5" />
+                    {s}
+                  </button>
+                )
+              })}
             </div>
           )}
 
