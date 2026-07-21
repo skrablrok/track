@@ -44,6 +44,123 @@ export async function sendInviteEmail(to: string, token: string) {
   })
 }
 
+export async function sendDeliveryNoteEmail(
+  to: string[],
+  details: {
+    requestId: string
+    requesterName: string
+    confirmedByName: string
+    projectName: string | null
+    status: string
+    confirmedAt: Date
+    items: { name: string; requestedQty: number; approvedQty: number }[]
+    adminNotes?: string | null
+  }
+) {
+  if (to.length === 0) return
+
+  const appUrl = (process.env.NEXTAUTH_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || 'http://localhost:3000').replace(/\/$/, '')
+  const { requestId, requesterName, confirmedByName, projectName, status, confirmedAt, items, adminNotes } = details
+
+  const refNumber = requestId.slice(-8).toUpperCase()
+  const dateStr = confirmedAt.toLocaleDateString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const timeStr = confirmedAt.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })
+
+  const statusLabel = status === 'APPROVED' ? 'Potrjeno' : 'Delno potrjeno'
+  const statusColor = status === 'APPROVED' ? '#15803d' : '#b45309'
+  const statusBg    = status === 'APPROVED' ? '#dcfce7'  : '#fef3c7'
+
+  const approvedItems = items.filter((i) => i.approvedQty > 0)
+
+  const itemRows = approvedItems.map((item, idx) => `
+    <tr style="background:${idx % 2 === 0 ? '#f8fafc' : 'white'};">
+      <td style="padding:10px 14px;color:#1e293b;font-size:13px;border-bottom:1px solid #e2e8f0;">${item.name}</td>
+      <td style="padding:10px 14px;text-align:center;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">${item.requestedQty}</td>
+      <td style="padding:10px 14px;text-align:center;font-size:13px;font-weight:600;color:${statusColor};border-bottom:1px solid #e2e8f0;">${item.approvedQty}</td>
+    </tr>`).join('')
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#f8fafc;padding:32px;border-radius:12px;">
+      <div style="background:#1e40af;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
+        <h1 style="color:white;margin:0;font-size:22px;">BuildFlow</h1>
+        <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">Upravljanje inventarja orodij</p>
+      </div>
+
+      <div style="background:white;border-radius:12px;padding:28px;border:1px solid #e2e8f0;">
+
+        <!-- Header row -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:2px solid #1e40af;padding-bottom:16px;">
+          <div>
+            <h2 style="color:#1e293b;margin:0 0 4px;font-size:20px;font-weight:700;">DOBAVNICA</h2>
+            <p style="color:#64748b;margin:0;font-size:13px;">Delivery Note</p>
+          </div>
+          <div style="text-align:right;">
+            <p style="color:#1e293b;margin:0;font-size:13px;font-weight:600;">Ref: #${refNumber}</p>
+            <p style="color:#64748b;margin:4px 0 0;font-size:12px;">${dateStr} ob ${timeStr}</p>
+            <span style="display:inline-block;margin-top:6px;background:${statusBg};color:${statusColor};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">${statusLabel}</span>
+          </div>
+        </div>
+
+        <!-- Parties -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+          <div style="background:#f1f5f9;border-radius:8px;padding:14px;">
+            <p style="color:#94a3b8;font-size:11px;font-weight:600;text-transform:uppercase;margin:0 0 4px;">Naročnik</p>
+            <p style="color:#1e293b;font-size:14px;font-weight:600;margin:0;">${requesterName}</p>
+            ${projectName ? `<p style="color:#64748b;font-size:12px;margin:4px 0 0;">Projekt: ${projectName}</p>` : ''}
+          </div>
+          <div style="background:#f1f5f9;border-radius:8px;padding:14px;">
+            <p style="color:#94a3b8;font-size:11px;font-weight:600;text-transform:uppercase;margin:0 0 4px;">Potrdil</p>
+            <p style="color:#1e293b;font-size:14px;font-weight:600;margin:0;">${confirmedByName}</p>
+            <p style="color:#64748b;font-size:12px;margin:4px 0 0;">${dateStr}</p>
+          </div>
+        </div>
+
+        <!-- Items table -->
+        <table style="width:100%;border-collapse:collapse;margin-bottom:${adminNotes ? '16px' : '24px'};">
+          <thead>
+            <tr style="background:#1e40af;">
+              <th style="padding:10px 14px;text-align:left;color:white;font-size:12px;font-weight:600;border-radius:6px 0 0 0;">Artikel</th>
+              <th style="padding:10px 14px;text-align:center;color:white;font-size:12px;font-weight:600;">Zahtevano</th>
+              <th style="padding:10px 14px;text-align:center;color:white;font-size:12px;font-weight:600;border-radius:0 6px 0 0;">Odobreno</th>
+            </tr>
+          </thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+
+        ${adminNotes ? `
+        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:24px;">
+          <p style="color:#92400e;font-size:12px;font-weight:600;margin:0 0 4px;">Opomba administratorja:</p>
+          <p style="color:#78350f;font-size:13px;margin:0;">${adminNotes}</p>
+        </div>` : ''}
+
+        <div style="text-align:center;">
+          <a href="${appUrl}/requests/${requestId}" style="display:inline-block;background:#2563eb;color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
+            Oglej zahtevek
+          </a>
+        </div>
+
+        <p style="color:#94a3b8;font-size:11px;text-align:center;margin:20px 0 0;">
+          Ta dokument je bil samodejno ustvarjen s sistemom BuildFlow.<br/>
+          Ref: #${refNumber} · ${dateStr}
+        </p>
+      </div>
+    </div>
+  `
+
+  const transporter = createTransporter()
+  const subject = `Dobavnica #${refNumber} – ${statusLabel}`
+  await Promise.allSettled(
+    to.map((recipient) =>
+      transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: recipient,
+        subject,
+        html,
+      })
+    )
+  )
+}
+
 export async function sendProcurementEmail(
   to: string[],
   details: {

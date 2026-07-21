@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireRole, logAudit, unauthorized, serverError, badRequest } from '@/lib/utils'
 import { notifyUser, notifyAdmins } from '@/lib/notifications'
+import { sendDeliveryNoteEmail } from '@/lib/email'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -150,11 +151,36 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const updated = await db.request.findUnique({
       where: { id: params.id },
       include: {
-        requester: { select: { id: true, name: true } },
+        requester: { select: { id: true, name: true, email: true } },
         project: true,
         items: { include: { tool: { select: { id: true, name: true, currentStock: true } } } },
       },
     })
+
+    // Send delivery note to both the requester and the admin who confirmed — only when something was approved
+    if (status !== 'REJECTED' && updated && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const deliveryRecipients = Array.from(new Set([
+        updated.requester.email,
+        admin.email,
+      ].filter(Boolean) as string[]))
+
+      const noteItems = items.map((i: any) => {
+        const original = request.items.find((ri) => ri.id === i.requestItemId)
+        const name = original?.tool?.name || original?.itemName || 'Unknown item'
+        return { name, requestedQty: original?.requestedQty ?? 0, approvedQty: parseInt(i.approvedQty) || 0 }
+      })
+
+      await sendDeliveryNoteEmail(deliveryRecipients, {
+        requestId: params.id,
+        requesterName: request.requester.name,
+        confirmedByName: admin.name as string,
+        projectName: updated.project?.name || null,
+        status,
+        confirmedAt: new Date(),
+        items: noteItems,
+        adminNotes: adminNotes || null,
+      }).catch((e) => console.error('Delivery note email failed:', e))
+    }
 
     return NextResponse.json({ request: updated, stockWarnings })
   } catch (e: any) {
