@@ -30,6 +30,7 @@ export const authOptions: NextAuthOptions = {
 
         const user = await db.user.findUnique({
           where: { email: credentials.email },
+          include: { organization: { select: { active: true } } },
         })
 
         // Always run bcrypt even when user not found — prevents timing-based user enumeration
@@ -49,6 +50,10 @@ export const authOptions: NextAuthOptions = {
             },
           })
           return null
+        }
+
+        if (!user.organization?.active) {
+          throw new Error('Your organization account is pending approval. You will be able to log in once an administrator confirms your registration.')
         }
 
         clearAttempts(ip)

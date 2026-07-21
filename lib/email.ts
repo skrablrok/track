@@ -44,6 +44,52 @@ export async function sendInviteEmail(to: string, token: string) {
   })
 }
 
+export async function sendNewOrgNotificationEmail(
+  to: string,
+  details: {
+    orgName: string
+    adminName: string
+    adminEmail: string
+    registeredAt: Date
+  }
+) {
+  const appUrl = (process.env.NEXTAUTH_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || 'http://localhost:3000').replace(/\/$/, '')
+  const { orgName, adminName, adminEmail, registeredAt } = details
+  const dateStr = registeredAt.toLocaleString('sl-SI', { dateStyle: 'full', timeStyle: 'short' })
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#f8fafc;padding:32px;border-radius:12px;">
+      <div style="background:#1e40af;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
+        <h1 style="color:white;margin:0;font-size:22px;">BuildFlow</h1>
+        <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">Super Admin Notification</p>
+      </div>
+      <div style="background:white;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
+        <h2 style="color:#1e293b;margin:0 0 16px;font-size:18px;">New organization registration — awaiting your approval</h2>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+          <tr><td style="padding:8px 0;color:#64748b;font-size:13px;width:140px;">Organization</td><td style="padding:8px 0;color:#1e293b;font-size:13px;font-weight:600;">${orgName}</td></tr>
+          <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Admin name</td><td style="padding:8px 0;color:#1e293b;font-size:13px;">${adminName}</td></tr>
+          <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Admin email</td><td style="padding:8px 0;color:#1e293b;font-size:13px;">${adminEmail}</td></tr>
+          <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Registered at</td><td style="padding:8px 0;color:#1e293b;font-size:13px;">${dateStr}</td></tr>
+        </table>
+        <p style="color:#475569;font-size:13px;margin:0 0 20px;">The organization's account is <strong>inactive</strong> until you approve it. Log in to the super-admin panel to activate it.</p>
+        <div style="text-align:center;">
+          <a href="${appUrl}/super-admin" style="display:inline-block;background:#2563eb;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
+            Open Super Admin Panel
+          </a>
+        </div>
+      </div>
+    </div>
+  `
+
+  const transporter = createTransporter()
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to,
+    subject: `BuildFlow – New registration: ${orgName} (pending approval)`,
+    html,
+  })
+}
+
 export async function sendDeliveryNoteEmail(
   to: string[],
   details: {

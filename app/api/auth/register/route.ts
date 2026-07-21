@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { badRequest, serverError } from '@/lib/utils'
+import { sendNewOrgNotificationEmail } from '@/lib/email'
 
 const PASSWORD_RE = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]).{15,}$/
 
@@ -20,11 +21,9 @@ export async function POST(req: NextRequest) {
       return badRequest('Password must be at least 15 characters with an uppercase letter, a number, and a special character')
     }
 
-    // Check email not already used
     const existingUser = await db.user.findUnique({ where: { email } })
     if (existingUser) return badRequest('This email is already registered')
 
-    // Build a unique slug for the org
     let baseSlug = slugify(orgName.trim()) || 'org'
     let slug = baseSlug
     let suffix = 1
@@ -34,9 +33,10 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
+    // New orgs start as inactive — super admin must approve before anyone can log in
     const { org, user } = await db.$transaction(async (tx) => {
       const org = await tx.organization.create({
-        data: { name: orgName.trim(), slug },
+        data: { name: orgName.trim(), slug, active: false },
       })
       const user = await tx.user.create({
         data: {
@@ -58,11 +58,22 @@ export async function POST(req: NextRequest) {
         entity: 'Organization',
         entityId: org.id,
         organizationId: org.id,
-        details: `New organization registered: ${org.name} by ${user.email}`,
+        details: `New organization registered (pending approval): ${org.name} by ${user.email}`,
       },
     })
 
-    return NextResponse.json({ success: true, orgSlug: org.slug }, { status: 201 })
+    // Notify super admin by email if configured
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
+    if (superAdminEmail && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      await sendNewOrgNotificationEmail(superAdminEmail, {
+        orgName: org.name,
+        adminName: name.trim(),
+        adminEmail: email.trim().toLowerCase(),
+        registeredAt: new Date(),
+      }).catch((e) => console.error('Super-admin notification email failed:', e))
+    }
+
+    return NextResponse.json({ success: true, pending: true }, { status: 201 })
   } catch (e: any) {
     console.error('Registration error:', e)
     return serverError(e.message)

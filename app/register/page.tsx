@@ -31,7 +31,6 @@ export default function RegisterPage() {
         setError(data.error || 'Registration failed')
       } else {
         setSuccess(true)
-        setTimeout(() => router.push('/login'), 2500)
       }
     } catch {
       setError('Network error — please try again')
@@ -55,8 +54,13 @@ export default function RegisterPage() {
           {success ? (
             <div className="text-center space-y-4">
               <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto" />
-              <h2 className="text-xl font-semibold text-gray-800">Account created!</h2>
-              <p className="text-sm text-gray-500">Redirecting you to login…</p>
+              <h2 className="text-xl font-semibold text-gray-800">Registration submitted!</h2>
+              <p className="text-sm text-gray-600">
+                Your account has been created and is <strong>awaiting approval</strong>.
+              </p>
+              <p className="text-sm text-gray-500">
+                You will be able to log in once the administrator confirms your registration. This usually takes up to 24 hours.
+              </p>
             </div>
           ) : (
             <>
