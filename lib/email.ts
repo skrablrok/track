@@ -83,6 +83,7 @@ export async function sendNewOrgNotificationEmail(
   `
 
   const transporter = createTransporter()
+  await transporter.verify()
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,

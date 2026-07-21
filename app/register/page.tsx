@@ -31,6 +31,9 @@ export default function RegisterPage() {
         setError(data.error || 'Registration failed')
       } else {
         setSuccess(true)
+        if (data.emailError) {
+          console.warn('Registration notification email failed:', data.emailError)
+        }
       }
     } catch {
       setError('Network error — please try again')

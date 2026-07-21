@@ -64,16 +64,28 @@ export async function POST(req: NextRequest) {
 
     // Notify super admin by email if configured
     const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
-    if (superAdminEmail && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      await sendNewOrgNotificationEmail(superAdminEmail, {
-        orgName: org.name,
-        adminName: name.trim(),
-        adminEmail: email.trim().toLowerCase(),
-        registeredAt: new Date(),
-      }).catch((e) => console.error('Super-admin notification email failed:', e))
+    let emailError: string | null = null
+    if (!superAdminEmail) {
+      emailError = 'SUPER_ADMIN_EMAIL is not configured on this server'
+      console.error(emailError)
+    } else if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      emailError = 'SMTP_USER or SMTP_PASS is not configured on this server'
+      console.error(emailError)
+    } else {
+      try {
+        await sendNewOrgNotificationEmail(superAdminEmail, {
+          orgName: org.name,
+          adminName: name.trim(),
+          adminEmail: email.trim().toLowerCase(),
+          registeredAt: new Date(),
+        })
+      } catch (e: any) {
+        emailError = e.message
+        console.error('Super-admin notification email failed:', e)
+      }
     }
 
-    return NextResponse.json({ success: true, pending: true }, { status: 201 })
+    return NextResponse.json({ success: true, pending: true, emailError }, { status: 201 })
   } catch (e: any) {
     console.error('Registration error:', e)
     return serverError(e.message)
