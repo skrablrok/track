@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import { generateDeliveryNotePdf } from '@/lib/pdf-delivery-note'
 
 function createTransporter() {
   return nodemailer.createTransport({
@@ -193,6 +194,9 @@ export async function sendDeliveryNoteEmail(
     </div>
   `
 
+  const pdfBuffer = await generateDeliveryNotePdf(details)
+  const pdfFilename = `Dobavnica_${refNumber}.pdf`
+
   const transporter = createTransporter()
   const subject = `Dobavnica #${refNumber} – ${statusLabel}`
   await Promise.allSettled(
@@ -202,6 +206,13 @@ export async function sendDeliveryNoteEmail(
         to: recipient,
         subject,
         html,
+        attachments: [
+          {
+            filename: pdfFilename,
+            content: pdfBuffer,
+            contentType: 'application/pdf',
+          },
+        ],
       })
     )
   )
