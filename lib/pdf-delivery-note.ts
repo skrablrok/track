@@ -1,4 +1,7 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { PDFDocument, rgb } from 'pdf-lib'
+import fontkit from '@pdf-lib/fontkit'
+import fs from 'fs'
+import path from 'path'
 
 type Item = { name: string; requestedQty: number; approvedQty: number }
 
@@ -7,10 +10,8 @@ const PAGE_H = 842
 const MARGIN = 50
 const USABLE_W = PAGE_W - MARGIN * 2  // 495
 
-// Convert hex-style [r,g,b] (0-255) to pdf-lib color
 function c([r, g, b]: number[]) { return rgb(r / 255, g / 255, b / 255) }
 
-// Color palette
 const COL = {
   darkBlue:  [30,  58,  95],
   white:     [255, 255, 255],
@@ -30,6 +31,19 @@ const COL = {
   yellowBdr: [253, 230, 138],
 }
 
+// Fonts are loaded once per process and cached
+let _fontRegular: Buffer | null = null
+let _fontBold: Buffer | null = null
+
+function getFontBytes() {
+  if (!_fontRegular || !_fontBold) {
+    const fontsDir = path.join(process.cwd(), 'public', 'fonts')
+    _fontRegular = fs.readFileSync(path.join(fontsDir, 'NotoSans-Regular.ttf'))
+    _fontBold    = fs.readFileSync(path.join(fontsDir, 'NotoSans-Bold.ttf'))
+  }
+  return { regular: _fontRegular!, bold: _fontBold! }
+}
+
 export async function generateDeliveryNotePdf(details: {
   requestId: string
   requesterName: string
@@ -41,15 +55,15 @@ export async function generateDeliveryNotePdf(details: {
   adminNotes?: string | null
 }): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create()
+  pdfDoc.registerFontkit(fontkit)
+
+  const { regular: regularBytes, bold: boldBytes } = getFontBytes()
+  const regular = await pdfDoc.embedFont(regularBytes, { subset: true })
+  const bold    = await pdfDoc.embedFont(boldBytes,    { subset: true })
+
   const page = pdfDoc.addPage([PAGE_W, PAGE_H])
 
-  // pdf-lib ships the 14 standard PDF fonts — no font files needed on disk
-  const regular = await pdfDoc.embedFont(StandardFonts.Helvetica)
-  const bold    = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-
-  // pdf-lib origin is bottom-left; pdfkit origin is top-left.
-  // All layout values below use "from-top" coords; these helpers convert them.
-
+  // pdf-lib origin is bottom-left; layout values use "from-top" — these helpers convert.
   const pdfY = (fromTop: number) => PAGE_H - fromTop
 
   function fillRect(x: number, yTop: number, w: number, h: number, col: number[]) {
@@ -60,9 +74,8 @@ export async function generateDeliveryNotePdf(details: {
     page.drawRectangle({ x, y: pdfY(yTop + h), width: w, height: h, borderColor: c(col), borderWidth: lw })
   }
 
-  // yTop = top edge of text line in from-top coords
   function drawText(str: string, x: number, yTop: number, size: number, font: typeof regular, col: number[], maxWidth?: number) {
-    page.drawText(str, { x, y: pdfY(yTop + size * 0.78), size, font, color: c(col), maxWidth })
+    page.drawText(String(str), { x, y: pdfY(yTop + size * 0.78), size, font, color: c(col), maxWidth })
   }
 
   function drawTextRight(str: string, xRight: number, yTop: number, size: number, font: typeof regular, col: number[]) {
@@ -88,7 +101,7 @@ export async function generateDeliveryNotePdf(details: {
   const dateStr = confirmedAt.toLocaleDateString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const timeStr = confirmedAt.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })
   const statusLabel = status === 'APPROVED' ? 'POTRJENO' : 'DELNO POTRJENO'
-  const statusCol   = status === 'APPROVED' ? COL.green  : COL.amber
+  const statusCol   = status === 'APPROVED' ? COL.green   : COL.amber
   const statusBgCol = status === 'APPROVED' ? COL.greenBg : COL.amberBg
 
   // ── Header bar ──────────────────────────────────────────────────────────
@@ -103,7 +116,6 @@ export async function generateDeliveryNotePdf(details: {
   drawText(`Ref: #${ref}`, MARGIN, stripY, 9, regular, COL.gray700)
   drawTextRight(`Datum: ${dateStr}  ob  ${timeStr}`, PAGE_W - MARGIN, stripY, 9, regular, COL.gray700)
 
-  // Status badge (centered)
   const badgeW = 110
   const badgeX = MARGIN + USABLE_W / 2 - badgeW / 2
   fillRect(badgeX, stripY - 3, badgeW, 16, statusBgCol)
@@ -128,18 +140,16 @@ export async function generateDeliveryNotePdf(details: {
   drawText(dateStr, rightX + 8, boxY + 36, 9, regular, COL.gray600)
 
   // ── Items table ──────────────────────────────────────────────────────
-  const tableY   = boxY + 80
-  const colName  = MARGIN
-  const colReq   = 390
-  const colApp   = 465
-  const colReqW  = 60
-  const colAppW  = 60
+  const tableY  = boxY + 80
+  const colName = MARGIN
+  const colReq  = 390
+  const colApp  = 465
+  const colW60  = 60
 
-  // Header
   fillRect(MARGIN, tableY, USABLE_W, 22, COL.darkBlue)
   drawText('ARTIKEL', colName + 6, tableY + 7, 9, bold, COL.white)
-  drawTextCenter('ZAHTEVANO', colReq, colReqW, tableY + 7, 9, bold, COL.white)
-  drawTextCenter('ODOBRENO', colApp, colAppW, tableY + 7, 9, bold, COL.white)
+  drawTextCenter('ZAHTEVANO', colReq, colW60, tableY + 7, 9, bold, COL.white)
+  drawTextCenter('ODOBRENO',  colApp, colW60, tableY + 7, 9, bold, COL.white)
 
   const approvedItems = items.filter((i) => i.approvedQty > 0)
   let rowY = tableY + 22
@@ -148,7 +158,6 @@ export async function generateDeliveryNotePdf(details: {
   approvedItems.forEach((item, idx) => {
     fillRect(MARGIN, rowY, USABLE_W, ROW_H, idx % 2 === 0 ? COL.gray50 : COL.white)
 
-    // Truncate long item names so they don't overflow
     let name = item.name
     while (name.length > 1 && regular.widthOfTextAtSize(name, 9) > 310) {
       name = name.slice(0, -1)
@@ -156,15 +165,13 @@ export async function generateDeliveryNotePdf(details: {
     if (name !== item.name) name += '…'
 
     drawText(name, colName + 6, rowY + 6, 9, regular, COL.dark)
-    drawTextCenter(String(item.requestedQty), colReq, colReqW, rowY + 6, 9, regular, COL.gray600)
-    drawTextCenter(String(item.approvedQty),  colApp, colAppW, rowY + 6, 9, bold, statusCol)
+    drawTextCenter(String(item.requestedQty), colReq, colW60, rowY + 6, 9, regular, COL.gray600)
+    drawTextCenter(String(item.approvedQty),  colApp, colW60, rowY + 6, 9, bold,    statusCol)
 
     rowY += ROW_H
   })
 
-  // Table outer border
   strokeRect(MARGIN, tableY, USABLE_W, rowY - tableY, COL.gray200)
-  // Column dividers
   vline(colReq - 4, tableY, rowY, COL.gray200)
   vline(colApp - 4, tableY, rowY, COL.gray200)
 
@@ -175,7 +182,6 @@ export async function generateDeliveryNotePdf(details: {
     fillRect(MARGIN, rowY, USABLE_W, noteH, COL.yellowBg)
     strokeRect(MARGIN, rowY, USABLE_W, noteH, COL.yellowBdr)
     drawText('OPOMBA ADMINISTRATORJA:', MARGIN + 8, rowY + 6, 8, bold, COL.amberNote)
-    // Limit note to ~80 chars so it fits on one line
     const note = adminNotes.length > 90 ? adminNotes.slice(0, 87) + '…' : adminNotes
     drawText(note, MARGIN + 8, rowY + 18, 9, regular, COL.amberText, USABLE_W - 16)
     rowY += noteH + 8
