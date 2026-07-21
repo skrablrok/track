@@ -8,7 +8,7 @@ import { formatMinutes } from '@/lib/utils'
 import { t as tr, DEFAULT_LANG, type Lang } from '@/lib/i18n/translations'
 import {
   ArrowLeft, Wrench, MapPin, User, Clock, Calendar,
-  Package, QrCode, AlertTriangle, Warehouse,
+  Package, QrCode, AlertTriangle, Warehouse, ClipboardList,
 } from 'lucide-react'
 import type { TranslationKey } from '@/lib/i18n/translations'
 
@@ -231,6 +231,14 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
 
         <div className="space-y-4">
           <ToolQRCode toolId={tool.id} toolName={tool.name} qrCode={tool.qrCode} />
+
+          <Link
+            href={`/requests/new?toolId=${tool.id}`}
+            className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          >
+            <ClipboardList size={16} />
+            {tr(lang, isMaterial ? 'requestMaterial' : 'requestTool')}
+          </Link>
 
           {isAdmin && (
             <Link
