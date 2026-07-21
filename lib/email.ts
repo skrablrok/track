@@ -198,8 +198,10 @@ export async function sendDeliveryNoteEmail(
   const pdfFilename = `Dobavnica_${refNumber}.pdf`
 
   const transporter = createTransporter()
+  await transporter.verify()
+
   const subject = `Dobavnica #${refNumber} – ${statusLabel}`
-  await Promise.allSettled(
+  await Promise.all(
     to.map((recipient) =>
       transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -261,7 +263,7 @@ export async function sendProcurementEmail(
   `
 
   const transporter = createTransporter()
-  await Promise.allSettled(
+  await Promise.all(
     to.map((recipient) =>
       transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,

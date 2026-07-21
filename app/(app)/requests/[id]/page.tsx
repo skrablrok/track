@@ -59,6 +59,7 @@ export default function RequestDetailPage() {
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
 
   const isPrivileged = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
 
@@ -98,6 +99,7 @@ export default function RequestDetailPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
       setWarnings(data.stockWarnings || [])
+      setEmailError(data.emailError || null)
       setDone(true)
       setRequest(data.request)
     } catch (e: any) {
@@ -170,6 +172,16 @@ export default function RequestDetailPage() {
         <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-green-500" />
           <p className="text-green-800 text-sm font-medium">{t('reviewedSuccessfully')}</p>
+        </div>
+      )}
+
+      {done && emailError && (
+        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-orange-800 text-sm font-semibold">Dobavnica ni bila poslana po e-pošti</p>
+            <p className="text-orange-700 text-xs mt-1">{emailError}</p>
+          </div>
         </div>
       )}
 
