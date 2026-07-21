@@ -157,32 +157,43 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
     })
 
+    let emailError: string | null = null
+
     // Send delivery note to both the requester and the admin who confirmed — only when something was approved
-    if (status !== 'REJECTED' && updated && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      const deliveryRecipients = Array.from(new Set([
-        updated.requester.email,
-        admin.email,
-      ].filter(Boolean) as string[]))
+    if (status !== 'REJECTED' && updated) {
+      if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        emailError = 'SMTP_USER or SMTP_PASS not configured on this server'
+      } else {
+        const deliveryRecipients = Array.from(new Set([
+          updated.requester.email,
+          admin.email,
+        ].filter(Boolean) as string[]))
 
-      const noteItems = items.map((i: any) => {
-        const original = request.items.find((ri) => ri.id === i.requestItemId)
-        const name = original?.tool?.name || original?.itemName || 'Unknown item'
-        return { name, requestedQty: original?.requestedQty ?? 0, approvedQty: parseInt(i.approvedQty) || 0 }
-      })
+        const noteItems = items.map((i: any) => {
+          const original = request.items.find((ri) => ri.id === i.requestItemId)
+          const name = original?.tool?.name || original?.itemName || 'Unknown item'
+          return { name, requestedQty: original?.requestedQty ?? 0, approvedQty: parseInt(i.approvedQty) || 0 }
+        })
 
-      await sendDeliveryNoteEmail(deliveryRecipients, {
-        requestId: params.id,
-        requesterName: request.requester.name,
-        confirmedByName: admin.name as string,
-        projectName: updated.project?.name || null,
-        status,
-        confirmedAt: new Date(),
-        items: noteItems,
-        adminNotes: adminNotes || null,
-      }).catch((e) => console.error('Delivery note email failed:', e))
+        try {
+          await sendDeliveryNoteEmail(deliveryRecipients, {
+            requestId: params.id,
+            requesterName: request.requester.name,
+            confirmedByName: admin.name as string,
+            projectName: updated.project?.name || null,
+            status,
+            confirmedAt: new Date(),
+            items: noteItems,
+            adminNotes: adminNotes || null,
+          })
+        } catch (e: any) {
+          emailError = e.message
+          console.error('Delivery note email failed:', e)
+        }
+      }
     }
 
-    return NextResponse.json({ request: updated, stockWarnings })
+    return NextResponse.json({ request: updated, stockWarnings, emailError })
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()
     if (e.message === 'Forbidden') return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
