@@ -6,8 +6,9 @@ import crypto from 'crypto'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireRole(['ADMIN', 'MANAGER'])
+    const admin = await requireRole(['ADMIN', 'MANAGER'])
     const users = await db.user.findMany({
+      where: { organizationId: admin.organizationId },
       select: { id: true, email: true, name: true, role: true, active: true, setupComplete: true, createdAt: true },
       orderBy: { name: 'asc' },
     })
@@ -27,8 +28,11 @@ export async function POST(req: NextRequest) {
 
     if (!email) return badRequest('Email is required')
 
-    // If user already exists but hasn't completed setup, resend invite
+    // If user already exists in this org and hasn't completed setup, resend invite
     const existing = await db.user.findUnique({ where: { email } })
+    if (existing && existing.organizationId !== admin.organizationId) {
+      return badRequest('This email is already registered with another organization')
+    }
     if (existing && existing.setupComplete) return badRequest('Email already in use')
 
     const inviteToken = crypto.randomBytes(32).toString('hex')
@@ -45,12 +49,20 @@ export async function POST(req: NextRequest) {
       })
     } else {
       user = await db.user.create({
-        data: { email, name: '', password: '', role: role || 'EMPLOYEE', setupComplete: false, inviteToken, inviteExpiry },
+        data: {
+          email,
+          name: '',
+          password: '',
+          role: role || 'EMPLOYEE',
+          setupComplete: false,
+          inviteToken,
+          inviteExpiry,
+          organizationId: admin.organizationId,
+        },
         select: { id: true, email: true, name: true, role: true, active: true, setupComplete: true, createdAt: true },
       })
     }
 
-    // Try to send email — if SMTP is not configured, return invite URL for manual sharing
     let emailSent = false
     let emailError = ''
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -63,7 +75,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await logAudit(admin.id, 'CREATE_USER', 'User', user.id, `Invited user: ${email}`)
+    await logAudit(admin.id, 'CREATE_USER', 'User', user.id, `Invited user: ${email}`, admin.organizationId)
 
     return NextResponse.json({ ...user, emailSent, inviteUrl: emailSent ? undefined : inviteUrl }, { status: 201 })
   } catch (e: any) {

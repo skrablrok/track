@@ -4,8 +4,9 @@ import { requireAuth, unauthorized, serverError } from '@/lib/utils'
 
 export async function GET() {
   try {
-    await requireAuth()
+    const user = await requireAuth()
     const rows = await db.toolWarehouseStock.findMany({
+      where: { tool: { organizationId: user.organizationId } },
       distinct: ['warehouse'],
       select: { warehouse: true },
       orderBy: { warehouse: 'asc' },

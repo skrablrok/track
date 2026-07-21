@@ -8,19 +8,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const admin = await requireRole(['ADMIN', 'MANAGER'])
     const body = await req.json()
     const { adminNotes, items } = body
-    // items: [{ requestItemId, approvedQty }]
 
     if (!items || !Array.isArray(items)) return badRequest('Items are required')
 
-    const request = await db.request.findUnique({
-      where: { id: params.id },
+    const request = await db.request.findFirst({
+      where: { id: params.id, organizationId: admin.organizationId },
       include: { items: { include: { tool: true } }, requester: true },
     })
 
     if (!request) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
     if (request.status !== 'PENDING') return badRequest('Request has already been reviewed')
 
-    // Calculate overall status
     const totalItems = items.length
     const approvedItems = items.filter((i: any) => parseInt(i.approvedQty) > 0)
     const fullyApproved = approvedItems.every((a: any) => {
@@ -43,15 +41,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           data: { approvedQty: qty },
         })
 
-        // Resolve the original request item for toolId and reservedQty
         const requestItem = request.items.find((ri) => ri.id === item.requestItemId)
         if (!requestItem?.toolId) continue
 
         const toolId = requestItem.toolId
 
         if (requestItem.reservedQty > 0) {
-          // Stock was already reduced when the request was submitted.
-          // Restore any amount that was reserved but not approved.
           const restoreQty = Math.max(0, requestItem.reservedQty - qty)
           if (restoreQty > 0) {
             await tx.tool.update({
@@ -60,7 +55,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             })
           }
 
-          // Create checkout for the approved quantity (no further stock deduction needed)
           if (qty > 0) {
             const isMaterial = requestItem.tool?.type === 'MATERIAL'
             await tx.checkout.create({
@@ -72,12 +66,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 quantity: qty,
                 notes: `Via approved request #${params.id.slice(-6).toUpperCase()}`,
                 status: isMaterial ? 'CONSUMED' : 'ACTIVE',
+                organizationId: admin.organizationId,
                 ...(isMaterial && { returnDate: new Date() }),
               },
             })
           }
 
-          // Check stock level after the restore and warn if low
           const updatedTool = await tx.tool.findUnique({
             where: { id: toolId },
             select: { name: true, currentStock: true, minStock: true },
@@ -90,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             }
           }
         } else {
-          // Legacy path: request predates the reservation feature — use old deduct-on-approval behavior
+          // Legacy path: request predates the reservation feature
           if (qty > 0) {
             const tool = await tx.tool.update({
               where: { id: toolId },
@@ -113,6 +107,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 quantity: qty,
                 notes: `Via approved request #${params.id.slice(-6).toUpperCase()}`,
                 status: isMaterial ? 'CONSUMED' : 'ACTIVE',
+                organizationId: admin.organizationId,
                 ...(isMaterial && { returnDate: new Date() }),
               },
             })
@@ -128,22 +123,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     await logAudit(
       admin.id, 'REVIEW_REQUEST', 'Request', params.id,
-      `${admin.name} ${status} request from ${request.requester.name}`
+      `${admin.name} ${status} request from ${request.requester.name}`,
+      admin.organizationId
     )
 
-    // Notify the requester
     const statusLabel = { APPROVED: 'approved', PARTIALLY_APPROVED: 'partially approved', REJECTED: 'rejected' }[status] || status
     await notifyUser(
       request.requesterId,
+      admin.organizationId,
       'REQUEST_REVIEWED',
       `Request ${statusLabel}`,
       `Your tool request has been ${statusLabel}${adminNotes ? `: "${adminNotes}"` : '.'}`,
       `/requests/${params.id}`
     )
 
-    // Notify admins/managers if stock warnings exist
     if (stockWarnings.length > 0) {
       await notifyAdmins(
+        admin.organizationId,
         'STOCK_NEGATIVE',
         '⚠️ Stock Replenishment Needed',
         stockWarnings.join(' | '),

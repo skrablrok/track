@@ -11,17 +11,18 @@ import { t } from '@/lib/i18n/translations'
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)!
   const lang = cookies().get('lang')?.value || 'sl'
+  const orgId = session?.user?.organizationId
 
   const [toolCount, materialCount, activeCheckouts, lowStockTools, recentActivity] = await Promise.all([
-    db.tool.count({ where: { active: true, type: 'TOOL' } }),
-    db.tool.count({ where: { active: true, type: 'MATERIAL' } }),
-    db.checkout.count({ where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] } } }),
+    db.tool.count({ where: { active: true, type: 'TOOL', organizationId: orgId } }),
+    db.tool.count({ where: { active: true, type: 'MATERIAL', organizationId: orgId } }),
+    db.checkout.count({ where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] }, organizationId: orgId } }),
     db.tool.findMany({
-      where: { active: true },
+      where: { active: true, organizationId: orgId },
       select: { id: true, name: true, currentStock: true, minStock: true, maxStock: true, totalStock: true },
     }).then((ts) => ts.filter((t) => t.currentStock <= t.minStock)),
     db.checkout.findMany({
-      where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] } },
+      where: { status: { in: ['ACTIVE', 'PENDING_RETURN'] }, organizationId: orgId },
       include: {
         tool: { select: { id: true, name: true, imageUrl: true, category: true } },
         user: { select: { id: true, name: true } },

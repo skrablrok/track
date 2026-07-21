@@ -5,8 +5,8 @@ import { requireAuth, logAudit, unauthorized, serverError } from '@/lib/utils'
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await requireAuth()
-    const request = await db.request.findUnique({
-      where: { id: params.id },
+    const request = await db.request.findFirst({
+      where: { id: params.id, organizationId: user.organizationId },
       include: {
         requester: { select: { id: true, name: true, email: true, role: true } },
         project: true,
@@ -38,8 +38,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   try {
     const user = await requireAuth()
 
-    const request = await db.request.findUnique({
-      where: { id: params.id },
+    const request = await db.request.findFirst({
+      where: { id: params.id, organizationId: user.organizationId },
       include: { items: true },
     })
     if (!request) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
@@ -52,7 +52,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return new Response(JSON.stringify({ error: 'Only pending requests can be cancelled' }), { status: 400 })
     }
 
-    // Restore reserved stock for each item, then delete the request
     await db.$transaction(async (tx) => {
       for (const item of request.items) {
         if (!item.toolId || item.reservedQty <= 0) continue
@@ -64,7 +63,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       await tx.request.delete({ where: { id: params.id } })
     })
 
-    await logAudit(user.id, 'CANCEL_REQUEST', 'Request', params.id, `Cancelled request ${params.id}`)
+    await logAudit(user.id, 'CANCEL_REQUEST', 'Request', params.id, `Cancelled request ${params.id}`, user.organizationId)
     return NextResponse.json({ success: true })
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()

@@ -4,6 +4,13 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
+  // Ensure default org exists
+  const org = await prisma.organization.upsert({
+    where: { slug: 'default' },
+    update: {},
+    create: { id: 'org_default', name: 'Default Organization', slug: 'default' },
+  })
+
   const [adminPw, managerPw, employeePw, foremanPw] = await Promise.all([
     bcrypt.hash('Admin123!', 12),
     bcrypt.hash('Manager123!', 12),
@@ -14,33 +21,33 @@ async function main() {
   await prisma.user.upsert({
     where: { email: 'admin@company.com' },
     update: {},
-    create: { email: 'admin@company.com', password: adminPw, name: 'System Administrator', role: 'ADMIN' },
+    create: { email: 'admin@company.com', password: adminPw, name: 'System Administrator', role: 'ADMIN', organizationId: org.id },
   })
   await prisma.user.upsert({
     where: { email: 'manager@company.com' },
     update: {},
-    create: { email: 'manager@company.com', password: managerPw, name: 'John Manager', role: 'MANAGER' },
+    create: { email: 'manager@company.com', password: managerPw, name: 'John Manager', role: 'MANAGER', organizationId: org.id },
   })
   await prisma.user.upsert({
     where: { email: 'employee@company.com' },
     update: {},
-    create: { email: 'employee@company.com', password: employeePw, name: 'Jane Employee', role: 'EMPLOYEE' },
+    create: { email: 'employee@company.com', password: employeePw, name: 'Jane Employee', role: 'EMPLOYEE', organizationId: org.id },
   })
   await prisma.user.upsert({
     where: { email: 'foreman@company.com' },
     update: {},
-    create: { email: 'foreman@company.com', password: foremanPw, name: 'Mike Foreman', role: 'FOREMAN' },
+    create: { email: 'foreman@company.com', password: foremanPw, name: 'Mike Foreman', role: 'FOREMAN', organizationId: org.id },
   })
 
   await prisma.project.upsert({
     where: { id: 'project-site-a' },
     update: {},
-    create: { id: 'project-site-a', name: 'Site A - Downtown Tower', location: '123 Main St, Downtown', description: 'High-rise construction project', status: 'ACTIVE' },
+    create: { id: 'project-site-a', name: 'Site A - Downtown Tower', location: '123 Main St, Downtown', description: 'High-rise construction project', status: 'ACTIVE', organizationId: org.id },
   })
   await prisma.project.upsert({
     where: { id: 'project-site-b' },
     update: {},
-    create: { id: 'project-site-b', name: 'Site B - Riverside Complex', location: '45 River Road', description: 'Residential complex renovation', status: 'ACTIVE' },
+    create: { id: 'project-site-b', name: 'Site B - Riverside Complex', location: '45 River Road', description: 'Residential complex renovation', status: 'ACTIVE', organizationId: org.id },
   })
 
   const tools = [
@@ -55,7 +62,7 @@ async function main() {
   ]
 
   for (const tool of tools) {
-    await prisma.tool.upsert({ where: { id: tool.id }, update: {}, create: tool })
+    await prisma.tool.upsert({ where: { id: tool.id }, update: {}, create: { ...tool, organizationId: org.id } })
   }
 
   console.log('\nDatabase seeded!')

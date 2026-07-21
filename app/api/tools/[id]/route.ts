@@ -4,9 +4,9 @@ import { requireAuth, requireRole, logAudit, unauthorized, serverError, badReque
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await requireAuth()
-    const tool = await db.tool.findUnique({
-      where: { id: params.id },
+    const user = await requireAuth()
+    const tool = await db.tool.findFirst({
+      where: { id: params.id, organizationId: user.organizationId },
       include: {
         checkouts: {
           include: {
@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const body = await req.json()
     const { name, description, category, imageUrl, type, totalStock, minStock, maxStock, active, warehouseStocks } = body
 
-    const existing = await db.tool.findUnique({ where: { id: params.id } })
+    const existing = await db.tool.findFirst({ where: { id: params.id, organizationId: user.organizationId } })
     if (!existing) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
 
     const stocks = Array.isArray(warehouseStocks)
@@ -85,7 +85,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       })
     })
 
-    await logAudit(user.id, 'UPDATE_TOOL', 'Tool', params.id, `Updated tool: ${tool?.name}`)
+    await logAudit(user.id, 'UPDATE_TOOL', 'Tool', params.id, `Updated tool: ${tool?.name}`, user.organizationId)
     return NextResponse.json(tool)
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()
@@ -97,8 +97,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await requireRole(['ADMIN'])
+    const existing = await db.tool.findFirst({ where: { id: params.id, organizationId: user.organizationId } })
+    if (!existing) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
     await db.tool.update({ where: { id: params.id }, data: { active: false } })
-    await logAudit(user.id, 'DELETE_TOOL', 'Tool', params.id, `Deactivated tool ${params.id}`)
+    await logAudit(user.id, 'DELETE_TOOL', 'Tool', params.id, `Deactivated tool ${params.id}`, user.organizationId)
     return NextResponse.json({ success: true })
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()

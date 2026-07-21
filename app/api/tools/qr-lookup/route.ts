@@ -4,13 +4,14 @@ import { requireAuth, unauthorized, serverError } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
     const { searchParams } = new URL(req.url)
     const code = searchParams.get('code')
     if (!code) return new Response(JSON.stringify({ error: 'Missing code' }), { status: 400 })
 
-    const tool = await db.tool.findUnique({
-      where: { qrCode: code },
+    // qrCode is unique per-org (@@unique([qrCode, organizationId])), use findFirst
+    const tool = await db.tool.findFirst({
+      where: { qrCode: code, organizationId: user.organizationId },
       include: {
         checkouts: {
           where: { status: 'ACTIVE' },

@@ -37,10 +37,11 @@ export async function logAudit(
   action: string,
   entity: string,
   entityId?: string,
-  details?: string
+  details?: string,
+  organizationId?: string
 ) {
   await db.auditLog.create({
-    data: { userId, action, entity, entityId, details },
+    data: { userId, action, entity, entityId, details, organizationId: organizationId ?? null },
   })
 }
 

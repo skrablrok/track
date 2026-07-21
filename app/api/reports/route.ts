@@ -4,11 +4,12 @@ import { requireRole, unauthorized, serverError } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireRole(['ADMIN', 'MANAGER'])
+    const user = await requireRole(['ADMIN', 'MANAGER'])
     const { searchParams } = new URL(req.url)
     const type = searchParams.get('type') || 'overview'
     const from = searchParams.get('from')
     const to = searchParams.get('to')
+    const orgId = user.organizationId
 
     const dateFilter = {
       ...(from && { gte: new Date(from) }),
@@ -18,30 +19,25 @@ export async function GET(req: NextRequest) {
     if (type === 'overview') {
       const [toolCount, materialCount, lowStockTools, activeCheckouts, totalCheckouts] =
         await Promise.all([
-          db.tool.count({ where: { active: true, type: 'TOOL' } }),
-          db.tool.count({ where: { active: true, type: 'MATERIAL' } }),
+          db.tool.count({ where: { active: true, type: 'TOOL', organizationId: orgId } }),
+          db.tool.count({ where: { active: true, type: 'MATERIAL', organizationId: orgId } }),
           db.tool.findMany({
-            where: { active: true },
+            where: { active: true, organizationId: orgId },
             select: { id: true, name: true, currentStock: true, minStock: true, totalStock: true, category: true },
           }).then(tools => tools.filter(t => t.currentStock <= t.minStock)),
-          db.checkout.count({ where: { status: 'ACTIVE' } }),
+          db.checkout.count({ where: { status: 'ACTIVE', organizationId: orgId } }),
           db.checkout.count({
-            where: { ...(Object.keys(dateFilter).length && { checkoutDate: dateFilter }) },
+            where: { organizationId: orgId, ...(Object.keys(dateFilter).length && { checkoutDate: dateFilter }) },
           }),
         ])
 
-      return NextResponse.json({
-        toolCount,
-        materialCount,
-        lowStockTools,
-        activeCheckouts,
-        totalCheckouts,
-      })
+      return NextResponse.json({ toolCount, materialCount, lowStockTools, activeCheckouts, totalCheckouts })
     }
 
     if (type === 'usage') {
       const checkouts = await db.checkout.findMany({
         where: {
+          organizationId: orgId,
           status: { in: ['RETURNED', 'CONSUMED'] },
           ...(Object.keys(dateFilter).length && { checkoutDate: dateFilter }),
         },
@@ -86,25 +82,16 @@ export async function GET(req: NextRequest) {
 
     if (type === 'inventory') {
       const tools = await db.tool.findMany({
-        where: { active: true },
-        select: {
-          id: true,
-          name: true,
-          category: true,
-          totalStock: true,
-          currentStock: true,
-          minStock: true,
-          maxStock: true,
-        },
+        where: { active: true, organizationId: orgId },
+        select: { id: true, name: true, category: true, totalStock: true, currentStock: true, minStock: true, maxStock: true },
         orderBy: { name: 'asc' },
       })
-
       return NextResponse.json(tools)
     }
 
     if (type === 'audit') {
       const logs = await db.auditLog.findMany({
-        where: { ...(Object.keys(dateFilter).length && { createdAt: dateFilter }) },
+        where: { organizationId: orgId, ...(Object.keys(dateFilter).length && { createdAt: dateFilter }) },
         include: { user: { select: { id: true, name: true, email: true } } },
         orderBy: { createdAt: 'desc' },
         take: 500,

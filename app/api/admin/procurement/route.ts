@@ -4,13 +4,14 @@ import { requireRole, unauthorized, forbidden, serverError } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireRole(['ADMIN', 'MANAGER'])
+    const user = await requireRole(['ADMIN', 'MANAGER'])
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
 
     const items = await db.requestItem.findMany({
       where: {
         procurementStatus: status ? status : { not: null },
+        request: { organizationId: user.organizationId },
       },
       include: {
         tool: { select: { id: true, name: true, imageUrl: true, currentStock: true } },

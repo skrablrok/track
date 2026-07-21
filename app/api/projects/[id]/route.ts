@@ -4,9 +4,9 @@ import { requireAuth, requireRole, logAudit, unauthorized, serverError } from '@
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await requireAuth()
-    const project = await db.project.findUnique({
-      where: { id: params.id },
+    const user = await requireAuth()
+    const project = await db.project.findFirst({
+      where: { id: params.id, organizationId: user.organizationId },
       include: {
         foreman: { select: { id: true, name: true } },
         checkouts: {
@@ -30,6 +30,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     const user = await requireRole(['ADMIN', 'MANAGER'])
     const body = await req.json()
+    const existing = await db.project.findFirst({ where: { id: params.id, organizationId: user.organizationId } })
+    if (!existing) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
+
     const project = await db.project.update({
       where: { id: params.id },
       data: {
@@ -40,7 +43,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         ...(body.foremanId !== undefined && { foremanId: body.foremanId || null }),
       },
     })
-    await logAudit(user.id, 'UPDATE_PROJECT', 'Project', project.id, `Updated project: ${project.name}`)
+    await logAudit(user.id, 'UPDATE_PROJECT', 'Project', project.id, `Updated project: ${project.name}`, user.organizationId)
     return NextResponse.json(project)
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()

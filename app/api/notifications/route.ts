@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
     const notifications = await db.notification.findMany({
       where: {
         userId: user.id,
+        organizationId: user.organizationId,
         ...(unreadOnly && { read: false }),
       },
       orderBy: { createdAt: 'desc' },
@@ -32,12 +33,12 @@ export async function PUT(req: NextRequest) {
 
     if (all) {
       await db.notification.updateMany({
-        where: { userId: user.id, read: false },
+        where: { userId: user.id, organizationId: user.organizationId, read: false },
         data: { read: true },
       })
     } else if (ids && Array.isArray(ids)) {
       await db.notification.updateMany({
-        where: { id: { in: ids }, userId: user.id },
+        where: { id: { in: ids }, userId: user.id, organizationId: user.organizationId },
         data: { read: true },
       })
     }

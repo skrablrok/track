@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
 
     const checkouts = await db.checkout.findMany({
       where: {
+        organizationId: user.organizationId,
         ...(status && { status: status as any }),
         ...(toolId && { toolId }),
         ...(projectId && { projectId }),
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     const qty = parseInt(quantity) || 1
 
-    const tool = await db.tool.findUnique({ where: { id: toolId } })
+    const tool = await db.tool.findFirst({ where: { id: toolId, organizationId: user.organizationId } })
     if (!tool || !tool.active) return badRequest('Tool not found or inactive')
     if (tool.currentStock < qty) return badRequest(`Insufficient stock. Available: ${tool.currentStock}`)
 
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
           quantity: qty,
           notes,
           status: isMaterial ? 'CONSUMED' : 'ACTIVE',
+          organizationId: user.organizationId,
           ...(isMaterial && { returnDate: new Date() }),
         },
         include: {
@@ -84,7 +86,8 @@ export async function POST(req: NextRequest) {
       isMaterial ? 'USE_MATERIAL' : 'CHECKOUT',
       'Checkout',
       checkout.id,
-      `${user.name} ${isMaterial ? 'used' : 'checked out'} ${qty}x ${tool.name}`
+      `${user.name} ${isMaterial ? 'used' : 'checked out'} ${qty}x ${tool.name}`,
+      user.organizationId
     )
 
     return NextResponse.json(checkout, { status: 201 })

@@ -105,7 +105,8 @@ function hrs(mins: number | null | undefined): string {
 // Route
 export async function GET(req: NextRequest) {
   try {
-    await requireRole(['ADMIN', 'MANAGER'])
+    const user = await requireRole(['ADMIN', 'MANAGER'])
+    const orgId = user.organizationId
 
     const { searchParams } = new URL(req.url)
     const month = searchParams.get('month') || new Date().toISOString().slice(0, 7)
@@ -118,7 +119,7 @@ export async function GET(req: NextRequest) {
     // Fetch all data
     const [checkouts, requests, tools, auditLogs] = await Promise.all([
       db.checkout.findMany({
-        where: { checkoutDate: { gte: from, lte: to } },
+        where: { organizationId: orgId, checkoutDate: { gte: from, lte: to } },
         include: {
           tool:    { select: { name: true, category: true } },
           user:    { select: { name: true, email: true, role: true } },
@@ -127,7 +128,7 @@ export async function GET(req: NextRequest) {
         orderBy: { checkoutDate: 'asc' },
       }),
       db.request.findMany({
-        where: { createdAt: { gte: from, lte: to } },
+        where: { organizationId: orgId, createdAt: { gte: from, lte: to } },
         include: {
           requester: { select: { name: true, email: true, role: true } },
           project:   { select: { name: true, location: true } },
@@ -135,9 +136,9 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      db.tool.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
+      db.tool.findMany({ where: { active: true, organizationId: orgId }, orderBy: { name: 'asc' } }),
       db.auditLog.findMany({
-        where: { createdAt: { gte: from, lte: to } },
+        where: { organizationId: orgId, createdAt: { gte: from, lte: to } },
         include: { user: { select: { name: true, email: true } } },
         orderBy: { createdAt: 'desc' },
         take: 2000,

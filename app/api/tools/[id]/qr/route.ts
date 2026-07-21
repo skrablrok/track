@@ -5,8 +5,8 @@ import QRCode from 'qrcode'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await requireAuth()
-    const tool = await db.tool.findUnique({ where: { id: params.id } })
+    const user = await requireAuth()
+    const tool = await db.tool.findFirst({ where: { id: params.id, organizationId: user.organizationId } })
     if (!tool) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
 
     const qrDataUrl = await QRCode.toDataURL(tool.qrCode, {

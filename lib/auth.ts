@@ -17,7 +17,6 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null
 
-        // Extract IP from the request NextAuth passes in
         const ip =
           (req?.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
           (req?.headers?.['x-real-ip'] as string) ||
@@ -34,7 +33,6 @@ export const authOptions: NextAuthOptions = {
         })
 
         // Always run bcrypt even when user not found — prevents timing-based user enumeration
-        // This is a real pre-computed bcrypt hash of a throwaway string
         const dummyHash = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/1XKAP12'
         const passwordMatch = await bcrypt.compare(
           credentials.password,
@@ -53,13 +51,6 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // Only allow company email domain
-        const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN
-        if (ALLOWED_DOMAIN && !user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-          recordFailedAttempt(ip)
-          return null
-        }
-
         clearAttempts(ip)
 
         await db.auditLog.create({
@@ -68,6 +59,7 @@ export const authOptions: NextAuthOptions = {
             action: 'LOGIN',
             entity: 'User',
             entityId: user.id,
+            organizationId: user.organizationId,
             details: `${user.email} logged in from IP: ${ip}`,
           },
         })
@@ -77,6 +69,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          organizationId: user.organizationId,
         }
       },
     }),
@@ -86,6 +79,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
+        token.organizationId = (user as any).organizationId
       }
       return token
     },
@@ -93,6 +87,7 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.id as string
         session.user.role = token.role as string
+        session.user.organizationId = token.organizationId as string
       }
       return session
     },

@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const tools: ToolRow[] = Array.isArray(body.tools) ? body.tools : []
     const projects: ProjectRow[] = Array.isArray(body.projects) ? body.projects : []
+    const orgId = user.organizationId
 
     if (tools.length === 0 && projects.length === 0) {
       return badRequest('Nothing to import')
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
       for (const row of tools) {
         const name = String(row.name || '').trim()
         if (!name) continue
-        const existing = await tx.tool.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } })
+        const existing = await tx.tool.findFirst({ where: { name: { equals: name, mode: 'insensitive' }, organizationId: orgId } })
         if (existing) { toolsSkipped.push(name); continue }
 
         const quantity = Math.max(0, parseInt(String(row.quantity)) || 0)
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
             currentStock: quantity,
             minStock: parseInt(String(row.minStock)) || (row.type === 'MATERIAL' ? 5 : 2),
             maxStock: parseInt(String(row.maxStock)) || 10,
+            organizationId: orgId,
             ...(warehouse && quantity > 0 && {
               warehouseStocks: {
                 create: [{ warehouse, quantity }],
@@ -69,10 +71,10 @@ export async function POST(req: NextRequest) {
       for (const row of projects) {
         const name = String(row.name || '').trim()
         if (!name) continue
-        const existing = await tx.project.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } })
+        const existing = await tx.project.findFirst({ where: { name: { equals: name, mode: 'insensitive' }, organizationId: orgId } })
         if (existing) { projectsSkipped.push(name); continue }
         await tx.project.create({
-          data: { name, location: row.location || null, description: row.description || null },
+          data: { name, location: row.location || null, description: row.description || null, organizationId: orgId },
         })
         projectsCreated++
       }
@@ -83,7 +85,8 @@ export async function POST(req: NextRequest) {
     await logAudit(
       user.id, 'BULK_IMPORT', 'Tool', undefined,
       `Imported ${result.toolsCreated} tool(s)/material(s) and ${result.projectsCreated} project(s) ` +
-      `(${result.toolsSkipped.length} tool duplicate(s), ${result.projectsSkipped.length} project duplicate(s) skipped)`
+      `(${result.toolsSkipped.length} tool duplicate(s), ${result.projectsSkipped.length} project duplicate(s) skipped)`,
+      orgId
     )
 
     return NextResponse.json({

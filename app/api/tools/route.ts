@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     const allTools = await db.tool.findMany({
       where: {
         active: true,
+        organizationId: user.organizationId,
         ...(category && { category }),
         ...(search && { name: { contains: search } }),
       },
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
         currentStock: computedTotal,
         minStock: parseInt(minStock) || (type === 'MATERIAL' ? 5 : 2),
         maxStock: parseInt(maxStock) || 10,
+        organizationId: user.organizationId,
         ...(stocks.length > 0 && {
           warehouseStocks: {
             create: stocks.map((w: any) => ({
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
       include: { warehouseStocks: true },
     })
 
-    await logAudit(user.id, 'CREATE_TOOL', 'Tool', tool.id, `Created tool: ${name}`)
+    await logAudit(user.id, 'CREATE_TOOL', 'Tool', tool.id, `Created tool: ${name}`, user.organizationId)
 
     return NextResponse.json(tool, { status: 201 })
   } catch (e: any) {

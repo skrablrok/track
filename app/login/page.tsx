@@ -132,8 +132,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
+          <div className="mt-6 pt-6 border-t border-gray-100 text-center space-y-2">
             <p className="text-xs text-gray-400">{t(lang, 'forAccess')}</p>
+            <p className="text-sm text-gray-500">
+              New organization?{' '}
+              <a href="/register" className="text-blue-600 font-medium hover:underline">Create an account</a>
+            </p>
           </div>
         </div>
 

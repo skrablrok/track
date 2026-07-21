@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
 
     const requests = await db.request.findMany({
       where: {
+        organizationId: user.organizationId,
         ...(!isPrivileged && { requesterId: user.id }),
         ...(isPrivileged && requesterId && { requesterId }),
         ...(status && { status }),
@@ -53,10 +54,10 @@ export async function POST(req: NextRequest) {
       return badRequest('At least one item is required')
     }
 
-    // Fetch current stock for validation and procurement flagging
+    // Fetch current stock for validation and procurement flagging (scoped to org)
     const toolIds = items.filter((i: any) => i.toolId).map((i: any) => i.toolId)
     const tools = toolIds.length
-      ? await db.tool.findMany({ where: { id: { in: toolIds } }, select: { id: true, name: true, type: true, currentStock: true } })
+      ? await db.tool.findMany({ where: { id: { in: toolIds }, organizationId: user.organizationId }, select: { id: true, name: true, type: true, currentStock: true } })
       : []
     const toolById = new Map(tools.map((t) => [t.id, t]))
 
@@ -80,7 +81,6 @@ export async function POST(req: NextRequest) {
       return !!tool && parseInt(i.requestedQty) > tool.currentStock
     }
 
-    // Create request and immediately reserve stock in one transaction
     const request = await db.$transaction(async (tx) => {
       const created = await tx.request.create({
         data: {
@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
           projectId: projectId || null,
           notes,
           status: 'PENDING',
+          organizationId: user.organizationId,
           items: {
             create: items.map((i: any) => ({
               toolId: i.toolId || null,
@@ -107,11 +108,9 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // Deduct stock for each tool/material item and record the amount reserved
       for (const createdItem of created.items) {
         if (!createdItem.toolId) continue
 
-        // Read fresh stock inside the transaction to avoid race conditions
         const freshTool = await tx.tool.findUnique({
           where: { id: createdItem.toolId },
           select: { currentStock: true },
@@ -137,9 +136,8 @@ export async function POST(req: NextRequest) {
     })
 
     await logAudit(user.id, 'CREATE_REQUEST', 'Request', request.id,
-      `${user.name} submitted request for ${items.length} item(s)`)
+      `${user.name} submitted request for ${items.length} item(s)`, user.organizationId)
 
-    // Notify all admins and managers
     const projectName = request.project?.name || 'no project'
     const neverStocked = items.filter((i: any) => !i.toolId).map((i: any) => ({ name: String(i.itemName).trim(), qty: parseInt(i.requestedQty) }))
     const lowStock = items
@@ -148,6 +146,7 @@ export async function POST(req: NextRequest) {
     const procurementCount = neverStocked.length + lowStock.length
 
     await notifyAdmins(
+      user.organizationId,
       'REQUEST_SUBMITTED',
       procurementCount > 0 ? '⚠️ Item Needed — Not In Stock' : 'New Tool Request',
       procurementCount > 0
@@ -157,7 +156,7 @@ export async function POST(req: NextRequest) {
     )
 
     if (procurementCount > 0) {
-      const admins = await db.user.findMany({ where: { active: true, role: { in: ['ADMIN', 'MANAGER'] } }, select: { email: true } })
+      const admins = await db.user.findMany({ where: { active: true, role: { in: ['ADMIN', 'MANAGER'] }, organizationId: user.organizationId }, select: { email: true } })
       await sendProcurementEmail(admins.map((a) => a.email), {
         requesterName: user.name as string,
         projectName,

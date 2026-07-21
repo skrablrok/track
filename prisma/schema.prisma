@@ -15,6 +15,22 @@ datasource db {
 // ToolType values: TOOL, MATERIAL
 // RequestItem.toolId is null for custom items not in inventory; itemName holds the free-text name in that case
 
+model Organization {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  users         User[]
+  tools         Tool[]
+  projects      Project[]
+  checkouts     Checkout[]
+  requests      Request[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+}
+
 model User {
   id             String         @id @default(cuid())
   email          String         @unique
@@ -25,8 +41,10 @@ model User {
   setupComplete  Boolean        @default(true)
   inviteToken    String?        @unique
   inviteExpiry   DateTime?
+  organizationId String
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  organization   Organization   @relation(fields: [organizationId], references: [id])
   checkouts      Checkout[]
   auditLogs      AuditLog[]
   requests       Request[]
@@ -35,23 +53,27 @@ model User {
 }
 
 model Tool {
-  id           String        @id @default(cuid())
-  name         String
-  description  String?
-  category     String?
-  imageUrl     String?
-  type         String        @default("TOOL")
-  totalStock   Int           @default(1)
-  currentStock Int           @default(1)
-  minStock     Int           @default(2)
+  id              String               @id @default(cuid())
+  name            String
+  description     String?
+  category        String?
+  imageUrl        String?
+  type            String               @default("TOOL")
+  totalStock      Int                  @default(1)
+  currentStock    Int                  @default(1)
+  minStock        Int                  @default(2)
   maxStock        Int                  @default(10)
-  qrCode          String               @unique @default(cuid())
+  qrCode          String               @default(cuid())
   active          Boolean              @default(true)
+  organizationId  String
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
+  organization    Organization         @relation(fields: [organizationId], references: [id])
   checkouts       Checkout[]
   requestItems    RequestItem[]
   warehouseStocks ToolWarehouseStock[]
+
+  @@unique([qrCode, organizationId])
 }
 
 model ToolWarehouseStock {
@@ -65,50 +87,56 @@ model ToolWarehouseStock {
 }
 
 model Project {
-  id          String     @id @default(cuid())
-  name        String
-  location    String?
-  description String?
-  status      String     @default("ACTIVE")
-  foremanId   String?
-  foreman     User?      @relation("ProjectForeman", fields: [foremanId], references: [id])
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  checkouts   Checkout[]
-  requests    Request[]
+  id             String     @id @default(cuid())
+  name           String
+  location       String?
+  description    String?
+  status         String     @default("ACTIVE")
+  foremanId      String?
+  organizationId String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  foreman        User?      @relation("ProjectForeman", fields: [foremanId], references: [id])
+  checkouts      Checkout[]
+  requests       Request[]
 }
 
 model Checkout {
-  id           String    @id @default(cuid())
-  toolId       String
-  userId       String
-  projectId    String?
-  requestId    String?
-  quantity     Int       @default(1)
-  checkoutDate DateTime  @default(now())
-  returnDate   DateTime?
-  durationMins Int?
-  notes        String?
-  status       String    @default("ACTIVE")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  tool         Tool      @relation(fields: [toolId], references: [id])
-  user         User      @relation(fields: [userId], references: [id])
-  project      Project?  @relation(fields: [projectId], references: [id])
+  id             String    @id @default(cuid())
+  toolId         String
+  userId         String
+  projectId      String?
+  requestId      String?
+  quantity       Int       @default(1)
+  checkoutDate   DateTime  @default(now())
+  returnDate     DateTime?
+  durationMins   Int?
+  notes          String?
+  status         String    @default("ACTIVE")
+  organizationId String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  tool           Tool      @relation(fields: [toolId], references: [id])
+  user           User      @relation(fields: [userId], references: [id])
+  project        Project?  @relation(fields: [projectId], references: [id])
 }
 
 model Request {
-  id          String        @id @default(cuid())
-  requesterId String
-  projectId   String?
-  status      String        @default("PENDING")
-  notes       String?
-  adminNotes  String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  requester   User          @relation(fields: [requesterId], references: [id])
-  project     Project?      @relation(fields: [projectId], references: [id])
-  items       RequestItem[]
+  id             String        @id @default(cuid())
+  requesterId    String
+  projectId      String?
+  status         String        @default("PENDING")
+  notes          String?
+  adminNotes     String?
+  organizationId String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  requester      User          @relation(fields: [requesterId], references: [id])
+  project        Project?      @relation(fields: [projectId], references: [id])
+  items          RequestItem[]
 }
 
 model RequestItem {
@@ -128,25 +156,29 @@ model RequestItem {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  userId    String?
-  type      String
-  title     String
-  message   String
-  read      Boolean  @default(false)
-  linkUrl   String?
-  createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
+  id             String   @id @default(cuid())
+  userId         String?
+  type           String
+  title          String
+  message        String
+  read           Boolean  @default(false)
+  linkUrl        String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User?    @relation(fields: [userId], references: [id])
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  entity    String
-  entityId  String?
-  details   String?
-  ipAddress String?
-  createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
+  id             String   @id @default(cuid())
+  userId         String?
+  action         String
+  entity         String
+  entityId       String?
+  details        String?
+  ipAddress      String?
+  organizationId String?
+  createdAt      DateTime @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User?    @relation(fields: [userId], references: [id])
 }

@@ -10,8 +10,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (action !== 'confirm' && action !== 'reject') return badRequest('Invalid action')
 
-    const checkout = await db.checkout.findUnique({
-      where: { id: params.id },
+    const checkout = await db.checkout.findFirst({
+      where: { id: params.id, organizationId: user.organizationId },
       include: { tool: true, user: true },
     })
 
@@ -38,11 +38,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         'RETURN_CONFIRMED',
         'Checkout',
         checkout.id,
-        `${user.name} confirmed return of ${checkout.quantity}x ${checkout.tool.name} from ${checkout.user.name}`
+        `${user.name} confirmed return of ${checkout.quantity}x ${checkout.tool.name} from ${checkout.user.name}`,
+        user.organizationId
       )
 
       await notifyUser(
         checkout.userId,
+        user.organizationId,
         'RETURN_CONFIRMED',
         'Return Confirmed',
         `Your return of ${checkout.tool.name} has been approved.`,
@@ -59,11 +61,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         'RETURN_REJECTED',
         'Checkout',
         checkout.id,
-        `${user.name} rejected return of ${checkout.tool.name} from ${checkout.user.name}`
+        `${user.name} rejected return of ${checkout.tool.name} from ${checkout.user.name}`,
+        user.organizationId
       )
 
       await notifyUser(
         checkout.userId,
+        user.organizationId,
         'RETURN_REJECTED',
         'Return Not Confirmed',
         `Your return of ${checkout.tool.name} was not confirmed. Please bring the tool to the warehouse.`,

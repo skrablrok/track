@@ -9,8 +9,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const body = await req.json().catch(() => ({}))
     const { notes } = body
 
-    const checkout = await db.checkout.findUnique({
-      where: { id: params.id },
+    const checkout = await db.checkout.findFirst({
+      where: { id: params.id, organizationId: user.organizationId },
       include: { tool: true, user: true },
     })
 
@@ -40,10 +40,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       'RETURN_REQUESTED',
       'Checkout',
       checkout.id,
-      `${user.name} requested return of ${checkout.quantity}x ${checkout.tool.name}`
+      `${user.name} requested return of ${checkout.quantity}x ${checkout.tool.name}`,
+      user.organizationId
     )
 
     await notifyAdmins(
+      user.organizationId,
       'RETURN_REQUESTED',
       'Tool Return Requested',
       `${user.name} requested to return ${checkout.tool.name}. Please confirm the return.`,

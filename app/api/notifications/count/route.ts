@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await requireAuth()
     const count = await db.notification.count({
-      where: { userId: user.id, read: false },
+      where: { userId: user.id, organizationId: user.organizationId, read: false },
     })
     return NextResponse.json({ count })
   } catch (e: any) {

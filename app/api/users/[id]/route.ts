@@ -9,6 +9,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const body = await req.json()
     const { name, role, active, password } = body
 
+    // Ensure the target user is in the same org
+    const target = await db.user.findFirst({ where: { id: params.id, organizationId: admin.organizationId } })
+    if (!target) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
+
     const data: any = {}
     if (name) data.name = name
     if (role) data.role = role
@@ -21,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       select: { id: true, email: true, name: true, role: true, active: true },
     })
 
-    await logAudit(admin.id, 'UPDATE_USER', 'User', user.id, `Updated user: ${user.email}`)
+    await logAudit(admin.id, 'UPDATE_USER', 'User', user.id, `Updated user: ${user.email}`, admin.organizationId)
     return NextResponse.json(user)
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()
