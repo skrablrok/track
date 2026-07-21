@@ -1,6 +1,34 @@
-import PDFDocument from 'pdfkit'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 type Item = { name: string; requestedQty: number; approvedQty: number }
+
+const PAGE_W = 595
+const PAGE_H = 842
+const MARGIN = 50
+const USABLE_W = PAGE_W - MARGIN * 2  // 495
+
+// Convert hex-style [r,g,b] (0-255) to pdf-lib color
+function c([r, g, b]: number[]) { return rgb(r / 255, g / 255, b / 255) }
+
+// Color palette
+const COL = {
+  darkBlue:  [30,  58,  95],
+  white:     [255, 255, 255],
+  gray700:   [55,  65,  81],
+  gray600:   [100, 116, 139],
+  gray400:   [148, 163, 184],
+  gray200:   [226, 232, 240],
+  gray50:    [248, 250, 252],
+  dark:      [30,  41,  59],
+  green:     [21,  128, 61],
+  greenBg:   [220, 252, 231],
+  amber:     [180, 83,  9],
+  amberBg:   [254, 243, 199],
+  amberNote: [146, 64,  14],
+  amberText: [120, 53,  15],
+  yellowBg:  [254, 252, 232],
+  yellowBdr: [253, 230, 138],
+}
 
 export async function generateDeliveryNotePdf(details: {
   requestId: string
@@ -12,143 +40,162 @@ export async function generateDeliveryNotePdf(details: {
   items: Item[]
   adminNotes?: string | null
 }): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 50 })
-    const chunks: Buffer[] = []
-    doc.on('data', (c: Buffer) => chunks.push(c))
-    doc.on('end', () => resolve(Buffer.concat(chunks)))
-    doc.on('error', reject)
+  const pdfDoc = await PDFDocument.create()
+  const page = pdfDoc.addPage([PAGE_W, PAGE_H])
 
-    const { requestId, requesterName, confirmedByName, projectName, status, confirmedAt, items, adminNotes } = details
-    const refNumber = requestId.slice(-8).toUpperCase()
-    const dateStr = confirmedAt.toLocaleDateString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const timeStr = confirmedAt.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })
-    const statusLabel = status === 'APPROVED' ? 'POTRJENO' : 'DELNO POTRJENO'
-    const W = 495 // usable width (595 - 50 - 50)
+  // pdf-lib ships the 14 standard PDF fonts — no font files needed on disk
+  const regular = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const bold    = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
-    // ── Header bar ──────────────────────────────────────────────────────────
-    doc.rect(50, 45, W, 52).fill('#1e3a5f')
+  // pdf-lib origin is bottom-left; pdfkit origin is top-left.
+  // All layout values below use "from-top" coords; these helpers convert them.
 
-    doc.fillColor('white').fontSize(18).font('Helvetica-Bold')
-       .text('BuildFlow', 62, 54)
-    doc.fontSize(9).font('Helvetica')
-       .text('Upravljanje inventarja orodij', 62, 76)
+  const pdfY = (fromTop: number) => PAGE_H - fromTop
 
-    doc.fontSize(22).font('Helvetica-Bold')
-       .text('DOBAVNICA', 0, 54, { align: 'right', width: 535 })
-    doc.fontSize(9).font('Helvetica')
-       .text('Delivery Note', 0, 76, { align: 'right', width: 535 })
+  function fillRect(x: number, yTop: number, w: number, h: number, col: number[]) {
+    page.drawRectangle({ x, y: pdfY(yTop + h), width: w, height: h, color: c(col) })
+  }
 
-    // ── Reference / date strip ───────────────────────────────────────────
-    doc.fillColor('#374151').fontSize(9).font('Helvetica')
-    const stripY = 108
-    doc.text(`Ref: #${refNumber}`, 50, stripY)
-    doc.text(`Datum: ${dateStr}  ob  ${timeStr}`, 0, stripY, { align: 'right', width: 545 })
+  function strokeRect(x: number, yTop: number, w: number, h: number, col: number[], lw = 0.5) {
+    page.drawRectangle({ x, y: pdfY(yTop + h), width: w, height: h, borderColor: c(col), borderWidth: lw })
+  }
 
-    // Status badge
-    const badgeBg = status === 'APPROVED' ? '#dcfce7' : '#fef3c7'
-    const badgeFg = status === 'APPROVED' ? '#15803d' : '#b45309'
-    const badgeW = 110
-    const badgeX = 50 + W / 2 - badgeW / 2
-    doc.rect(badgeX, stripY - 3, badgeW, 16).fill(badgeBg)
-    doc.fillColor(badgeFg).fontSize(8).font('Helvetica-Bold')
-       .text(statusLabel, badgeX, stripY, { width: badgeW, align: 'center' })
+  // yTop = top edge of text line in from-top coords
+  function drawText(str: string, x: number, yTop: number, size: number, font: typeof regular, col: number[], maxWidth?: number) {
+    page.drawText(str, { x, y: pdfY(yTop + size * 0.78), size, font, color: c(col), maxWidth })
+  }
 
-    // ── Divider ──────────────────────────────────────────────────────────
-    doc.moveTo(50, 130).lineTo(545, 130).strokeColor('#cbd5e1').lineWidth(1).stroke()
+  function drawTextRight(str: string, xRight: number, yTop: number, size: number, font: typeof regular, col: number[]) {
+    const tw = font.widthOfTextAtSize(str, size)
+    drawText(str, xRight - tw, yTop, size, font, col)
+  }
 
-    // ── Parties ──────────────────────────────────────────────────────────
-    const colW = W / 2 - 8
-    const boxY = 138
+  function drawTextCenter(str: string, boxX: number, boxW: number, yTop: number, size: number, font: typeof regular, col: number[]) {
+    const tw = font.widthOfTextAtSize(str, size)
+    drawText(str, boxX + (boxW - tw) / 2, yTop, size, font, col)
+  }
 
-    // Left box — naročnik
-    doc.rect(50, boxY, colW, 64).fill('#f8fafc')
-    doc.fillColor('#94a3b8').fontSize(7).font('Helvetica-Bold')
-       .text('NAROČNIK', 58, boxY + 8)
-    doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold')
-       .text(requesterName, 58, boxY + 20)
-    if (projectName) {
-      doc.fillColor('#64748b').fontSize(9).font('Helvetica')
-         .text(`Projekt: ${projectName}`, 58, boxY + 36)
+  function hline(yTop: number, x1: number, x2: number, col: number[], lw = 0.5) {
+    page.drawLine({ start: { x: x1, y: pdfY(yTop) }, end: { x: x2, y: pdfY(yTop) }, thickness: lw, color: c(col) })
+  }
+
+  function vline(x: number, yTop1: number, yTop2: number, col: number[], lw = 0.5) {
+    page.drawLine({ start: { x, y: pdfY(yTop1) }, end: { x, y: pdfY(yTop2) }, thickness: lw, color: c(col) })
+  }
+
+  const { requestId, requesterName, confirmedByName, projectName, status, confirmedAt, items, adminNotes } = details
+  const ref     = requestId.slice(-8).toUpperCase()
+  const dateStr = confirmedAt.toLocaleDateString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const timeStr = confirmedAt.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })
+  const statusLabel = status === 'APPROVED' ? 'POTRJENO' : 'DELNO POTRJENO'
+  const statusCol   = status === 'APPROVED' ? COL.green  : COL.amber
+  const statusBgCol = status === 'APPROVED' ? COL.greenBg : COL.amberBg
+
+  // ── Header bar ──────────────────────────────────────────────────────────
+  fillRect(MARGIN, 45, USABLE_W, 52, COL.darkBlue)
+  drawText('BuildFlow', MARGIN + 12, 54, 18, bold, COL.white)
+  drawText('Upravljanje inventarja orodij', MARGIN + 12, 74, 9, regular, COL.white)
+  drawTextRight('DOBAVNICA', PAGE_W - MARGIN, 54, 22, bold, COL.white)
+  drawTextRight('Delivery Note', PAGE_W - MARGIN, 74, 9, regular, COL.white)
+
+  // ── Reference / date strip ───────────────────────────────────────────
+  const stripY = 108
+  drawText(`Ref: #${ref}`, MARGIN, stripY, 9, regular, COL.gray700)
+  drawTextRight(`Datum: ${dateStr}  ob  ${timeStr}`, PAGE_W - MARGIN, stripY, 9, regular, COL.gray700)
+
+  // Status badge (centered)
+  const badgeW = 110
+  const badgeX = MARGIN + USABLE_W / 2 - badgeW / 2
+  fillRect(badgeX, stripY - 3, badgeW, 16, statusBgCol)
+  drawTextCenter(statusLabel, badgeX, badgeW, stripY + 1, 8, bold, statusCol)
+
+  // ── Divider ─────────────────────────────────────────────────────────
+  hline(130, MARGIN, PAGE_W - MARGIN, COL.gray200)
+
+  // ── Parties ──────────────────────────────────────────────────────────
+  const halfW = USABLE_W / 2 - 8
+  const boxY  = 138
+
+  fillRect(MARGIN, boxY, halfW, 64, COL.gray50)
+  drawText('NAROČNIK', MARGIN + 8, boxY + 8, 7, bold, COL.gray400)
+  drawText(requesterName, MARGIN + 8, boxY + 20, 11, bold, COL.dark)
+  if (projectName) drawText(`Projekt: ${projectName}`, MARGIN + 8, boxY + 36, 9, regular, COL.gray600)
+
+  const rightX = MARGIN + halfW + 16
+  fillRect(rightX, boxY, halfW, 64, COL.gray50)
+  drawText('POTRDIL', rightX + 8, boxY + 8, 7, bold, COL.gray400)
+  drawText(confirmedByName, rightX + 8, boxY + 20, 11, bold, COL.dark)
+  drawText(dateStr, rightX + 8, boxY + 36, 9, regular, COL.gray600)
+
+  // ── Items table ──────────────────────────────────────────────────────
+  const tableY   = boxY + 80
+  const colName  = MARGIN
+  const colReq   = 390
+  const colApp   = 465
+  const colReqW  = 60
+  const colAppW  = 60
+
+  // Header
+  fillRect(MARGIN, tableY, USABLE_W, 22, COL.darkBlue)
+  drawText('ARTIKEL', colName + 6, tableY + 7, 9, bold, COL.white)
+  drawTextCenter('ZAHTEVANO', colReq, colReqW, tableY + 7, 9, bold, COL.white)
+  drawTextCenter('ODOBRENO', colApp, colAppW, tableY + 7, 9, bold, COL.white)
+
+  const approvedItems = items.filter((i) => i.approvedQty > 0)
+  let rowY = tableY + 22
+  const ROW_H = 20
+
+  approvedItems.forEach((item, idx) => {
+    fillRect(MARGIN, rowY, USABLE_W, ROW_H, idx % 2 === 0 ? COL.gray50 : COL.white)
+
+    // Truncate long item names so they don't overflow
+    let name = item.name
+    while (name.length > 1 && regular.widthOfTextAtSize(name, 9) > 310) {
+      name = name.slice(0, -1)
     }
+    if (name !== item.name) name += '…'
 
-    // Right box — potrdil
-    const rightX = 50 + colW + 16
-    doc.rect(rightX, boxY, colW, 64).fill('#f8fafc')
-    doc.fillColor('#94a3b8').fontSize(7).font('Helvetica-Bold')
-       .text('POTRDIL', rightX + 8, boxY + 8)
-    doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold')
-       .text(confirmedByName, rightX + 8, boxY + 20)
-    doc.fillColor('#64748b').fontSize(9).font('Helvetica')
-       .text(dateStr, rightX + 8, boxY + 36)
+    drawText(name, colName + 6, rowY + 6, 9, regular, COL.dark)
+    drawTextCenter(String(item.requestedQty), colReq, colReqW, rowY + 6, 9, regular, COL.gray600)
+    drawTextCenter(String(item.approvedQty),  colApp, colAppW, rowY + 6, 9, bold, statusCol)
 
-    // ── Items table ──────────────────────────────────────────────────────
-    const tableY = boxY + 80
-    const colName = 50
-    const colReq  = 390
-    const colApp  = 465
-
-    // Table header
-    doc.rect(50, tableY, W, 22).fill('#1e3a5f')
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
-    doc.text('ARTIKEL', colName + 6, tableY + 7)
-    doc.text('ZAHTEVANO', colReq, tableY + 7, { width: 60, align: 'center' })
-    doc.text('ODOBRENO', colApp, tableY + 7, { width: 60, align: 'center' })
-
-    const approvedItems = items.filter((i) => i.approvedQty > 0)
-    let rowY = tableY + 22
-    const rowH = 20
-
-    approvedItems.forEach((item, idx) => {
-      const bg = idx % 2 === 0 ? '#f8fafc' : 'white'
-      doc.rect(50, rowY, W, rowH).fill(bg)
-
-      doc.fillColor('#1e293b').fontSize(9).font('Helvetica')
-         .text(item.name, colName + 6, rowY + 6, { width: 320, ellipsis: true })
-
-      doc.fillColor('#64748b')
-         .text(String(item.requestedQty), colReq, rowY + 6, { width: 60, align: 'center' })
-
-      const approvedColor = status === 'APPROVED' ? '#15803d' : '#b45309'
-      doc.fillColor(approvedColor).font('Helvetica-Bold')
-         .text(String(item.approvedQty), colApp, rowY + 6, { width: 60, align: 'center' })
-
-      rowY += rowH
-    })
-
-    // Table bottom border
-    doc.rect(50, tableY, W, rowY - tableY).strokeColor('#e2e8f0').lineWidth(0.5).stroke()
-    doc.moveTo(colReq - 4, tableY).lineTo(colReq - 4, rowY).stroke()
-    doc.moveTo(colApp - 4, tableY).lineTo(colApp - 4, rowY).stroke()
-
-    // ── Admin notes ──────────────────────────────────────────────────────
-    if (adminNotes) {
-      rowY += 12
-      doc.rect(50, rowY, W, 36).fill('#fefce8')
-      doc.rect(50, rowY, W, 36).strokeColor('#fde68a').lineWidth(0.5).stroke()
-      doc.fillColor('#92400e').fontSize(8).font('Helvetica-Bold')
-         .text('OPOMBA ADMINISTRATORJA:', 58, rowY + 6)
-      doc.fillColor('#78350f').fontSize(9).font('Helvetica')
-         .text(adminNotes, 58, rowY + 18, { width: W - 16 })
-      rowY += 48
-    }
-
-    // ── Signature lines ──────────────────────────────────────────────────
-    const sigY = Math.max(rowY + 40, 620)
-    doc.moveTo(50, sigY).lineTo(210, sigY).strokeColor('#94a3b8').lineWidth(0.5).stroke()
-    doc.fillColor('#64748b').fontSize(8).font('Helvetica')
-       .text('Podpis naročnika', 50, sigY + 4)
-    doc.text(requesterName, 50, sigY + 14, { width: 160 })
-
-    doc.moveTo(330, sigY).lineTo(490, sigY).stroke()
-    doc.text('Podpis prevzemnika', 330, sigY + 4)
-    doc.text(confirmedByName, 330, sigY + 14, { width: 160 })
-
-    // ── Footer ───────────────────────────────────────────────────────────
-    doc.moveTo(50, 775).lineTo(545, 775).strokeColor('#e2e8f0').lineWidth(0.5).stroke()
-    doc.fillColor('#94a3b8').fontSize(7.5).font('Helvetica')
-       .text(`BuildFlow · Dobavnica #${refNumber} · ${dateStr}`, 50, 780, { align: 'center', width: W })
-
-    doc.end()
+    rowY += ROW_H
   })
+
+  // Table outer border
+  strokeRect(MARGIN, tableY, USABLE_W, rowY - tableY, COL.gray200)
+  // Column dividers
+  vline(colReq - 4, tableY, rowY, COL.gray200)
+  vline(colApp - 4, tableY, rowY, COL.gray200)
+
+  // ── Admin notes ──────────────────────────────────────────────────────
+  if (adminNotes) {
+    rowY += 12
+    const noteH = 40
+    fillRect(MARGIN, rowY, USABLE_W, noteH, COL.yellowBg)
+    strokeRect(MARGIN, rowY, USABLE_W, noteH, COL.yellowBdr)
+    drawText('OPOMBA ADMINISTRATORJA:', MARGIN + 8, rowY + 6, 8, bold, COL.amberNote)
+    // Limit note to ~80 chars so it fits on one line
+    const note = adminNotes.length > 90 ? adminNotes.slice(0, 87) + '…' : adminNotes
+    drawText(note, MARGIN + 8, rowY + 18, 9, regular, COL.amberText, USABLE_W - 16)
+    rowY += noteH + 8
+  }
+
+  // ── Signature lines ──────────────────────────────────────────────────
+  const sigY = Math.max(rowY + 40, 630)
+  hline(sigY, MARGIN, MARGIN + 160, COL.gray400)
+  drawText('Podpis naročnika', MARGIN, sigY + 4, 8, regular, COL.gray600)
+  drawText(requesterName, MARGIN, sigY + 14, 8, regular, COL.gray600)
+
+  hline(sigY, 330, 490, COL.gray400)
+  drawText('Podpis prevzemnika', 330, sigY + 4, 8, regular, COL.gray600)
+  drawText(confirmedByName, 330, sigY + 14, 8, regular, COL.gray600)
+
+  // ── Footer ───────────────────────────────────────────────────────────
+  hline(775, MARGIN, PAGE_W - MARGIN, COL.gray200)
+  const footerStr = `BuildFlow · Dobavnica #${ref} · ${dateStr}`
+  drawTextCenter(footerStr, 0, PAGE_W, 780, 7.5, regular, COL.gray400)
+
+  const pdfBytes = await pdfDoc.save()
+  return Buffer.from(pdfBytes)
 }
