@@ -17,9 +17,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <LanguageProvider initialLang={lang}>
       <div className="flex h-screen bg-gray-50 overflow-hidden">
-        <Sidebar role={session.user.role} />
+        <Sidebar role={session.user.role} orgName={session.user.orgName} />
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          <Header user={session.user} />
+          <Header user={session.user} orgName={session.user.orgName} />
           <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
             <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
               {children}

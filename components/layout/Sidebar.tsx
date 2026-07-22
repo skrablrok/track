@@ -10,7 +10,7 @@ import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
-export default function Sidebar({ role }: { role: string }) {
+export default function Sidebar({ role, orgName }: { role: string; orgName?: string }) {
   const pathname = usePathname()
   const { t } = useLanguage()
 
@@ -32,10 +32,10 @@ export default function Sidebar({ role }: { role: string }) {
   return (
     <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 h-screen">
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
           <Building2 className="w-4 h-4 text-white" />
         </div>
-        <span className="font-bold text-gray-900 text-lg">BuildFlow</span>
+        <span className="font-bold text-gray-900 text-base leading-tight truncate">{orgName || 'BuildFlow'}</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
@@ -54,7 +54,7 @@ export default function Sidebar({ role }: { role: string }) {
         ))}
       </nav>
 
-      <div className="px-3 py-4 border-t border-gray-100">
+      <div className="px-3 py-4 border-t border-gray-100 space-y-1">
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="sidebar-link w-full text-red-500 hover:bg-red-50 hover:text-red-600"
@@ -62,6 +62,14 @@ export default function Sidebar({ role }: { role: string }) {
           <LogOut size={18} />
           {t('nav_signOut')}
         </button>
+        <a
+          href="https://skrablweb.si"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-center text-[10px] text-gray-300 hover:text-gray-400 transition-colors py-1"
+        >
+          BuildFlow by SKRABLWEB
+        </a>
       </div>
     </aside>
   )

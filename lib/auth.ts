@@ -31,7 +31,7 @@ export const authOptions: NextAuthOptions = {
           credentials.email.toLowerCase() === superAdminEmail.toLowerCase() &&
           credentials.password === superAdminPassword
         ) {
-          return { id: 'super-admin', email: superAdminEmail, name: 'Super Admin', role: 'SUPER_ADMIN', organizationId: '' }
+          return { id: 'super-admin', email: superAdminEmail, name: 'Super Admin', role: 'SUPER_ADMIN', organizationId: '', orgName: '' }
         }
 
         const { allowed, retryAfterSecs } = checkRateLimit(ip)
@@ -42,7 +42,7 @@ export const authOptions: NextAuthOptions = {
 
         const user = await db.user.findUnique({
           where: { email: credentials.email },
-          include: { organization: { select: { active: true } } },
+          include: { organization: { select: { active: true, name: true } } },
         })
 
         // Always run bcrypt even when user not found — prevents timing-based user enumeration
@@ -87,6 +87,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           organizationId: user.organizationId,
+          orgName: user.organization?.name ?? '',
         }
       },
     }),
@@ -97,6 +98,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.role = (user as any).role
         token.organizationId = (user as any).organizationId
+        token.orgName = (user as any).orgName ?? ''
       }
       return token
     },
@@ -105,6 +107,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.role = token.role as string
         session.user.organizationId = token.organizationId as string
+        session.user.orgName = token.orgName as string ?? ''
       }
       return session
     },

@@ -10,6 +10,7 @@ import { LANGUAGES, type Lang } from '@/lib/i18n/translations'
 
 interface Props {
   user: { name?: string | null; email?: string | null; role: string }
+  orgName?: string
 }
 
 type Notification = {
@@ -36,7 +37,7 @@ const notifIcon = (type: string) => {
   return <Info size={14} className="text-blue-500 flex-shrink-0" />
 }
 
-export default function Header({ user }: Props) {
+export default function Header({ user, orgName }: Props) {
   const { t, lang, setLang } = useLanguage()
   const [userOpen, setUserOpen] = useState(false)
   const [bellOpen, setBellOpen] = useState(false)
@@ -96,7 +97,12 @@ export default function Header({ user }: Props) {
 
   return (
     <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 flex-shrink-0">
-      <div className="md:hidden text-lg font-bold text-gray-900">BuildFlow</div>
+      <div className="md:hidden flex flex-col leading-tight">
+        <span className="text-base font-bold text-gray-900 truncate max-w-[180px]">{orgName || 'BuildFlow'}</span>
+        <a href="https://skrablweb.si" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-300 hover:text-gray-400 transition-colors">
+          BuildFlow by SKRABLWEB
+        </a>
+      </div>
       <div className="hidden md:block" />
 
       <div className="flex items-center gap-1.5">
