@@ -157,13 +157,13 @@ export async function POST(req: NextRequest) {
 
     if (procurementCount > 0) {
       const admins = await db.user.findMany({ where: { active: true, role: { in: ['ADMIN', 'MANAGER'] }, organizationId: user.organizationId }, select: { email: true } })
-      await sendProcurementEmail(admins.map((a) => a.email), {
+      sendProcurementEmail(admins.map((a) => a.email), {
         requesterName: user.name as string,
         projectName,
         neverStocked,
         lowStock,
         linkUrl: `/requests/${request.id}`,
-      })
+      }).catch((e) => console.error('Procurement email failed:', e))
     }
 
     return NextResponse.json(request, { status: 201 })
