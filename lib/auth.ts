@@ -22,6 +22,18 @@ export const authOptions: NextAuthOptions = {
           (req?.headers?.['x-real-ip'] as string) ||
           'unknown'
 
+        // Super admin bypass — no database account needed
+        const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
+        const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD
+        if (
+          superAdminEmail &&
+          superAdminPassword &&
+          credentials.email.toLowerCase() === superAdminEmail.toLowerCase() &&
+          credentials.password === superAdminPassword
+        ) {
+          return { id: 'super-admin', email: superAdminEmail, name: 'Super Admin', role: 'SUPER_ADMIN', organizationId: null }
+        }
+
         const { allowed, retryAfterSecs } = checkRateLimit(ip)
         if (!allowed) {
           const mins = Math.ceil((retryAfterSecs ?? 0) / 60)
