@@ -23,27 +23,27 @@ type OrgDetail = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  APPROVED: 'text-green-700 bg-green-50',
-  PENDING: 'text-amber-700 bg-amber-50',
-  REJECTED: 'text-red-700 bg-red-50',
+  APPROVED:           'text-green-700 bg-green-50',
+  PENDING:            'text-amber-700 bg-amber-50',
+  REJECTED:           'text-red-700 bg-red-50',
   PARTIALLY_APPROVED: 'text-blue-700 bg-blue-50',
 }
 
 const PROJECT_COLORS: Record<string, string> = {
-  ACTIVE: 'text-green-700 bg-green-50',
+  ACTIVE:    'text-green-700 bg-green-50',
   COMPLETED: 'text-gray-600 bg-gray-100',
-  ON_HOLD: 'text-amber-700 bg-amber-50',
+  ON_HOLD:   'text-amber-700 bg-amber-50',
 }
 
 export default function OrgDetailPage() {
   const { orgId } = useParams<{ orgId: string }>()
   const router = useRouter()
   const { status } = useSession()
-  const [org, setOrg] = useState<OrgDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [org, setOrg]           = useState<OrgDetail | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState('')
   const [confirming, setConfirming] = useState<'delete' | null>(null)
-  const [acting, setActing] = useState(false)
+  const [acting, setActing]     = useState(false)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/super-admin')
@@ -78,34 +78,35 @@ export default function OrgDetailPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-5xl mx-auto space-y-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-gray-100 p-6 animate-pulse h-28" />
+          <div key={i} className="bg-white rounded-2xl border border-gray-100 p-6 animate-pulse h-24" />
         ))}
       </div>
     </div>
   )
 
   if (error || !org) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <p className="text-gray-500">{error || 'Organization not found'}</p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <p className="text-gray-500 text-sm">{error || 'Organization not found'}</p>
     </div>
   )
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-8 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ArrowLeft size={18} className="text-gray-600" />
+      <div className="bg-white border-b border-gray-100 px-4 sm:px-8 py-3 sm:py-4">
+        <div className="max-w-5xl mx-auto">
+          {/* Row 1: back + name */}
+          <div className="flex items-start gap-2 sm:gap-3 mb-3">
+            <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 mt-0.5">
+              <ArrowLeft size={16} className="text-gray-600" />
             </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-gray-900">{org.name}</h1>
-                <span className="text-xs text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-lg">/{org.slug}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-base sm:text-lg font-bold text-gray-900">{org.name}</h1>
+                <span className="text-xs text-gray-400 font-mono bg-gray-100 px-1.5 py-0.5 rounded">/{org.slug}</span>
                 {org.active
                   ? <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">Active</span>
                   : <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Pending</span>
@@ -114,44 +115,39 @@ export default function OrgDetailPage() {
               <p className="text-xs text-gray-400 mt-0.5">Registered {format(new Date(org.createdAt), 'MMMM d, yyyy')}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          {/* Row 2: actions */}
+          <div className="flex gap-2 flex-wrap pl-9 sm:pl-11">
             <button
-              onClick={toggleActive}
-              disabled={acting}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-colors disabled:opacity-50 ${
+              onClick={toggleActive} disabled={acting}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium border transition-colors disabled:opacity-50 ${
                 org.active ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-700 hover:bg-green-50'
               }`}
             >
-              {org.active ? <><PowerOff size={14} /> Suspend</> : <><Power size={14} /> Activate</>}
+              {org.active ? <><PowerOff size={13} /> Suspend</> : <><Power size={13} /> Activate</>}
             </button>
             <button
-              onClick={() => setConfirming('delete')}
-              disabled={acting}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+              onClick={() => setConfirming('delete')} disabled={acting}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
             >
-              <Trash2 size={14} /> Reject & Delete
+              <Trash2 size={13} /> Reject & Delete
             </button>
           </div>
         </div>
       </div>
 
-      {/* Confirm delete dialog */}
+      {/* Confirm delete */}
       {confirming === 'delete' && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
             <h2 className="text-base font-bold text-gray-900 mb-2">Reject & delete organization?</h2>
             <p className="text-sm text-gray-500 mb-6">
-              This will permanently delete <strong>{org.name}</strong> and all its data (users, tools, projects). This cannot be undone.
+              This will permanently delete <strong>{org.name}</strong> and all its data. This cannot be undone.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirming(null)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
+              <button onClick={() => setConfirming(null)} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
                 Cancel
               </button>
-              <button
-                onClick={deleteOrg}
-                disabled={acting}
-                className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
-              >
+              <button onClick={deleteOrg} disabled={acting} className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
                 {acting ? 'Deleting…' : 'Delete'}
               </button>
             </div>
@@ -159,10 +155,10 @@ export default function OrgDetailPage() {
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto p-8 space-y-6">
+      <div className="max-w-5xl mx-auto p-4 sm:p-8 space-y-4 sm:space-y-6">
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {/* Stats */}
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
           {[
             { label: 'Users',     value: org._count.users,     icon: Users },
             { label: 'Tools',     value: org._count.tools,     icon: Wrench },
@@ -170,114 +166,101 @@ export default function OrgDetailPage() {
             { label: 'Requests',  value: org._count.requests,  icon: ClipboardList },
             { label: 'Checkouts', value: org._count.checkouts, icon: Building2 },
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <Icon size={18} className="text-blue-600 mx-auto mb-1" />
-              <p className="text-xl font-bold text-gray-900">{value}</p>
+            <div key={label} className="bg-white rounded-xl border border-gray-100 p-3 text-center">
+              <Icon size={15} className="text-blue-600 mx-auto mb-1" />
+              <p className="text-lg font-bold text-gray-900">{value}</p>
               <p className="text-xs text-gray-500">{label}</p>
             </div>
           ))}
         </div>
 
         {/* Users */}
-        <section className="bg-white rounded-2xl border border-gray-100">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Users size={16} className="text-blue-600" />
-            <h2 className="font-semibold text-gray-900 text-sm">Users ({org.users.length})</h2>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {org.users.map((u) => (
-              <div key={u.id} className="px-6 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <User size={14} className="text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{u.name || '—'}</p>
-                    <p className="text-xs text-gray-400">{u.email}</p>
-                  </div>
+        <Section icon={<Users size={15} className="text-blue-600" />} title={`Users (${org.users.length})`}>
+          {org.users.map((u) => (
+            <div key={u.id} className="px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <User size={13} className="text-blue-600" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-lg">{u.role}</span>
-                  {u.active
-                    ? <CheckCircle size={14} className="text-green-500" />
-                    : <XCircle size={14} className="text-red-400" />
-                  }
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{u.name || '—'}</p>
+                  <p className="text-xs text-gray-400 truncate">{u.email}</p>
                 </div>
               </div>
-            ))}
-            {org.users.length === 0 && <p className="px-6 py-4 text-sm text-gray-400">No users</p>}
-          </div>
-        </section>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded hidden sm:inline">{u.role}</span>
+                {u.active ? <CheckCircle size={14} className="text-green-500" /> : <XCircle size={14} className="text-red-400" />}
+              </div>
+            </div>
+          ))}
+          {org.users.length === 0 && <Empty text="No users" />}
+        </Section>
 
         {/* Projects */}
-        <section className="bg-white rounded-2xl border border-gray-100">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <FolderOpen size={16} className="text-blue-600" />
-            <h2 className="font-semibold text-gray-900 text-sm">Projects ({org.projects.length})</h2>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {org.projects.map((p) => (
-              <div key={p.id} className="px-6 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{p.name}</p>
-                  {p.location && <p className="text-xs text-gray-400">{p.location}</p>}
-                </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PROJECT_COLORS[p.status] || 'text-gray-600 bg-gray-100'}`}>
-                  {p.status}
-                </span>
+        <Section icon={<FolderOpen size={15} className="text-blue-600" />} title={`Projects (${org.projects.length})`}>
+          {org.projects.map((p) => (
+            <div key={p.id} className="px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                {p.location && <p className="text-xs text-gray-400 truncate">{p.location}</p>}
               </div>
-            ))}
-            {org.projects.length === 0 && <p className="px-6 py-4 text-sm text-gray-400">No projects</p>}
-          </div>
-        </section>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${PROJECT_COLORS[p.status] || 'text-gray-600 bg-gray-100'}`}>
+                {p.status}
+              </span>
+            </div>
+          ))}
+          {org.projects.length === 0 && <Empty text="No projects" />}
+        </Section>
 
         {/* Tools */}
-        <section className="bg-white rounded-2xl border border-gray-100">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Wrench size={16} className="text-blue-600" />
-            <h2 className="font-semibold text-gray-900 text-sm">Tools & Materials ({org.tools.length})</h2>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {org.tools.map((t) => (
-              <div key={t.id} className="px-6 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{t.name}</p>
-                  <p className="text-xs text-gray-400">{t.category || t.type}</p>
-                </div>
-                <span className="text-xs text-gray-600">
-                  {t.currentStock} / {t.totalStock} in stock
-                </span>
+        <Section icon={<Wrench size={15} className="text-blue-600" />} title={`Tools & Materials (${org.tools.length})`}>
+          {org.tools.map((t) => (
+            <div key={t.id} className="px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{t.name}</p>
+                <p className="text-xs text-gray-400">{t.category || t.type}</p>
               </div>
-            ))}
-            {org.tools.length === 0 && <p className="px-6 py-4 text-sm text-gray-400">No tools added</p>}
-          </div>
-        </section>
+              <span className="text-xs text-gray-600 flex-shrink-0">{t.currentStock}/{t.totalStock}</span>
+            </div>
+          ))}
+          {org.tools.length === 0 && <Empty text="No tools added" />}
+        </Section>
 
         {/* Recent requests */}
-        <section className="bg-white rounded-2xl border border-gray-100">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <ClipboardList size={16} className="text-blue-600" />
-            <h2 className="font-semibold text-gray-900 text-sm">Recent Requests</h2>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {org.requests.map((r) => (
-              <div key={r.id} className="px-6 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{r.requester.name}</p>
-                  <p className="text-xs text-gray-400 flex items-center gap-1">
-                    <Clock size={11} /> {format(new Date(r.createdAt), 'MMM d, yyyy')} · {r._count.items} items
-                  </p>
-                </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[r.status] || 'text-gray-600 bg-gray-100'}`}>
-                  {r.status}
-                </span>
+        <Section icon={<ClipboardList size={15} className="text-blue-600" />} title="Recent Requests">
+          {org.requests.map((r) => (
+            <div key={r.id} className="px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{r.requester.name}</p>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <Clock size={10} /> {format(new Date(r.createdAt), 'MMM d, yyyy')} · {r._count.items} items
+                </p>
               </div>
-            ))}
-            {org.requests.length === 0 && <p className="px-6 py-4 text-sm text-gray-400">No requests yet</p>}
-          </div>
-        </section>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${STATUS_COLORS[r.status] || 'text-gray-600 bg-gray-100'}`}>
+                {r.status}
+              </span>
+            </div>
+          ))}
+          {org.requests.length === 0 && <Empty text="No requests yet" />}
+        </Section>
 
       </div>
     </div>
   )
+}
+
+function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+  return (
+    <section className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex items-center gap-2">
+        {icon}
+        <h2 className="font-semibold text-gray-900 text-sm">{title}</h2>
+      </div>
+      <div className="divide-y divide-gray-50">{children}</div>
+    </section>
+  )
+}
+
+function Empty({ text }: { text: string }) {
+  return <p className="px-4 sm:px-6 py-4 text-sm text-gray-400">{text}</p>
 }
