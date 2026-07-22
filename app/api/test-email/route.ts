@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { requireRole } from '@/lib/utils'
 import nodemailer from 'nodemailer'
@@ -6,35 +8,41 @@ export async function GET() {
   try {
     const user = await requireRole(['ADMIN', 'MANAGER', 'WORKER'])
 
-    const smtpUser = process.env.SMTP_USER
-    const smtpPass = process.env.SMTP_PASS
+    const smtpUser = process.env.SMTP_USER?.trim()
+    const smtpPass = process.env.SMTP_PASS?.trim()
+
+    const config = {
+      SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com (default)',
+      SMTP_PORT: process.env.SMTP_PORT || '587 (default)',
+      SMTP_USER: smtpUser || '✗ MISSING',
+      SMTP_PASS_length: smtpPass?.length ?? 0,
+    }
 
     if (!smtpUser || !smtpPass) {
-      return NextResponse.json({
-        ok: false,
-        error: 'SMTP_USER or SMTP_PASS environment variable is not set on this server.',
-        smtpUser: smtpUser ?? '(not set)',
-      })
+      return NextResponse.json({ ok: false, config, error: 'SMTP credentials missing' })
     }
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: Number(process.env.SMTP_PORT) || 587,
       secure: false,
-      auth: { user: smtpUser, pass: smtpPass.trim() },
+      auth: { user: smtpUser, pass: smtpPass },
     })
-
-    await transporter.verify()
 
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || smtpUser,
+      from: smtpUser,
       to: user.email as string,
-      subject: 'BuildFlow – test email',
-      html: '<p>If you received this, your SMTP configuration is working correctly.</p>',
+      subject: 'BuildFlow – SMTP test',
+      text: 'If you receive this, SMTP is working.',
     })
 
-    return NextResponse.json({ ok: true, sentTo: user.email })
+    return NextResponse.json({ ok: true, config, sentTo: user.email })
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e.message }, { status: 500 })
+    return NextResponse.json({ ok: false, config: {
+      SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com (default)',
+      SMTP_PORT: process.env.SMTP_PORT || '587 (default)',
+      SMTP_USER: process.env.SMTP_USER?.trim() || '✗ MISSING',
+      SMTP_PASS_length: process.env.SMTP_PASS?.trim()?.length ?? 0,
+    }, error: e.message })
   }
 }
