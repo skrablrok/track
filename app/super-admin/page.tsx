@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { signIn, signOut, useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import {
   Building2, Users, Wrench, FolderOpen, ClipboardList,
   Power, PowerOff, RefreshCw, LogOut, ShieldCheck, Eye, EyeOff,
+  Trash2, ChevronRight,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -34,11 +36,13 @@ function isSuperAdminSession(email?: string | null) {
 
 export default function SuperAdminPage() {
   const { data: session, status } = useSession()
+  const router = useRouter()
   const [orgs, setOrgs]         = useState<Org[]>([])
   const [stats, setStats]       = useState<Stats | null>(null)
   const [loading, setLoading]   = useState(false)
   const [forbidden, setForbidden] = useState(false)
   const [toggling, setToggling] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   // Login form state
   const [email, setEmail]       = useState('')
@@ -74,6 +78,16 @@ export default function SuperAdminPage() {
     if (result?.error) {
       setLoginError('Invalid email or password.')
     }
+  }
+
+  async function deleteOrg(orgId: string) {
+    setDeleting(orgId)
+    const res = await fetch(`/api/super-admin/${orgId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setOrgs((prev) => prev.filter((o) => o.id !== orgId))
+      setStats((prev) => prev ? { ...prev, totalOrgs: prev.totalOrgs - 1, pendingCount: prev.pendingCount - 1 } : prev)
+    }
+    setDeleting(null)
   }
 
   async function toggleOrg(orgId: string, active: boolean) {
@@ -225,7 +239,7 @@ export default function SuperAdminPage() {
               Pending Approval ({pendingOrgs.length})
             </h2>
             <div className="space-y-3">
-              {pendingOrgs.map((org) => <OrgCard key={org.id} org={org} toggling={toggling} onToggle={toggleOrg} />)}
+              {pendingOrgs.map((org) => <OrgCard key={org.id} org={org} toggling={toggling} deleting={deleting} onToggle={toggleOrg} onDelete={deleteOrg} onView={(id) => router.push(`/super-admin/${id}`)} />)}
             </div>
           </section>
         )}
@@ -239,7 +253,7 @@ export default function SuperAdminPage() {
             <p className="text-sm text-gray-400">No active organizations yet.</p>
           ) : (
             <div className="space-y-3">
-              {activeOrgs.map((org) => <OrgCard key={org.id} org={org} toggling={toggling} onToggle={toggleOrg} />)}
+              {activeOrgs.map((org) => <OrgCard key={org.id} org={org} toggling={toggling} deleting={deleting} onToggle={toggleOrg} onDelete={deleteOrg} onView={(id) => router.push(`/super-admin/${id}`)} />)}
             </div>
           )}
         </section>
@@ -248,34 +262,55 @@ export default function SuperAdminPage() {
   )
 }
 
-function OrgCard({ org, toggling, onToggle }: { org: Org; toggling: string | null; onToggle: (id: string, active: boolean) => void }) {
+function OrgCard({ org, toggling, deleting, onToggle, onDelete, onView }: {
+  org: Org
+  toggling: string | null
+  deleting: string | null
+  onToggle: (id: string, active: boolean) => void
+  onDelete: (id: string) => void
+  onView: (id: string) => void
+}) {
   return (
-    <div className={`bg-white rounded-2xl border p-5 flex items-center justify-between gap-6 ${org.active ? 'border-gray-100' : 'border-amber-200 bg-amber-50/40'}`}>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <h3 className="font-semibold text-gray-900">{org.name}</h3>
-          <span className="text-xs text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-lg">/{org.slug}</span>
-          {!org.active && <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Awaiting approval</span>}
-        </div>
-        <div className="flex items-center gap-4 flex-wrap text-sm text-gray-500">
-          <span className="flex items-center gap-1.5"><Users size={13} /> {org._count.users} users</span>
-          <span className="flex items-center gap-1.5"><Wrench size={13} /> {org._count.tools} tools</span>
-          <span className="flex items-center gap-1.5"><FolderOpen size={13} /> {org._count.projects} projects</span>
-          <span className="flex items-center gap-1.5"><ClipboardList size={13} /> {org._count.requests} requests</span>
-          <span className="text-xs text-gray-400">Registered {format(new Date(org.createdAt), 'MMM d, yyyy')}</span>
+    <div className={`bg-white rounded-2xl border p-5 ${org.active ? 'border-gray-100' : 'border-amber-200 bg-amber-50/40'}`}>
+      <div className="flex items-center justify-between gap-4">
+        <button onClick={() => onView(org.id)} className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <h3 className="font-semibold text-gray-900">{org.name}</h3>
+            <span className="text-xs text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-lg">/{org.slug}</span>
+            {!org.active && <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Awaiting approval</span>}
+          </div>
+          <div className="flex items-center gap-4 flex-wrap text-sm text-gray-500">
+            <span className="flex items-center gap-1.5"><Users size={13} /> {org._count.users} users</span>
+            <span className="flex items-center gap-1.5"><Wrench size={13} /> {org._count.tools} tools</span>
+            <span className="flex items-center gap-1.5"><FolderOpen size={13} /> {org._count.projects} projects</span>
+            <span className="flex items-center gap-1.5"><ClipboardList size={13} /> {org._count.requests} requests</span>
+            <span className="text-xs text-gray-400">Registered {format(new Date(org.createdAt), 'MMM d, yyyy')}</span>
+          </div>
+        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => onToggle(org.id, !org.active)}
+            disabled={toggling === org.id || deleting === org.id}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap ${
+              org.active
+                ? 'border border-red-200 text-red-600 hover:bg-red-50'
+                : 'border border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
+            }`}
+          >
+            {org.active ? <><PowerOff size={14} /> Suspend</> : <><Power size={14} /> Activate</>}
+          </button>
+          {!org.active && (
+            <button
+              onClick={() => onDelete(org.id)}
+              disabled={deleting === org.id || toggling === org.id}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              <Trash2 size={14} /> Reject
+            </button>
+          )}
+          <ChevronRight size={16} className="text-gray-300" />
         </div>
       </div>
-      <button
-        onClick={() => onToggle(org.id, !org.active)}
-        disabled={toggling === org.id}
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap ${
-          org.active
-            ? 'border border-red-200 text-red-600 hover:bg-red-50'
-            : 'border border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
-        }`}
-      >
-        {org.active ? <><PowerOff size={14} /> Suspend</> : <><Power size={14} /> Activate</>}
-      </button>
     </div>
   )
 }
