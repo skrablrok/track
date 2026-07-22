@@ -31,7 +31,7 @@ export const authOptions: NextAuthOptions = {
           credentials.email.toLowerCase() === superAdminEmail.toLowerCase() &&
           credentials.password === superAdminPassword
         ) {
-          return { id: 'super-admin', email: superAdminEmail, name: 'Super Admin', role: 'SUPER_ADMIN', organizationId: null }
+          return { id: 'super-admin', email: superAdminEmail, name: 'Super Admin', role: 'SUPER_ADMIN', organizationId: '' }
         }
 
         const { allowed, retryAfterSecs } = checkRateLimit(ip)
