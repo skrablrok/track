@@ -83,7 +83,6 @@ export async function sendNewOrgNotificationEmail(
   `
 
   const transporter = createTransporter()
-  await transporter.verify()
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
@@ -199,8 +198,6 @@ export async function sendDeliveryNoteEmail(
   const pdfFilename = `Dobavnica_${refNumber}.pdf`
 
   const transporter = createTransporter()
-  await transporter.verify()
-
   const subject = `Dobavnica #${refNumber} – ${statusLabel}`
   await Promise.all(
     to.map((recipient) =>
