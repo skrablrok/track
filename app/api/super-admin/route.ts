@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
@@ -23,7 +25,12 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  return NextResponse.json(orgs)
+  const totalUsers    = orgs.reduce((s, o) => s + o._count.users,    0)
+  const totalTools    = orgs.reduce((s, o) => s + o._count.tools,    0)
+  const totalRequests = orgs.reduce((s, o) => s + o._count.requests, 0)
+  const pendingOrgs   = orgs.filter((o) => !o.active)
+
+  return NextResponse.json({ orgs, stats: { totalOrgs: orgs.length, totalUsers, totalTools, totalRequests, pendingCount: pendingOrgs.length } })
 }
 
 export async function PATCH(req: NextRequest) {
