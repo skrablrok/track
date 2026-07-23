@@ -4,17 +4,19 @@ import { useEffect, useState } from 'react'
 import { Download, X, MoreHorizontal } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
-type Platform = 'chrome' | 'safari-ios' | 'chrome-ios' | 'safari-mac' | null
+type Platform = 'chrome' | 'safari-ios' | 'chrome-ios' | 'google-app-ios' | 'safari-mac' | null
 
 function detectPlatform(): Platform {
   const ua = navigator.userAgent
   const isIOS = /iPad|iPhone|iPod/.test(ua)
   const isChromeIOS = /CriOS/.test(ua)
+  const isGoogleApp = /GSA\//.test(ua)          // Google app (not Chrome)
   const isFirefoxIOS = /FxiOS/.test(ua)
   const isEdgeIOS = /EdgiOS/.test(ua)
-  const isSafari = /Safari/.test(ua) && !isChromeIOS && !isFirefoxIOS && !isEdgeIOS
+  const isSafari = /Safari/.test(ua) && !isChromeIOS && !isFirefoxIOS && !isEdgeIOS && !isGoogleApp
   const isMac = /Macintosh/.test(ua)
 
+  if (isIOS && isGoogleApp) return 'google-app-ios'
   if (isIOS && isChromeIOS) return 'chrome-ios'
   if (isIOS && isSafari) return 'safari-ios'
   if (isMac && isSafari) return 'safari-mac'
@@ -172,22 +174,32 @@ export default function InstallButton() {
                 </>
               )}
 
-              {/* Chrome iOS — steps: share icon → Add to Home Screen */}
+              {/* Chrome iOS — ⋮ menu → Add to Home Screen */}
               {platform === 'chrome-ios' && (
                 <>
-                  <StepCard n={1} first icon={<IOSShareIcon size={22} />}
-                    label='Tap the Share button'
-                    description="The box-with-arrow icon in Chrome's toolbar"
+                  <StepCard n={1} first icon={<MoreHorizontal size={22} />}
+                    label='Tap "⋮" at the bottom right'
+                    description="The three-dot menu in Chrome's toolbar"
                   />
                   <StepCard n={2} icon={<span className="text-xl">+</span>}
-                    label='"Add to Home Screen"'
-                    description="Scroll down in the share sheet to find it"
+                    label='Tap "Add to Home Screen"'
+                    description="Scroll down in the menu if you don't see it"
                   />
                   <StepCard n={3} icon={<span className="text-xl">✓</span>}
                     label='Tap "Add" to confirm'
                     description={null}
                   />
                 </>
+              )}
+
+              {/* Google app on iOS — can't install, tell user to use Safari/Chrome */}
+              {platform === 'google-app-ios' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
+                  <p className="text-sm font-semibold text-amber-800 mb-1">Open in Safari or Chrome</p>
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    The Google app doesn't support installing web apps. Copy the link and open it in <strong>Safari</strong> or <strong>Chrome</strong> to install BuildFlow on your home screen.
+                  </p>
+                </div>
               )}
 
               {/* Safari Mac */}
