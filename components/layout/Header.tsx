@@ -99,7 +99,7 @@ export default function Header({ user, orgName }: Props) {
   return (
     <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 flex-shrink-0">
       <div className="md:hidden flex flex-col leading-tight">
-        <span className="text-base font-bold text-gray-900 truncate max-w-[180px]">{orgName || 'BuildFlow'}</span>
+        <span className="text-sm font-bold text-gray-900 leading-tight max-w-[180px] line-clamp-2">{orgName || 'BuildFlow'}</span>
         <a href="https://skrablweb.si" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-300 hover:text-gray-400 transition-colors">
           BuildFlow by SKRABLWEB
         </a>

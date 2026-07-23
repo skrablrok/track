@@ -91,7 +91,7 @@ export default function InstallButton() {
 
       {showModal && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center"
           onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
         >
           <div className="bg-white w-full sm:max-w-sm sm:mx-4 sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden">
