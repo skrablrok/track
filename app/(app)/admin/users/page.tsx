@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Users, Plus, UserCheck, UserX, X, Mail } from 'lucide-react'
+import { Users, Plus, UserCheck, UserX, X, Mail, Trash2 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 type User = {
@@ -24,6 +24,8 @@ export default function UsersPage() {
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [inviteUrl, setInviteUrl] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -62,6 +64,19 @@ export default function UsersPage() {
       setError(e.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDeleteUser(userId: string) {
+    setDeletingId(userId)
+    const res = await fetch(`/api/users/${userId}`, { method: 'DELETE' })
+    setDeletingId(null)
+    setConfirmDeleteId(null)
+    if (res.ok) {
+      load()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      setError(d.error || 'Failed to delete user')
     }
   }
 
@@ -219,13 +234,40 @@ export default function UsersPage() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
-                    {user.setupComplete && (
-                      <button onClick={() => toggleActive(user)}
-                        className="text-xs text-gray-500 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                        title={user.active ? t('disableUser') : t('enableUser')}>
-                        {user.active ? <UserX size={14} /> : <UserCheck size={14} />}
-                      </button>
-                    )}
+                    <div className="flex items-center justify-end gap-1">
+                      {user.setupComplete && (
+                        <button onClick={() => toggleActive(user)}
+                          className="text-xs text-gray-500 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                          title={user.active ? t('disableUser') : t('enableUser')}>
+                          {user.active ? <UserX size={14} /> : <UserCheck size={14} />}
+                        </button>
+                      )}
+                      {confirmDeleteId === user.id ? (
+                        <>
+                          <button
+                            onClick={() => handleDeleteUser(user.id)}
+                            disabled={deletingId === user.id}
+                            className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-60"
+                          >
+                            {deletingId === user.id ? '…' : t('confirmQuestion')}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            <X size={13} />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(user.id)}
+                          className="p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                          title={t('delete')}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

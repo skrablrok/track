@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Search, Plus, Wrench, AlertTriangle, Warehouse } from 'lucide-react'
+import { Search, Plus, Wrench, AlertTriangle, Warehouse, Trash2, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import CheckoutModal from '@/components/checkouts/CheckoutModal'
 import { useRouter } from 'next/navigation'
@@ -36,10 +36,15 @@ export default function ToolsPage() {
   const [filter, setFilter] = useState<'all' | 'available' | 'inuse' | 'lowstock'>('all')
   const [loading, setLoading] = useState(true)
   const [checkoutTool, setCheckoutTool] = useState<Tool | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const router = useRouter()
-  const isAdmin = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
-  const isForeman = session?.user?.role === 'FOREMAN'
+  const role = session?.user?.role || ''
+  const isAdminOrManager = ['ADMIN', 'MANAGER'].includes(role)
+  const isAdminOnly = role === 'ADMIN'
+  const isManager = role === 'MANAGER'
+  const isForeman = role === 'FOREMAN'
 
   async function loadTools() {
     setLoading(true)
@@ -53,6 +58,14 @@ export default function ToolsPage() {
   }
 
   useEffect(() => { loadTools() }, [search, category])
+
+  async function handleDeleteTool(toolId: string) {
+    setDeletingId(toolId)
+    const res = await fetch(`/api/tools/${toolId}`, { method: 'DELETE' })
+    setDeletingId(null)
+    setConfirmDeleteId(null)
+    if (res.ok) loadTools()
+  }
 
   const categories = Array.from(new Set(tools.map((t) => t.category).filter(Boolean)))
   const warehouses = Array.from(new Set(tools.flatMap((t) => t.warehouseStocks.map((ws) => ws.warehouse))))
@@ -97,7 +110,7 @@ export default function ToolsPage() {
           <h1 className="text-2xl font-bold text-gray-900">{t('tools')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{filtered.length} {t('tools').toLowerCase()}</p>
         </div>
-        {isAdmin && (
+        {isAdminOrManager && (
           <Link href="/tools/new"
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
             <Plus size={16} />{t('addTool')}
@@ -213,12 +226,67 @@ export default function ToolsPage() {
                   </div>
                 )}
 
-                {isForeman ? (
+                {/* ADMIN: delete button only */}
+                {isAdminOnly && (
+                  confirmDeleteId === tool.id ? (
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={() => handleDeleteTool(tool.id)} disabled={deletingId === tool.id}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-2 rounded-xl transition-colors disabled:opacity-60">
+                        {deletingId === tool.id ? '…' : t('confirmQuestion')}
+                      </button>
+                      <button onClick={() => setConfirmDeleteId(null)}
+                        className="p-2 border border-gray-200 text-gray-400 hover:bg-gray-50 rounded-xl transition-colors">
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDeleteId(tool.id)}
+                      className="w-full mt-3 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-medium py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5">
+                      <Trash2 size={13} />
+                      {t('delete')}
+                    </button>
+                  )
+                )}
+
+                {/* MANAGER: checkout + delete */}
+                {isManager && (
+                  <div className="mt-3 flex gap-2">
+                    {tool.currentStock > 0 && (
+                      <button onClick={() => setCheckoutTool(tool)}
+                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-2 rounded-xl transition-colors">
+                        {tool.type === 'MATERIAL' ? t('useItem') : t('checkOut')}
+                      </button>
+                    )}
+                    {confirmDeleteId === tool.id ? (
+                      <>
+                        <button onClick={() => handleDeleteTool(tool.id)} disabled={deletingId === tool.id}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-2 rounded-xl transition-colors disabled:opacity-60">
+                          {deletingId === tool.id ? '…' : t('confirmQuestion')}
+                        </button>
+                        <button onClick={() => setConfirmDeleteId(null)}
+                          className="p-2 border border-gray-200 text-gray-400 hover:bg-gray-50 rounded-xl transition-colors">
+                          <X size={13} />
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => setConfirmDeleteId(tool.id)}
+                        className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl transition-colors flex items-center justify-center">
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* FOREMAN: request */}
+                {isForeman && (
                   <button onClick={() => router.push(`/requests/new?toolId=${tool.id}`)}
                     className="w-full mt-3 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-medium py-2 rounded-xl transition-colors">
                     {t('requestTool')}
                   </button>
-                ) : tool.currentStock > 0 && (
+                )}
+
+                {/* EMPLOYEE: checkout */}
+                {!isAdminOnly && !isManager && !isForeman && tool.currentStock > 0 && (
                   <button onClick={() => setCheckoutTool(tool)}
                     className="w-full mt-3 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-2 rounded-xl transition-colors">
                     {tool.type === 'MATERIAL' ? t('useItem') : t('checkOut')}

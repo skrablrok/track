@@ -96,7 +96,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const user = await requireRole(['ADMIN'])
+    const user = await requireRole(['ADMIN', 'MANAGER'])
     const existing = await db.tool.findFirst({ where: { id: params.id, organizationId: user.organizationId } })
     if (!existing) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
     await db.tool.update({ where: { id: params.id }, data: { active: false } })
