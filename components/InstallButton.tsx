@@ -33,8 +33,8 @@ function IOSShareIcon({ size = 24 }: { size?: number }) {
   )
 }
 
-function StepCard({ n, icon, label, description, first = false }: {
-  n: number; icon: React.ReactNode; label: string; description: React.ReactNode; first?: boolean
+function StepCard({ n, icon, label, description, first = false, stepWord }: {
+  n: number; icon: React.ReactNode; label: string; description: React.ReactNode; first?: boolean; stepWord: string
 }) {
   return (
     <div className={`rounded-2xl p-4 mb-3 flex items-center gap-4 ${first ? 'bg-blue-50' : 'bg-gray-50'}`}>
@@ -43,7 +43,7 @@ function StepCard({ n, icon, label, description, first = false }: {
       </div>
       <div className="min-w-0">
         <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${first ? 'text-blue-600' : 'text-gray-400'}`}>
-          Step {n}
+          {stepWord} {n}
         </p>
         <p className="text-sm font-semibold text-gray-900 leading-tight">{label}</p>
         {description && <p className="text-xs text-gray-500 mt-0.5 leading-snug">{description}</p>}
@@ -152,75 +152,51 @@ export default function InstallButton() {
                 </button>
               </div>
 
-              {/* Safari iOS — real steps: ··· → Share → View More → Add to Home Screen */}
+              {/* Safari iOS */}
               {platform === 'safari-ios' && (
                 <>
-                  <StepCard n={1} first icon={<span className="text-lg">···</span>}
-                    label='Tap "···" at the bottom right'
-                    description="The three dots in Safari's bottom toolbar"
-                  />
-                  <StepCard n={2} icon={<IOSShareIcon size={22} />}
-                    label='Tap "Share"'
-                    description="Opens the Share menu"
-                  />
-                  <StepCard n={3} icon={<span className="text-base">≡</span>}
-                    label='Tap "View More"'
-                    description='Scroll to the bottom of the Share menu'
-                  />
-                  <StepCard n={4} icon={<span className="text-xl">+</span>}
-                    label='"Add to Home Screen"'
-                    description="Then tap Add to confirm"
-                  />
+                  <StepCard n={1} first stepWord={t('pwaStep')} icon={<span className="text-lg">···</span>}
+                    label={t('pwaSafari1')} description={t('pwaSafari1d')} />
+                  <StepCard n={2} stepWord={t('pwaStep')} icon={<IOSShareIcon size={22} />}
+                    label={t('pwaSafari2')} description={t('pwaSafari2d')} />
+                  <StepCard n={3} stepWord={t('pwaStep')} icon={<span className="text-base">≡</span>}
+                    label={t('pwaSafari3')} description={t('pwaSafari3d')} />
+                  <StepCard n={4} stepWord={t('pwaStep')} icon={<span className="text-xl">+</span>}
+                    label={t('pwaSafari4')} description={null} />
                 </>
               )}
 
-              {/* Chrome iOS — ⋮ menu → Add to Home Screen */}
+              {/* Chrome iOS */}
               {platform === 'chrome-ios' && (
                 <>
-                  <StepCard n={1} first icon={<MoreHorizontal size={22} />}
-                    label='Tap "⋮" at the bottom right'
-                    description="The three-dot menu in Chrome's toolbar"
-                  />
-                  <StepCard n={2} icon={<span className="text-xl">+</span>}
-                    label='Tap "Add to Home Screen"'
-                    description="Scroll down in the menu if you don't see it"
-                  />
-                  <StepCard n={3} icon={<span className="text-xl">✓</span>}
-                    label='Tap "Add" to confirm'
-                    description={null}
-                  />
+                  <StepCard n={1} first stepWord={t('pwaStep')} icon={<MoreHorizontal size={22} />}
+                    label={t('pwaChrome1')} description={t('pwaChrome1d')} />
+                  <StepCard n={2} stepWord={t('pwaStep')} icon={<span className="text-xl">+</span>}
+                    label={t('pwaChrome2')} description={t('pwaChrome2d')} />
+                  <StepCard n={3} stepWord={t('pwaStep')} icon={<span className="text-xl">✓</span>}
+                    label={t('pwaChrome3')} description={null} />
                 </>
               )}
 
-              {/* Google app on iOS — tap Share → Open in Safari/Chrome */}
+              {/* Google app on iOS */}
               {platform === 'google-app-ios' && (
                 <>
-                  <StepCard n={1} first icon={<IOSShareIcon size={22} />}
-                    label="Tap the Share icon"
-                    description="The box-with-arrow button in the Google app toolbar"
-                  />
-                  <StepCard n={2} icon={<span className="text-base font-bold">↗</span>}
-                    label='"Open in Safari" or "Open in Chrome"'
-                    description="Choose one — both support app installation"
-                  />
-                  <StepCard n={3} icon={<Download size={20} />}
-                    label='Tap "Install app" and follow the steps'
-                    description="The install button will appear in the top bar"
-                  />
+                  <StepCard n={1} first stepWord={t('pwaStep')} icon={<IOSShareIcon size={22} />}
+                    label={t('pwaGoogle1')} description={t('pwaGoogle1d')} />
+                  <StepCard n={2} stepWord={t('pwaStep')} icon={<span className="text-base font-bold">↗</span>}
+                    label={t('pwaGoogle2')} description={t('pwaGoogle2d')} />
+                  <StepCard n={3} stepWord={t('pwaStep')} icon={<Download size={20} />}
+                    label={t('pwaGoogle3')} description={t('pwaGoogle3d')} />
                 </>
               )}
 
               {/* Safari Mac */}
               {platform === 'safari-mac' && (
                 <>
-                  <StepCard n={1} first icon={<span className="text-xs font-bold">File</span>}
-                    label={t('pwaStep_mac1')}
-                    description={null}
-                  />
-                  <StepCard n={2} icon={<span className="text-xl">⊞</span>}
-                    label={t('pwaStep_mac2')}
-                    description={null}
-                  />
+                  <StepCard n={1} first stepWord={t('pwaStep')} icon={<span className="text-xs font-bold">File</span>}
+                    label={t('pwaStep_mac1')} description={null} />
+                  <StepCard n={2} stepWord={t('pwaStep')} icon={<span className="text-xl">⊞</span>}
+                    label={t('pwaStep_mac2')} description={null} />
                 </>
               )}
 
