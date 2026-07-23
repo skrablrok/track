@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { LANGUAGES, type Lang } from '@/lib/i18n/translations'
+import InstallButton from '@/components/InstallButton'
 
 interface Props {
   user: { name?: string | null; email?: string | null; role: string }
@@ -106,6 +107,8 @@ export default function Header({ user, orgName }: Props) {
       <div className="hidden md:block" />
 
       <div className="flex items-center gap-1.5">
+
+        <InstallButton />
 
         {/* Notification Bell */}
         <div ref={bellRef} className="relative">
