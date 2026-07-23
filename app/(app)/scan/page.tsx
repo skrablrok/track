@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { QrCode, CheckCircle2, XCircle, Wrench, MapPin, User, ArrowRight } from 'lucide-react'
+import { QrCode, CheckCircle2, XCircle, Wrench, MapPin, User, ClipboardList, Pencil, ExternalLink, Plus } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import CheckoutModal from '@/components/checkouts/CheckoutModal'
+import RestockButton from '@/components/tools/RestockButton'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 const QRScanner = dynamic(() => import('@/components/scanner/QRScanner'), { ssr: false })
@@ -241,9 +243,44 @@ export default function ScanPage() {
               </div>
             )}
 
+            {/* Action section */}
+            <div className="border-t border-gray-100 pt-4 space-y-2">
+              <Link
+                href={`/requests/new?toolId=${result.id}`}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-2xl text-sm font-medium transition-colors border border-amber-100"
+              >
+                <ClipboardList size={15} />
+                {result.type === 'MATERIAL' ? t('requestMaterial') : t('requestTool')}
+              </Link>
+
+              {isAdmin && (
+                <Link
+                  href={`/tools/${result.id}/edit`}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-2xl text-sm font-medium transition-colors border border-gray-100"
+                >
+                  <Pencil size={15} />
+                  {t('editTool')}
+                </Link>
+              )}
+
+              {isAdmin && result.type === 'MATERIAL' && (
+                <div className="flex justify-center pt-1">
+                  <RestockButton toolId={result.id} />
+                </div>
+              )}
+
+              <Link
+                href={`/tools/${result.id}`}
+                className="w-full flex items-center justify-center gap-2 py-2 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+              >
+                <ExternalLink size={13} />
+                {t('viewDetails')}
+              </Link>
+            </div>
+
             <button
               onClick={() => { setResult(null); setScanning(true) }}
-              className="w-full text-gray-500 hover:text-gray-700 text-sm py-2"
+              className="w-full text-gray-400 hover:text-gray-600 text-sm py-2"
             >
               {t('scanAnother')}
             </button>
