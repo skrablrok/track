@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Users, Plus, UserCheck, UserX, X, Mail, Trash2 } from 'lucide-react'
+import { Plus, UserCheck, UserX, X, Mail, Trash2 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 type User = {
@@ -190,89 +190,77 @@ export default function UsersPage() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse h-16" />
+            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse h-20" />
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-5 py-3 font-medium text-gray-600">{t('name')}</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-600 hidden sm:table-cell">{t('email')}</th>
-                <th className="text-center px-5 py-3 font-medium text-gray-600">{t('role')}</th>
-                <th className="text-center px-5 py-3 font-medium text-gray-600">{t('status')}</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id} className={`border-b border-gray-50 ${!user.active ? 'opacity-50' : ''}`}>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 text-xs font-semibold">
-                        {avatarLetter(user)}
-                      </div>
-                      <span className="font-medium text-gray-900">{displayName(user)}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3 text-gray-500 hidden sm:table-cell">{user.email}</td>
-                  <td className="px-5 py-3 text-center">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${roleColor[user.role] || 'bg-gray-100 text-gray-600'}`}>
-                      {user.role}
+        <div className="space-y-2">
+          {users.map((user) => (
+            <div key={user.id} className={`bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3 transition-opacity ${!user.active ? 'opacity-50' : ''}`}>
+              {/* Avatar */}
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 text-sm font-semibold flex-shrink-0">
+                {avatarLetter(user)}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                  <span className="font-semibold text-gray-900 text-sm truncate">{displayName(user)}</span>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${roleColor[user.role] || 'bg-gray-100 text-gray-600'}`}>
+                    {user.role}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                <div className="mt-1">
+                  {!user.setupComplete ? (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                      {t('invitePending')}
                     </span>
-                  </td>
-                  <td className="px-5 py-3 text-center">
-                    {!user.setupComplete ? (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                        {t('invitePending')}
-                      </span>
-                    ) : (
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${user.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {user.active ? t('statusActive') : t('statusDisabled')}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {user.setupComplete && (
-                        <button onClick={() => toggleActive(user)}
-                          className="text-xs text-gray-500 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                          title={user.active ? t('disableUser') : t('enableUser')}>
-                          {user.active ? <UserX size={14} /> : <UserCheck size={14} />}
-                        </button>
-                      )}
-                      {confirmDeleteId === user.id ? (
-                        <>
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            disabled={deletingId === user.id}
-                            className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-60"
-                          >
-                            {deletingId === user.id ? '…' : t('confirmQuestion')}
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <X size={13} />
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmDeleteId(user.id)}
-                          className="p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                          title={t('delete')}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  ) : (
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${user.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {user.active ? t('statusActive') : t('statusDisabled')}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {user.setupComplete && (
+                  <button onClick={() => toggleActive(user)}
+                    className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
+                    title={user.active ? t('disableUser') : t('enableUser')}>
+                    {user.active ? <UserX size={16} /> : <UserCheck size={16} />}
+                  </button>
+                )}
+                {confirmDeleteId === user.id ? (
+                  <>
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      disabled={deletingId === user.id}
+                      className="text-xs px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors disabled:opacity-60"
+                    >
+                      {deletingId === user.id ? '…' : t('confirmQuestion')}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
+                    >
+                      <X size={15} />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteId(user.id)}
+                    className="p-2 text-red-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                    title={t('delete')}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

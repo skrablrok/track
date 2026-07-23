@@ -135,8 +135,8 @@ export default function LoginPage() {
           <div className="mt-6 pt-6 border-t border-gray-100 text-center space-y-2">
             <p className="text-xs text-gray-400">{t(lang, 'forAccess')}</p>
             <p className="text-sm text-gray-500">
-              New organization?{' '}
-              <a href="/register" className="text-blue-600 font-medium hover:underline">Create an account</a>
+              {t(lang, 'newOrganization')}{' '}
+              <a href="/register" className="text-blue-600 font-medium hover:underline">{t(lang, 'createAccount')}</a>
             </p>
           </div>
         </div>
