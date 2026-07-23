@@ -192,14 +192,22 @@ export default function InstallButton() {
                 </>
               )}
 
-              {/* Google app on iOS — can't install, tell user to use Safari/Chrome */}
+              {/* Google app on iOS — tap Share → Open in Safari/Chrome */}
               {platform === 'google-app-ios' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
-                  <p className="text-sm font-semibold text-amber-800 mb-1">Open in Safari or Chrome</p>
-                  <p className="text-xs text-amber-700 leading-relaxed">
-                    The Google app doesn't support installing web apps. Copy the link and open it in <strong>Safari</strong> or <strong>Chrome</strong> to install BuildFlow on your home screen.
-                  </p>
-                </div>
+                <>
+                  <StepCard n={1} first icon={<IOSShareIcon size={22} />}
+                    label="Tap the Share icon"
+                    description="The box-with-arrow button in the Google app toolbar"
+                  />
+                  <StepCard n={2} icon={<span className="text-base font-bold">↗</span>}
+                    label='"Open in Safari" or "Open in Chrome"'
+                    description="Choose one — both support app installation"
+                  />
+                  <StepCard n={3} icon={<Download size={20} />}
+                    label='Tap "Install app" and follow the steps'
+                    description="The install button will appear in the top bar"
+                  />
+                </>
               )}
 
               {/* Safari Mac */}
