@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Camera, Flashlight } from 'lucide-react'
+import { Camera } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import jsQR from 'jsqr'
 
 interface Props {
   onScan: (result: string) => void
@@ -13,8 +14,8 @@ export default function QRScanner({ onScan }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const intervalRef = useRef<any>(null)
+  const calledRef = useRef(false)
   const [error, setError] = useState('')
-  const [active, setActive] = useState(false)
 
   useEffect(() => {
     startCamera()
@@ -29,10 +30,9 @@ export default function QRScanner({ onScan }: Props) {
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         videoRef.current.play()
-        setActive(true)
         startScanning()
       }
-    } catch (e) {
+    } catch {
       setError(t('cameraPermissionDenied'))
     }
   }
@@ -41,8 +41,7 @@ export default function QRScanner({ onScan }: Props) {
     clearInterval(intervalRef.current)
     const video = videoRef.current
     if (video?.srcObject) {
-      const stream = video.srcObject as MediaStream
-      stream.getTracks().forEach((t) => t.stop())
+      ;(video.srcObject as MediaStream).getTracks().forEach((t) => t.stop())
     }
   }
 
@@ -52,26 +51,38 @@ export default function QRScanner({ onScan }: Props) {
       const canvas = canvasRef.current
       if (!video || !canvas || video.readyState !== 4) return
 
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
       ctx.drawImage(video, 0, 0)
 
-      try {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        // Use BarcodeDetector if available (modern browsers/Android)
-        if ('BarcodeDetector' in window) {
+      let found: string | null = null
+
+      // Try native BarcodeDetector first (Chrome desktop + Android — fast)
+      if ('BarcodeDetector' in window) {
+        try {
           const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
           const barcodes = await detector.detect(canvas)
-          if (barcodes.length > 0) {
-            clearInterval(intervalRef.current)
-            onScan(barcodes[0].rawValue)
-          }
-        }
-      } catch {}
-    }, 300)
+          if (barcodes.length > 0) found = barcodes[0].rawValue
+        } catch {}
+      }
+
+      // Fallback: jsQR — works on iOS Safari, iOS Chrome, Firefox, and all others
+      if (!found) {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const result = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert',
+        })
+        if (result) found = result.data
+      }
+
+      if (found && !calledRef.current) {
+        calledRef.current = true
+        clearInterval(intervalRef.current)
+        onScan(found)
+      }
+    }, 250)
   }
 
   if (error) {
@@ -79,9 +90,7 @@ export default function QRScanner({ onScan }: Props) {
       <div className="flex flex-col items-center justify-center p-8 text-center">
         <Camera className="w-12 h-12 text-gray-300 mb-3" />
         <p className="text-sm text-gray-600 font-medium">{error}</p>
-        <p className="text-xs text-gray-400 mt-2">
-          {t('cameraHint')}
-        </p>
+        <p className="text-xs text-gray-400 mt-2">{t('cameraHint')}</p>
         <ManualInput onScan={onScan} />
       </div>
     )
@@ -89,14 +98,10 @@ export default function QRScanner({ onScan }: Props) {
 
   return (
     <div className="relative">
-      <video
-        ref={videoRef}
-        className="w-full aspect-[4/3] object-cover"
-        playsInline
-        muted
-      />
+      <video ref={videoRef} className="w-full aspect-[4/3] object-cover" playsInline muted />
       <canvas ref={canvasRef} className="hidden" />
 
+      {/* Viewfinder overlay */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="w-56 h-56 relative">
           <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
@@ -119,7 +124,6 @@ export default function QRScanner({ onScan }: Props) {
 function ManualInput({ onScan }: { onScan: (v: string) => void }) {
   const { t } = useLanguage()
   const [value, setValue] = useState('')
-
   return (
     <div className="mt-4 w-full">
       <div className="flex gap-2">
