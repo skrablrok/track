@@ -61,11 +61,20 @@ export default function InstallButton() {
 
   async function handleClick() {
     if (deferredPrompt) {
+      // Chrome / Edge / Android — native install prompt
       deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
       if (outcome === 'accepted') setInstalled(true)
       setDeferredPrompt(null)
+    } else if (platform === 'safari-ios' && navigator.share) {
+      // iOS Safari — open the native Share sheet; user taps "Add to Home Screen"
+      try {
+        await navigator.share({ url: window.location.href, title: document.title })
+      } catch {
+        // User cancelled — do nothing
+      }
     } else {
+      // Safari Mac and any other fallback — show instructions modal
       setShowModal(true)
     }
   }
