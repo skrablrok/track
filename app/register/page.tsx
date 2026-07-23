@@ -1,12 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, Lock, Mail, User, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Building2, Lock, Mail, User, Eye, EyeOff, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react'
+import { LANGUAGES, DEFAULT_LANG, t, type Lang } from '@/lib/i18n/translations'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const [lang, setLangState] = useState<Lang>(DEFAULT_LANG)
+  const [langOpen, setLangOpen] = useState(false)
+  const langRef = useRef<HTMLDivElement>(null)
   const [orgName, setOrgName] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -15,6 +19,24 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    const cookie = document.cookie.match(/(?:^|; )lang=([^;]+)/)?.[1]
+    if (cookie && cookie in LANGUAGES) setLangState(cookie as Lang)
+  }, [])
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function changeLang(l: Lang) {
+    setLangState(l)
+    document.cookie = `lang=${l};path=/;max-age=31536000;SameSite=Lax`
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,15 +50,12 @@ export default function RegisterPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Registration failed')
+        setError(data.error || t(lang, 'registrationFailed'))
       } else {
         setSuccess(true)
-        if (data.emailError) {
-          console.warn('Registration notification email failed:', data.emailError)
-        }
       }
     } catch {
-      setError('Network error — please try again')
+      setError(t(lang, 'networkError'))
     } finally {
       setLoading(false)
     }
@@ -44,30 +63,57 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+
+      {/* Language dropdown — fixed top-right corner */}
+      <div ref={langRef} className="fixed top-10 right-10 z-50">
+        <button
+          onClick={() => setLangOpen((v) => !v)}
+          className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-xl transition-colors text-sm font-medium"
+        >
+          <span className="text-xl leading-none">{LANGUAGES[lang].flag}</span>
+          <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+        </button>
+
+        {langOpen && (
+          <div className="absolute top-full mt-2 right-0 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 flex gap-1">
+            {(Object.entries(LANGUAGES) as [Lang, { name: string; flag: string }][]).map(([code, info]) => (
+              <button
+                key={code}
+                onClick={() => { changeLang(code); setLangOpen(false) }}
+                title={info.name}
+                className={`text-2xl leading-none p-1.5 rounded-xl transition-all hover:bg-gray-100 ${lang === code ? 'bg-blue-50 ring-2 ring-blue-400' : ''}`}
+              >
+                {info.flag}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-2xl mb-4 shadow-xl">
             <Building2 className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white">BuildFlow</h1>
-          <p className="text-blue-300 mt-1 text-sm">Create your organization account</p>
+          <p className="text-blue-300 mt-1 text-sm">{t(lang, 'createOrgAccount')}</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl p-8">
           {success ? (
             <div className="text-center space-y-4">
               <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto" />
-              <h2 className="text-xl font-semibold text-gray-800">Registration submitted!</h2>
+              <h2 className="text-xl font-semibold text-gray-800">{t(lang, 'registrationSubmitted')}</h2>
               <p className="text-sm text-gray-600">
-                Your account has been created and is <strong>awaiting approval</strong>.
+                {t(lang, 'registrationCreated')}
               </p>
               <p className="text-sm text-gray-500">
-                You will be able to log in once the administrator confirms your registration. This usually takes up to 24 hours.
+                {t(lang, 'registrationAwait')}
               </p>
             </div>
           ) : (
             <>
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">Register your organization</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">{t(lang, 'registerOrg')}</h2>
 
               {error && (
                 <div className="flex items-center gap-2 bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 mb-5 text-sm">
@@ -78,7 +124,7 @@ export default function RegisterPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Organization name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t(lang, 'orgName')}</label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -90,7 +136,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Your full name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t(lang, 'yourFullName')}</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -102,7 +148,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t(lang, 'emailAddress')}</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -114,12 +160,12 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t(lang, 'password')}</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required
-                      placeholder="Min. 15 chars, uppercase, number, symbol"
+                      placeholder="••••••••"
                       className="w-full pl-10 pr-11 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
                     />
                     <button type="button" onClick={() => setShowPw(!showPw)}
@@ -127,19 +173,19 @@ export default function RegisterPage() {
                       {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">At least 15 characters with an uppercase letter, number, and special character.</p>
+                  <p className="text-xs text-gray-400 mt-1">{t(lang, 'passwordHint')}</p>
                 </div>
 
                 <button type="submit" disabled={loading}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-all disabled:opacity-60 shadow-sm mt-2">
-                  {loading ? 'Creating account…' : 'Create account'}
+                  {loading ? t(lang, 'creatingAccount') : t(lang, 'createAccount')}
                 </button>
               </form>
 
               <div className="mt-6 pt-6 border-t border-gray-100 text-center">
                 <p className="text-sm text-gray-500">
-                  Already have an account?{' '}
-                  <Link href="/login" className="text-blue-600 font-medium hover:underline">Sign in</Link>
+                  {t(lang, 'alreadyHaveAccount')}{' '}
+                  <Link href="/login" className="text-blue-600 font-medium hover:underline">{t(lang, 'signIn')}</Link>
                 </p>
               </div>
             </>
