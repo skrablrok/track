@@ -100,7 +100,7 @@ export default function InstallButton() {
               <div className="w-10 h-1 bg-gray-200 rounded-full" />
             </div>
 
-            <div className="p-6">
+            <div className="p-6" style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem))' }}>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
