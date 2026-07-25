@@ -15,7 +15,9 @@ export default function RegisterPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -41,6 +43,10 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    if (password !== confirmPw) {
+      setError(t(lang, 'passwordsNoMatch'))
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch('/api/auth/register', {
@@ -174,6 +180,31 @@ export default function RegisterPage() {
                     </button>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">{t(lang, 'passwordHint')}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t(lang, 'confirmPassword')}</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type={showConfirmPw ? 'text' : 'password'} value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} required
+                      placeholder="••••••••"
+                      className={`w-full pl-10 pr-11 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 bg-gray-50 transition-all ${
+                        confirmPw && password !== confirmPw
+                          ? 'border-red-300 focus:ring-red-400'
+                          : confirmPw && password === confirmPw
+                          ? 'border-green-300 focus:ring-green-400'
+                          : 'border-gray-200 focus:ring-blue-500'
+                      }`}
+                    />
+                    <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {confirmPw && password !== confirmPw && (
+                    <p className="text-xs text-red-500 mt-1">{t(lang, 'passwordsNoMatch')}</p>
+                  )}
                 </div>
 
                 <button type="submit" disabled={loading}
