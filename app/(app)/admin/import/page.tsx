@@ -47,6 +47,8 @@ export default function ImportPage() {
   // per-sheet detection state
   const [hasHeaders, setHasHeaders] = useState(true)
   const [roles, setRoles] = useState<ColumnRole[]>([])
+  const [headerRowIndex, setHeaderRowIndex] = useState(-1)
+  const [defaultType, setDefaultType] = useState<'TOOL' | 'MATERIAL'>('TOOL')
 
   const [parsing, setParsing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -55,12 +57,13 @@ export default function ImportPage() {
 
   // ── derived parsed preview ────────────────────────────────────────────────
   const rawRows = sheetData[activeSheet] ?? []
+  const dataStartIdx = hasHeaders ? Math.max(headerRowIndex, 0) + 1 : 0
   const { tools, projects } = rawRows.length && roles.length
-    ? parseRows(rawRows, hasHeaders, roles)
+    ? parseRows(rawRows, hasHeaders, roles, hasHeaders ? headerRowIndex : undefined, defaultType)
     : { tools: [], projects: [] }
 
-  const previewRows = rawRows.slice(hasHeaders ? 1 : 0, (hasHeaders ? 1 : 0) + 5)
-  const totalRows = hasHeaders ? Math.max(0, rawRows.length - 1) : rawRows.length
+  const previewRows = rawRows.slice(dataStartIdx, dataStartIdx + 5)
+  const totalRows = Math.max(0, rawRows.length - dataStartIdx)
   const validTools = tools.filter((r) => r.status === 'ok')
   const validProjects = projects.filter((r) => r.status === 'ok')
 
@@ -87,7 +90,7 @@ export default function ImportPage() {
         setSheets(pdfSheets.map((s) => s.name))
         setSheetData(allSheets)
         setActiveSheet(firstSheet)
-        applyDetection(allSheets[firstSheet] ?? [])
+        applyDetection(allSheets[firstSheet] ?? [], firstSheet)
       } else {
         const wb = XLSX.read(buf, { type: 'array' })
         const allSheets: Record<string, any[][]> = {}
@@ -98,7 +101,7 @@ export default function ImportPage() {
         setSheets(wb.SheetNames)
         setSheetData(allSheets)
         setActiveSheet(firstSheet)
-        applyDetection(allSheets[firstSheet] ?? [])
+        applyDetection(allSheets[firstSheet] ?? [], firstSheet)
       }
     } catch (e: any) {
       setError(e.message || 'Could not read this file')
@@ -108,15 +111,17 @@ export default function ImportPage() {
     }
   }
 
-  function applyDetection(rows: any[][]) {
-    const detected = detectColumns(rows)
+  function applyDetection(rows: any[][], sheetName?: string) {
+    const detected = detectColumns(rows, sheetName)
     setHasHeaders(detected.hasHeaders)
     setRoles(detected.roles)
+    setHeaderRowIndex(detected.headerRowIndex)
+    setDefaultType(detected.defaultType)
   }
 
   function switchSheet(name: string) {
     setActiveSheet(name)
-    applyDetection(sheetData[name] ?? [])
+    applyDetection(sheetData[name] ?? [], name)
   }
 
   function setRole(colIdx: number, role: ColumnRole) {
@@ -245,7 +250,7 @@ export default function ImportPage() {
                     className="rounded" />
                   First row is header
                 </label>
-                <button onClick={() => applyDetection(rawRows)}
+                <button onClick={() => applyDetection(rawRows, activeSheet)}
                   title="Re-detect columns"
                   className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
                   <RefreshCw size={14} />
@@ -278,9 +283,9 @@ export default function ImportPage() {
                     ))}
                   </tr>
                   {/* Original header row (if hasHeaders) */}
-                  {hasHeaders && rawRows[0] && (
+                  {hasHeaders && rawRows[headerRowIndex >= 0 ? headerRowIndex : 0] && (
                     <tr className="bg-gray-50 border-b border-gray-100">
-                      {rawRows[0].map((h, ci) => (
+                      {rawRows[headerRowIndex >= 0 ? headerRowIndex : 0].map((h, ci) => (
                         <th key={ci} className="px-3 py-2 text-left text-xs text-gray-500 font-normal">
                           {String(h)}
                         </th>

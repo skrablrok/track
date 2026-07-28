@@ -41,7 +41,7 @@ const HEADER_ALIASES: Partial<Record<ColumnRole, string[]>> = {
   name: [
     'name', 'naziv', 'ime', 'artikel', 'item', 'product',
     'tool name', 'material name', 'orodje', 'naziv orodja', 'opis orodja',
-    'tool', 'opis',
+    'tool', 'opis', 'ime in dimenzije', 'article', 'artikal',
   ],
   type: [
     'type', 'tip', 'vrsta', 'kind', 'type (tool/material)', 'item type', 'art type',
@@ -52,6 +52,7 @@ const HEADER_ALIASES: Partial<Record<ColumnRole, string[]>> = {
   quantity: [
     'quantity', 'qty', 'stock', 'total stock', 'total qty', 'količina', 'zaloga',
     'total', 'amount', 'kolicina', 'st.', 'štt.', 'kol.', 'kol',
+    'teža', 'teza', 'težišče', 'tezisce', 'kolicina kom', 'kom',
   ],
   minStock: [
     'min stock', 'min', 'minimum', 'min level', 'minimalna zaloga', 'minstock', 'min qty',
@@ -60,7 +61,7 @@ const HEADER_ALIASES: Partial<Record<ColumnRole, string[]>> = {
     'max stock', 'max', 'maximum', 'max level', 'maksimalna zaloga', 'maxstock', 'max qty',
   ],
   description: [
-    'description', 'opis', 'desc', 'notes', 'opomba', 'info', 'details', 'note', 'komentar',
+    'description', 'desc', 'notes', 'opomba', 'info', 'details', 'note', 'komentar',
   ],
   warehouse: [
     'warehouse', 'location', 'skladisce', 'skladišče', 'lokacija', 'depot',
@@ -73,6 +74,11 @@ const HEADER_ALIASES: Partial<Record<ColumnRole, string[]>> = {
     'project location', 'lokacija projekta', 'address', 'naslov', 'project address',
   ],
 }
+
+const MATERIAL_SHEET_WORDS = [
+  'material', 'materijal', 'materiale', 'malzeme', 'materiau', 'materiali',
+  'consumable', 'potrošni',
+]
 
 function normalize(s: string) {
   return String(s || '').toLowerCase().trim().replace(/[\s_\-]+/g, ' ')
@@ -92,7 +98,7 @@ function matchHeader(h: string): ColumnRole | null {
 // ─── Data-based role inference ────────────────────────────────────────────────
 
 const MATERIAL_WORDS = [
-  'material', 'materijal', 'malzeme', 'consumable', 'potrošni', 'disposable', 'за enkratno',
+  'material', 'materijal', 'malzeme', 'consumable', 'potrošni', 'disposable', 'za enkratno',
 ]
 const TOOL_WORDS = [
   'tool', 'orodje', 'alat', 'mjet', 'alet', 'reusable', 'trajno',
@@ -148,42 +154,61 @@ function inferRole(values: any[], assigned: Set<ColumnRole>): ColumnRole {
 
 // ─── Main detect function ─────────────────────────────────────────────────────
 
-export function detectColumns(rawRows: any[][]): { hasHeaders: boolean; roles: ColumnRole[] } {
-  if (!rawRows.length || !rawRows[0].length) return { hasHeaders: false, roles: [] }
+export type DetectResult = {
+  hasHeaders: boolean
+  roles: ColumnRole[]
+  headerRowIndex: number
+  defaultType: 'TOOL' | 'MATERIAL'
+}
 
-  const numCols = rawRows[0].length
-  const first = rawRows[0].map((v) => String(v ?? ''))
+export function detectColumns(rawRows: any[][], sheetName?: string): DetectResult {
+  // Determine default type from sheet name
+  const sheetNorm = normalize(sheetName ?? '')
+  const defaultType: 'TOOL' | 'MATERIAL' = MATERIAL_SHEET_WORDS.some((w) => sheetNorm.includes(w))
+    ? 'MATERIAL'
+    : 'TOOL'
 
-  // Try header matching on first row
-  const headerMatches = first.map(matchHeader)
-  const matchCount = headerMatches.filter(Boolean).length
-  const firstNumericCount = first.filter(
-    (v) => !isNaN(Number(v.trim())) && v.trim() !== ''
-  ).length
+  if (!rawRows.length) return { hasHeaders: false, roles: [], headerRowIndex: -1, defaultType }
 
-  if (matchCount >= 1) {
-    // First row is recognizable headers
+  const numCols = Math.max(0, ...rawRows.slice(0, 30).map((r) => r.length))
+  if (!numCols) return { hasHeaders: false, roles: [], headerRowIndex: -1, defaultType }
+
+  // Scan first 30 rows to find the row with the most distinct header alias matches
+  const scanLimit = Math.min(rawRows.length, 30)
+  let bestRow = -1
+  let bestCount = 0
+
+  for (let r = 0; r < scanLimit; r++) {
+    const seen = new Set<ColumnRole>()
+    let count = 0
+    for (const cell of rawRows[r]) {
+      const role = matchHeader(String(cell ?? ''))
+      if (role && !seen.has(role)) { seen.add(role); count++ }
+    }
+    if (count > bestCount) { bestCount = count; bestRow = r }
+  }
+
+  if (bestCount >= 1) {
+    const headerRow = rawRows[bestRow]
     const assigned = new Set<ColumnRole>()
-    const roles: ColumnRole[] = headerMatches.map((m) => {
+    const roles: ColumnRole[] = Array.from({ length: numCols }, (_, i) => {
+      const m = matchHeader(String(headerRow[i] ?? ''))
       if (m && !assigned.has(m)) { assigned.add(m); return m }
       return 'skip'
     })
-    return { hasHeaders: true, roles }
+    return { hasHeaders: true, roles, headerRowIndex: bestRow, defaultType }
   }
 
-  // No header matches — decide if first row is still a header row (all text, no numbers)
-  const hasHeaders = firstNumericCount === 0 && first.some((v) => v.trim() !== '')
-  const dataRows = hasHeaders ? rawRows.slice(1) : rawRows
-
+  // No headers found — infer roles from data
   const assigned = new Set<ColumnRole>()
   const roles: ColumnRole[] = []
   for (let c = 0; c < numCols; c++) {
-    const values = dataRows.map((row) => row[c])
+    const values = rawRows.map((row) => row[c])
     const role = inferRole(values, assigned)
     roles.push(role)
     if (role !== 'skip') assigned.add(role)
   }
-  return { hasHeaders, roles }
+  return { hasHeaders: false, roles, headerRowIndex: -1, defaultType }
 }
 
 // ─── Row parsing ──────────────────────────────────────────────────────────────
@@ -197,9 +222,15 @@ function parseType(val: string): 'TOOL' | 'MATERIAL' {
 export function parseRows(
   rawRows: any[][],
   hasHeaders: boolean,
-  roles: ColumnRole[]
+  roles: ColumnRole[],
+  headerRowIndex?: number,
+  defaultType: 'TOOL' | 'MATERIAL' = 'TOOL'
 ): { tools: ParsedTool[]; projects: ParsedProject[] } {
-  const dataRows = hasHeaders ? rawRows.slice(1) : rawRows
+  const dataStart =
+    headerRowIndex !== undefined && headerRowIndex >= 0
+      ? headerRowIndex + 1
+      : hasHeaders ? 1 : 0
+  const dataRows = rawRows.slice(dataStart)
 
   const idx = (role: ColumnRole) => roles.indexOf(role)
   const get = (row: any[], role: ColumnRole) => {
@@ -208,6 +239,7 @@ export function parseRows(
   }
 
   const isProjectSheet = idx('projectName') >= 0
+  const typeColAssigned = idx('type') >= 0
 
   const tools: ParsedTool[] = []
   const projects: ParsedProject[] = []
@@ -225,12 +257,14 @@ export function parseRows(
       const name = get(row, 'name')
       if (!name) continue
       const qty = parseInt(get(row, 'quantity'))
+      const typeVal = typeColAssigned ? get(row, 'type') : ''
+      const itemType = typeVal ? parseType(typeVal) : defaultType
       tools.push({
         name,
-        type: parseType(get(row, 'type')),
+        type: itemType,
         category: get(row, 'category') || undefined,
         quantity: isNaN(qty) ? 1 : Math.max(0, qty),
-        minStock: parseInt(get(row, 'minStock')) || (parseType(get(row, 'type')) === 'MATERIAL' ? 5 : 2),
+        minStock: parseInt(get(row, 'minStock')) || (itemType === 'MATERIAL' ? 5 : 2),
         maxStock: parseInt(get(row, 'maxStock')) || 10,
         description: get(row, 'description') || undefined,
         warehouse: get(row, 'warehouse') || undefined,
