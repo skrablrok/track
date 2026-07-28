@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Search, Plus, Wrench, AlertTriangle, Warehouse, Trash2, X } from 'lucide-react'
+import { Search, Plus, Wrench, AlertTriangle, Warehouse, Trash2, X, Check, CheckSquare } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import CheckoutModal from '@/components/checkouts/CheckoutModal'
 import { useRouter } from 'next/navigation'
@@ -38,6 +38,10 @@ export default function ToolsPage() {
   const [checkoutTool, setCheckoutTool] = useState<Tool | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
 
   const router = useRouter()
   const role = session?.user?.role || ''
@@ -65,6 +69,36 @@ export default function ToolsPage() {
     setDeletingId(null)
     setConfirmDeleteId(null)
     if (res.ok) loadTools()
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+    setConfirmBulkDelete(false)
+  }
+
+  async function handleBulkDelete() {
+    setBulkDeleting(true)
+    try {
+      await fetch('/api/tools/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      })
+      exitSelectionMode()
+      loadTools()
+    } finally {
+      setBulkDeleting(false)
+    }
   }
 
   const categories = Array.from(new Set(tools.map((t) => t.category).filter(Boolean)))
@@ -111,10 +145,24 @@ export default function ToolsPage() {
           <p className="text-sm text-gray-500 mt-0.5">{filtered.length} {t('tools').toLowerCase()}</p>
         </div>
         {isAdminOrManager && (
-          <Link href="/tools/new"
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
-            <Plus size={16} />{t('addTool')}
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => selectionMode ? exitSelectionMode() : setSelectionMode(true)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                selectionMode
+                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}>
+              <CheckSquare size={16} />
+              {selectionMode ? 'Cancel' : 'Select'}
+            </button>
+            {!selectionMode && (
+              <Link href="/tools/new"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
+                <Plus size={16} />{t('addTool')}
+              </Link>
+            )}
+          </div>
         )}
       </div>
 
@@ -169,17 +217,46 @@ export default function ToolsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((tool) => (
-            <div key={tool.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md hover:border-blue-100 transition-all group">
-              <Link href={`/tools/${tool.id}`} className="block">
+          {filtered.map((tool) => {
+            const isSelected = selectedIds.has(tool.id)
+            return (
+            <div
+              key={tool.id}
+              onClick={selectionMode ? () => toggleSelect(tool.id) : undefined}
+              className={`relative bg-white rounded-2xl border overflow-hidden transition-all ${
+                selectionMode
+                  ? isSelected
+                    ? 'border-blue-500 ring-2 ring-blue-500 cursor-pointer shadow-sm'
+                    : 'border-gray-200 cursor-pointer hover:border-blue-300'
+                  : 'border-gray-100 hover:shadow-md hover:border-blue-100 group'
+              }`}>
+              {/* Selection checkbox */}
+              {selectionMode && (
+                <div className={`absolute top-2 left-2 z-20 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                  isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white/90 border-gray-300'
+                }`}>
+                  {isSelected && <Check size={13} className="text-white" />}
+                </div>
+              )}
+              {selectionMode ? (
                 <div className="w-full h-44 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
                   {tool.imageUrl ? (
-                    <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" />
                   ) : (
                     <Wrench className="w-16 h-16 text-gray-300" />
                   )}
                 </div>
-              </Link>
+              ) : (
+                <Link href={`/tools/${tool.id}`} className="block">
+                  <div className="w-full h-44 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+                    {tool.imageUrl ? (
+                      <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <Wrench className="w-16 h-16 text-gray-300" />
+                    )}
+                  </div>
+                </Link>
+              )}
               <div className="p-4">
                 <Link href={`/tools/${tool.id}`} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors text-sm leading-tight block mb-1">
                   {tool.name}
@@ -226,8 +303,9 @@ export default function ToolsPage() {
                   </div>
                 )}
 
+                {/* Per-card actions — hidden in selection mode */}
                 {/* ADMIN: delete button only */}
-                {isAdminOnly && (
+                {!selectionMode && isAdminOnly && (
                   confirmDeleteId === tool.id ? (
                     <div className="mt-3 flex gap-2">
                       <button onClick={() => handleDeleteTool(tool.id)} disabled={deletingId === tool.id}
@@ -249,7 +327,7 @@ export default function ToolsPage() {
                 )}
 
                 {/* MANAGER: checkout + delete */}
-                {isManager && (
+                {!selectionMode && isManager && (
                   <div className="mt-3 flex gap-2">
                     {tool.currentStock > 0 && (
                       <button onClick={() => setCheckoutTool(tool)}
@@ -278,7 +356,7 @@ export default function ToolsPage() {
                 )}
 
                 {/* FOREMAN: request */}
-                {isForeman && (
+                {!selectionMode && isForeman && (
                   <button onClick={() => router.push(`/requests/new?toolId=${tool.id}`)}
                     className="w-full mt-3 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-medium py-2 rounded-xl transition-colors">
                     {t('requestTool')}
@@ -286,7 +364,7 @@ export default function ToolsPage() {
                 )}
 
                 {/* EMPLOYEE: checkout */}
-                {!isAdminOnly && !isManager && !isForeman && tool.currentStock > 0 && (
+                {!selectionMode && !isAdminOnly && !isManager && !isForeman && tool.currentStock > 0 && (
                   <button onClick={() => setCheckoutTool(tool)}
                     className="w-full mt-3 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-2 rounded-xl transition-colors">
                     {tool.type === 'MATERIAL' ? t('useItem') : t('checkOut')}
@@ -294,13 +372,52 @@ export default function ToolsPage() {
                 )}
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
       {checkoutTool && (
         <CheckoutModal tool={checkoutTool} onClose={() => setCheckoutTool(null)}
           onSuccess={() => { setCheckoutTool(null); loadTools() }} />
+      )}
+
+      {/* Sticky bulk-action bar */}
+      {selectionMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl">
+          <span className="text-sm font-medium">
+            {selectedIds.size === 0 ? 'Select items to delete' : `${selectedIds.size} selected`}
+          </span>
+          {selectedIds.size > 0 && (
+            <>
+              <button
+                onClick={() => setSelectedIds(new Set(filtered.map((t) => t.id)))}
+                className="text-xs text-gray-300 hover:text-white underline">
+                Select all
+              </button>
+              {confirmBulkDelete ? (
+                <>
+                  <span className="text-xs text-red-300">Delete {selectedIds.size} item(s)?</span>
+                  <button onClick={handleBulkDelete} disabled={bulkDeleting}
+                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-xl disabled:opacity-60">
+                    {bulkDeleting ? 'Deleting…' : 'Confirm'}
+                  </button>
+                  <button onClick={() => setConfirmBulkDelete(false)}
+                    className="text-gray-300 hover:text-white text-xs px-2 py-2">
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => setConfirmBulkDelete(true)}
+                  className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-xl">
+                  <Trash2 size={13} /> Delete selected
+                </button>
+              )}
+            </>
+          )}
+          <button onClick={exitSelectionMode} className="p-1.5 text-gray-400 hover:text-white">
+            <X size={16} />
+          </button>
+        </div>
       )}
     </div>
   )
