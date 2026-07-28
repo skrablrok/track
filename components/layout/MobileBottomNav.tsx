@@ -13,7 +13,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext'
 const ALL_LINKS = [
   { href: '/dashboard',   key: 'nav_dashboard', icon: LayoutDashboard, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
   { href: '/tools',       key: 'nav_tools',     icon: Wrench,          roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
-  { href: '/scan',        key: 'nav_scan',      icon: QrCode,          roles: ['ADMIN','MANAGER','EMPLOYEE'] },
+  { href: '/scan',        key: 'nav_scan',      icon: QrCode,          roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
   { href: '/requests',    key: 'nav_requests',  icon: ClipboardCheck,  roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
   { href: '/projects',    key: 'nav_projects',  icon: FolderOpen,      roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
   { href: '/checkouts',   key: 'nav_checkouts', icon: ClipboardList,   roles: ['ADMIN','MANAGER','EMPLOYEE'] },
