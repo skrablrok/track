@@ -225,7 +225,8 @@ export function parseRows(
   roles: ColumnRole[],
   headerRowIndex?: number,
   defaultType: 'TOOL' | 'MATERIAL' = 'TOOL',
-  excludedRows?: Set<number>
+  excludedRows?: Set<number>,
+  skippedCells?: Set<string>
 ): { tools: ParsedTool[]; projects: ParsedProject[] } {
   const dataStart =
     headerRowIndex !== undefined && headerRowIndex >= 0
@@ -234,9 +235,11 @@ export function parseRows(
   const dataRows = rawRows.slice(dataStart)
 
   const idx = (role: ColumnRole) => roles.indexOf(role)
-  const get = (row: any[], role: ColumnRole) => {
+  const get = (row: any[], role: ColumnRole, originalRowIdx: number) => {
     const i = idx(role)
-    return i >= 0 ? String(row[i] ?? '').trim() : ''
+    if (i < 0) return ''
+    if (skippedCells?.has(`${originalRowIdx}:${i}`)) return ''
+    return String(row[i] ?? '').trim()
   }
 
   const isProjectSheet = idx('projectName') >= 0
@@ -250,28 +253,28 @@ export function parseRows(
     if (excludedRows?.has(originalIdx)) continue
     const row = dataRows[i]
     if (isProjectSheet) {
-      const name = get(row, 'projectName')
+      const name = get(row, 'projectName', originalIdx)
       if (!name) continue
       projects.push({
         name,
-        location: get(row, 'projectLocation') || undefined,
+        location: get(row, 'projectLocation', originalIdx) || undefined,
         status: 'ok',
       })
     } else {
-      const name = get(row, 'name')
+      const name = get(row, 'name', originalIdx)
       if (!name) continue
-      const qty = parseInt(get(row, 'quantity'))
-      const typeVal = typeColAssigned ? get(row, 'type') : ''
+      const qty = parseInt(get(row, 'quantity', originalIdx))
+      const typeVal = typeColAssigned ? get(row, 'type', originalIdx) : ''
       const itemType = typeVal ? parseType(typeVal) : defaultType
       tools.push({
         name,
         type: itemType,
-        category: get(row, 'category') || undefined,
+        category: get(row, 'category', originalIdx) || undefined,
         quantity: isNaN(qty) ? 1 : Math.max(0, qty),
-        minStock: parseInt(get(row, 'minStock')) || (itemType === 'MATERIAL' ? 5 : 2),
-        maxStock: parseInt(get(row, 'maxStock')) || 10,
-        description: get(row, 'description') || undefined,
-        warehouse: get(row, 'warehouse') || undefined,
+        minStock: parseInt(get(row, 'minStock', originalIdx)) || (itemType === 'MATERIAL' ? 5 : 2),
+        maxStock: parseInt(get(row, 'maxStock', originalIdx)) || 10,
+        description: get(row, 'description', originalIdx) || undefined,
+        warehouse: get(row, 'warehouse', originalIdx) || undefined,
         status: 'ok',
         rowIndex: originalIdx,
       })

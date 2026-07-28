@@ -52,9 +52,11 @@ export default function ImportPage() {
   // { row: -1 } means whole column selected via header click; row >= 0 means specific cell
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null)
   const [excludedRows, setExcludedRows] = useState<number[]>([])
+  const [skippedCells, setSkippedCells] = useState<Set<string>>(new Set())
   // { sheetName: { rowIndex: dataUrl } } — extracted from the xlsx server-side
   const [sheetImageMap, setSheetImageMap] = useState<Record<string, Record<number, string>>>({})
   const [imagesLoading, setImagesLoading] = useState(false)
+  const [logoSaved, setLogoSaved] = useState(false)
 
   const [parsing, setParsing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -66,11 +68,12 @@ export default function ImportPage() {
   const dataStartIdx = hasHeaders ? Math.max(headerRowIndex, 0) + 1 : 0
   const excludedRowsSet = new Set(excludedRows)
   const { tools, projects } = rawRows.length && roles.length
-    ? parseRows(rawRows, hasHeaders, roles, hasHeaders ? headerRowIndex : undefined, defaultType, excludedRowsSet)
+    ? parseRows(rawRows, hasHeaders, roles, hasHeaders ? headerRowIndex : undefined, defaultType, excludedRowsSet, skippedCells)
     : { tools: [], projects: [] }
 
   const totalRows = Math.max(0, rawRows.length - dataStartIdx)
   const selectedCol = selectedCell?.col ?? null
+  const isColumnMode = selectedCell?.row === -1
   const imageMap: Record<number, string> = sheetImageMap[activeSheet] ?? {}
   const hasImages = Object.keys(imageMap).length > 0
   const validTools = tools.filter((r) => r.status === 'ok')
@@ -149,6 +152,7 @@ export default function ImportPage() {
     setActiveSheet(name)
     setSelectedCell(null)
     setExcludedRows([])
+    setSkippedCells(new Set())
     applyDetection(sheetData[name] ?? [], name)
   }
 
@@ -189,6 +193,7 @@ export default function ImportPage() {
       setRoles([])
       setSelectedCell(null)
       setExcludedRows([])
+      setSkippedCells(new Set())
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -277,7 +282,7 @@ export default function ImportPage() {
                   {hasImages && ` · ${Object.keys(imageMap).length} images`}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
-                  Click a cell to select its column. Click a row number to exclude that row.
+                  Click a column header to assign role · click a data cell to skip it · click a row number to exclude the whole row.
                   {imagesLoading && <span className="flex items-center gap-1 text-blue-400"><Loader2 size={10} className="animate-spin" /> extracting images…</span>}
                 </p>
               </div>
@@ -297,9 +302,47 @@ export default function ImportPage() {
 
             {/* Role picker / row action bar */}
             <div className={`px-4 py-2.5 border-b flex flex-wrap items-center gap-2 min-h-[44px] transition-colors ${
-              selectedCell !== null ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'
+              selectedCell?.col === -1 ? 'bg-purple-50 border-purple-100'
+              : selectedCell !== null ? 'bg-blue-50 border-blue-100'
+              : 'bg-gray-50 border-gray-100'
             }`}>
-              {selectedCell !== null ? (
+              {selectedCell === null ? (
+                <p className="text-xs text-gray-400">
+                  Click a column header to assign role · click a data cell to skip it · click a row number to exclude the whole row.
+                </p>
+              ) : selectedCell.col === -1 ? (
+                // Image mode — user clicked an image cell
+                <>
+                  <span className="text-xs font-semibold text-purple-800 mr-1">
+                    Image at row {selectedCell.row + 1}:
+                  </span>
+                  {imageMap[selectedCell.row] && (
+                    <img src={imageMap[selectedCell.row]} alt="" className="w-7 h-7 object-cover rounded border border-purple-200" />
+                  )}
+                  <button
+                    onClick={async () => {
+                      const logoUrl = imageMap[selectedCell.row]
+                      if (!logoUrl) return
+                      try {
+                        const res = await fetch('/api/admin/org', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ logoUrl }),
+                        })
+                        if (res.ok) {
+                          setLogoSaved(true)
+                          setTimeout(() => setLogoSaved(false), 3000)
+                        }
+                      } catch {}
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg font-medium bg-purple-600 text-white hover:bg-purple-700 transition-all"
+                  >
+                    Set as org logo
+                  </button>
+                  {logoSaved && <span className="text-xs text-green-600 font-medium">✓ Logo saved</span>}
+                </>
+              ) : isColumnMode ? (
+                // Column mode — user clicked a column header
                 <>
                   <span className="text-xs font-semibold text-blue-800 mr-1">
                     {(() => {
@@ -321,29 +364,70 @@ export default function ImportPage() {
                       {ROLE_LABELS[r]}
                     </button>
                   ))}
-                  {selectedCell.row >= 0 && selectedCell.row !== headerRowIndex && (
-                    <>
-                      <span className="text-gray-200 mx-1">|</span>
-                      <button
-                        onClick={() => {
-                          const ri = selectedCell.row
-                          setExcludedRows(prev => prev.includes(ri) ? prev.filter(r => r !== ri) : [...prev, ri])
-                        }}
-                        className={`text-xs px-2.5 py-1 rounded-lg font-medium border transition-all ${
-                          excludedRows.includes(selectedCell.row)
-                            ? 'bg-red-500 text-white border-red-500'
-                            : 'bg-white text-red-500 border-red-200 hover:bg-red-50'
-                        }`}
-                      >
-                        {excludedRows.includes(selectedCell.row) ? 'Include row' : 'Exclude row'}
-                      </button>
-                    </>
-                  )}
                 </>
               ) : (
-                <p className="text-xs text-gray-400">
-                  Click a cell to assign its column role — or click a row number on the left to exclude that row.
-                </p>
+                // Cell mode — user clicked a data cell
+                <>
+                  {(() => {
+                    const hRow = rawRows[headerRowIndex >= 0 ? headerRowIndex : 0]
+                    const lbl = hasHeaders && hRow ? String(hRow[selectedCell.col] ?? '').trim() : ''
+                    const cellKey = `${selectedCell.row}:${selectedCell.col}`
+                    const isCellSkipped = skippedCells.has(cellKey)
+                    return (
+                      <>
+                        <span className="text-xs font-semibold text-blue-800 mr-1">
+                          Row {selectedCell.row + 1} · {lbl || `Col ${selectedCell.col + 1}`}:
+                        </span>
+                        <button
+                          onClick={() => {
+                            setSkippedCells(prev => {
+                              const next = new Set(prev)
+                              if (next.has(cellKey)) next.delete(cellKey)
+                              else next.add(cellKey)
+                              return next
+                            })
+                          }}
+                          className={`text-xs px-2.5 py-1 rounded-lg font-medium border transition-all ${
+                            isCellSkipped
+                              ? 'bg-orange-500 text-white border-orange-500'
+                              : 'bg-white text-orange-500 border-orange-200 hover:bg-orange-50'
+                          }`}
+                        >
+                          {isCellSkipped ? 'Include cell' : 'Skip this cell'}
+                        </button>
+                        {selectedCell.row !== headerRowIndex && (
+                          <button
+                            onClick={() => {
+                              const ri = selectedCell.row
+                              setExcludedRows(prev => prev.includes(ri) ? prev.filter(r => r !== ri) : [...prev, ri])
+                            }}
+                            className={`text-xs px-2.5 py-1 rounded-lg font-medium border transition-all ${
+                              excludedRows.includes(selectedCell.row)
+                                ? 'bg-red-500 text-white border-red-500'
+                                : 'bg-white text-red-500 border-red-200 hover:bg-red-50'
+                            }`}
+                          >
+                            {excludedRows.includes(selectedCell.row) ? 'Include row' : 'Exclude row'}
+                          </button>
+                        )}
+                        <span className="text-gray-300 text-xs">| Column role:</span>
+                        {ROLE_OPTIONS.map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => { setRole(selectedCell.col, r) }}
+                            className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
+                              roles[selectedCell.col] === r
+                                ? r === 'skip' ? 'bg-gray-400 text-white' : 'bg-blue-600 text-white shadow-sm'
+                                : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-700'
+                            }`}
+                          >
+                            {ROLE_LABELS[r]}
+                          </button>
+                        ))}
+                      </>
+                    )
+                  })()}
+                </>
               )}
             </div>
 
@@ -359,7 +443,7 @@ export default function ImportPage() {
                       </th>
                     )}
                     {roles.map((role, ci) => {
-                      const isColSelected = selectedCol === ci
+                      const isColSelected = isColumnMode && selectedCol === ci
                       const hRow = rawRows[headerRowIndex >= 0 ? headerRowIndex : 0]
                       const colLabel = hasHeaders && hRow ? String(hRow[ci] ?? '').trim() : ''
                       return (
@@ -416,9 +500,16 @@ export default function ImportPage() {
                           {isExcluded ? '✕' : ri + 1}
                         </td>
                         {hasImages && (
-                          <td className={`sticky left-8 z-10 border-r border-gray-100 p-0.5 ${isHeaderRow ? 'bg-amber-50' : isExcluded ? 'bg-red-50' : 'bg-white'}`}>
+                          <td
+                            className={`sticky left-8 z-10 border-r border-gray-100 p-0.5 ${isHeaderRow ? 'bg-amber-50' : isExcluded ? 'bg-red-50' : 'bg-white'} ${imageMap[ri] ? 'cursor-pointer' : ''}`}
+                            onClick={() => imageMap[ri] ? setSelectedCell(prev => (prev?.row === ri && prev?.col === -1) ? null : { row: ri, col: -1 }) : undefined}
+                            title={imageMap[ri] ? 'Click to set as org logo' : undefined}
+                          >
                             {imageMap[ri] ? (
-                              <img src={imageMap[ri]} alt="" className="w-7 h-7 object-cover rounded" />
+                              <img
+                                src={imageMap[ri]} alt=""
+                                className={`w-7 h-7 object-cover rounded transition-all ${selectedCell?.row === ri && selectedCell?.col === -1 ? 'ring-2 ring-purple-500' : ''}`}
+                              />
                             ) : (
                               <span className="w-7 h-7 block" />
                             )}
@@ -426,7 +517,8 @@ export default function ImportPage() {
                         )}
                         {roles.map((role, ci) => {
                           const isCellSelected = selectedCell?.row === ri && selectedCell?.col === ci
-                          const isColSelected = selectedCol === ci
+                          const isColSelected = isColumnMode && selectedCol === ci
+                          const isCellSkipped = skippedCells.has(`${ri}:${ci}`)
                           const val = String(row[ci] ?? '')
                           return (
                             <td
@@ -436,6 +528,8 @@ export default function ImportPage() {
                               className={`px-2 py-1 border-r border-gray-50 cursor-pointer whitespace-nowrap transition-colors ${
                                 isCellSelected
                                   ? 'bg-blue-200 text-blue-900 font-semibold'
+                                  : isCellSkipped
+                                  ? 'text-gray-300 line-through bg-orange-50'
                                   : isColSelected
                                   ? 'bg-blue-50 text-blue-800'
                                   : isExcluded
