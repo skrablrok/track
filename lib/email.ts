@@ -222,6 +222,77 @@ export async function sendDeliveryNoteEmail(
   )
 }
 
+export async function sendNewItemsAddedEmail(
+  to: string[],
+  details: {
+    requesterName: string
+    projectName: string
+    newItems: { name: string; qty: number; toolId: string }[]
+    requestId: string
+  }
+) {
+  if (to.length === 0) return
+
+  const appUrl = (process.env.NEXTAUTH_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || 'http://localhost:3000').replace(/\/$/, '')
+  const { requesterName, projectName, newItems, requestId } = details
+
+  const itemRows = newItems.map((item, idx) => `
+    <tr style="background:${idx % 2 === 0 ? '#f8fafc' : 'white'};">
+      <td style="padding:10px 14px;color:#1e293b;font-size:13px;border-bottom:1px solid #e2e8f0;">${item.name}</td>
+      <td style="padding:10px 14px;text-align:center;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">${item.qty}</td>
+      <td style="padding:10px 14px;text-align:center;font-size:13px;border-bottom:1px solid #e2e8f0;">
+        <a href="${appUrl}/tools/${item.toolId}/edit" style="color:#2563eb;text-decoration:none;font-size:12px;font-weight:600;">Uredi &rarr;</a>
+      </td>
+    </tr>`).join('')
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;background:#f8fafc;padding:32px;border-radius:12px;">
+      <div style="background:#1e40af;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
+        <h1 style="color:white;margin:0;font-size:22px;">BuildFlow</h1>
+        <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">Upravljanje inventarja orodij</p>
+      </div>
+      <div style="background:white;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
+        <h2 style="color:#1e293b;margin:0 0 8px;font-size:18px;">&#10133; Nova artikla samodejno dodana v inventar</h2>
+        <p style="color:#475569;margin:0 0 20px;font-size:13px;">
+          <strong>${requesterName}</strong> je naročil artikel(e), ki jih ni bilo v sistemu.
+          Samodejno so bili dodani v katalog inventarja (brez zaloge). Preverite in dopolnite njihove podatke.
+          ${projectName !== 'no project' ? `<br/>Projekt: <strong>${projectName}</strong>` : ''}
+        </p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+          <thead>
+            <tr style="background:#7c3aed;">
+              <th style="padding:10px 14px;text-align:left;color:white;font-size:12px;font-weight:600;border-radius:6px 0 0 0;">Artikel</th>
+              <th style="padding:10px 14px;text-align:center;color:white;font-size:12px;font-weight:600;">Naročena kol.</th>
+              <th style="padding:10px 14px;text-align:center;color:white;font-size:12px;font-weight:600;border-radius:0 6px 0 0;">Akcija</th>
+            </tr>
+          </thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+        <p style="color:#64748b;font-size:12px;margin:0 0 20px;">
+          Ti artikli imajo trenutno zalogo <strong>0</strong>. Dodajte sliko, kategorijo in zalogo v nastavitvah.
+        </p>
+        <div style="text-align:center;">
+          <a href="${appUrl}/requests/${requestId}" style="display:inline-block;background:#2563eb;color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
+            Oglej zahtevek
+          </a>
+        </div>
+      </div>
+    </div>
+  `
+
+  const transporter = createTransporter()
+  await Promise.all(
+    to.map((recipient) =>
+      transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: recipient,
+        subject: `BuildFlow – ${newItems.length} nov artikel(i) samodejno dodan(i) v inventar`,
+        html,
+      })
+    )
+  )
+}
+
 export async function sendProcurementEmail(
   to: string[],
   details: {

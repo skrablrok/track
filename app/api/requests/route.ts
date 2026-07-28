@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth, logAudit, unauthorized, serverError, badRequest } from '@/lib/utils'
 import { notifyAdmins } from '@/lib/notifications'
-import { sendProcurementEmail } from '@/lib/email'
+import { sendProcurementEmail, sendNewItemsAddedEmail } from '@/lib/email'
 
 export async function GET(req: NextRequest) {
   try {
@@ -81,7 +81,34 @@ export async function POST(req: NextRequest) {
       return !!tool && parseInt(i.requestedQty) > tool.currentStock
     }
 
+    // Auto-create tools for custom items not yet in the system
+    const autoCreatedTools: { name: string; qty: number; toolId: string }[] = []
+
     const request = await db.$transaction(async (tx) => {
+      // Map custom item names → new tool IDs (dedup by name)
+      const customToolIds = new Map<string, string>()
+      for (const item of items) {
+        if (!item.toolId && item.itemName) {
+          const name = String(item.itemName).trim()
+          if (!customToolIds.has(name)) {
+            const newTool = await tx.tool.create({
+              data: {
+                name,
+                type: 'MATERIAL',
+                currentStock: 0,
+                totalStock: 0,
+                minStock: 0,
+                maxStock: 0,
+                organizationId: user.organizationId,
+                active: true,
+              },
+            })
+            customToolIds.set(name, newTool.id)
+            autoCreatedTools.push({ name, qty: parseInt(item.requestedQty), toolId: newTool.id })
+          }
+        }
+      }
+
       const created = await tx.request.create({
         data: {
           requesterId: user.id,
@@ -90,15 +117,18 @@ export async function POST(req: NextRequest) {
           status: 'PENDING',
           organizationId: user.organizationId,
           items: {
-            create: items.map((i: any) => ({
-              toolId: i.toolId || null,
-              itemName: i.toolId ? null : String(i.itemName).trim(),
-              requestedQty: parseInt(i.requestedQty),
-              notes: i.notes || null,
-              procurementStatus: needsProcurement(i) ? 'PENDING_PURCHASE' : null,
-              procurementUpdatedAt: needsProcurement(i) ? new Date() : null,
-              reservedQty: 0,
-            })),
+            create: items.map((i: any) => {
+              const resolvedToolId = i.toolId || (i.itemName ? customToolIds.get(String(i.itemName).trim()) : null) || null
+              return {
+                toolId: resolvedToolId,
+                itemName: resolvedToolId ? null : String(i.itemName ?? '').trim() || null,
+                requestedQty: parseInt(i.requestedQty),
+                notes: i.notes || null,
+                procurementStatus: needsProcurement(i) ? 'PENDING_PURCHASE' : null,
+                procurementUpdatedAt: needsProcurement(i) ? new Date() : null,
+                reservedQty: 0,
+              }
+            }),
           },
         },
         include: {
@@ -155,15 +185,29 @@ export async function POST(req: NextRequest) {
       `/requests/${request.id}`
     )
 
+    const admins = await db.user.findMany({
+      where: { active: true, role: { in: ['ADMIN', 'MANAGER'] }, organizationId: user.organizationId },
+      select: { email: true },
+    })
+    const adminEmails = admins.map((a) => a.email)
+
     if (procurementCount > 0) {
-      const admins = await db.user.findMany({ where: { active: true, role: { in: ['ADMIN', 'MANAGER'] }, organizationId: user.organizationId }, select: { email: true } })
-      sendProcurementEmail(admins.map((a) => a.email), {
+      sendProcurementEmail(adminEmails, {
         requesterName: user.name as string,
         projectName,
         neverStocked,
         lowStock,
         linkUrl: `/requests/${request.id}`,
       }).catch((e) => console.error('Procurement email failed:', e))
+    }
+
+    if (autoCreatedTools.length > 0) {
+      sendNewItemsAddedEmail(adminEmails, {
+        requesterName: user.name as string,
+        projectName,
+        newItems: autoCreatedTools,
+        requestId: request.id,
+      }).catch((e) => console.error('New items email failed:', e))
     }
 
     return NextResponse.json(request, { status: 201 })
