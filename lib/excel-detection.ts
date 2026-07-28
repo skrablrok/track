@@ -52,7 +52,6 @@ const HEADER_ALIASES: Partial<Record<ColumnRole, string[]>> = {
   quantity: [
     'quantity', 'qty', 'stock', 'total stock', 'total qty', 'količina', 'zaloga',
     'total', 'amount', 'kolicina', 'st.', 'štt.', 'kol.', 'kol',
-    'teža', 'teza', 'težišče', 'tezisce', 'kolicina kom', 'kom',
   ],
   minStock: [
     'min stock', 'min', 'minimum', 'min level', 'minimalna zaloga', 'minstock', 'min qty',
