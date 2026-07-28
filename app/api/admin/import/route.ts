@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       for (const row of tools) {
         const name = String(row.name || '').trim()
         if (!name) continue
-        const existing = await tx.tool.findFirst({ where: { name: { equals: name, mode: 'insensitive' }, organizationId: orgId } })
+        const existing = await tx.tool.findFirst({ where: { name: { equals: name, mode: 'insensitive' }, organizationId: orgId, active: true } })
         if (existing) { toolsSkipped.push(name); continue }
 
         const quantity = Math.max(0, parseInt(String(row.quantity)) || 0)
