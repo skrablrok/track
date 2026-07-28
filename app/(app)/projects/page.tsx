@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { FolderOpen, Plus, MapPin, X, User } from 'lucide-react'
+import { FolderOpen, Plus, MapPin, X, User, Trash2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
@@ -28,6 +28,8 @@ export default function ProjectsPage() {
   const [users, setUsers] = useState<UserOption[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const isAdmin = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
 
@@ -73,6 +75,20 @@ export default function ProjectsPage() {
       setError(e.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed')
+      setConfirmDeleteId(null)
+      load()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -161,13 +177,41 @@ export default function ProjectsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => {
             const s = statusConfig[project.status]
+            const isConfirming = confirmDeleteId === project.id
             return (
-              <div key={project.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-sm hover:border-blue-100 transition-all">
+              <div key={project.id} className="relative bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-sm hover:border-blue-100 transition-all">
+                {/* Delete confirm overlay */}
+                {isConfirming && (
+                  <div className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center gap-3 z-10 p-5">
+                    <p className="text-sm font-semibold text-gray-800 text-center">Delete &ldquo;{project.name}&rdquo;?</p>
+                    <p className="text-xs text-gray-400 text-center">This cannot be undone. Existing checkouts will remain but lose their project link.</p>
+                    <div className="flex gap-2 w-full">
+                      <button onClick={() => setConfirmDeleteId(null)}
+                        className="flex-1 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
+                        Cancel
+                      </button>
+                      <button onClick={() => handleDelete(project.id)} disabled={deleting}
+                        className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-medium disabled:opacity-60">
+                        {deleting ? 'Deleting…' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
                     <FolderOpen size={18} className="text-blue-500" />
                   </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</span>
+                    {isAdmin && (
+                      <button onClick={() => setConfirmDeleteId(project.id)}
+                        className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="Delete project">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <h3 className="font-semibold text-gray-900 text-sm">{project.name}</h3>
                 {project.location && (

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { requireAuth, requireRole, logAudit, unauthorized, serverError } from '@/lib/utils'
+import { requireAuth, requireRole, logAudit, unauthorized, forbidden, serverError } from '@/lib/utils'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -47,7 +47,24 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json(project)
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()
-    if (e.message === 'Forbidden') return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
+    if (e.message === 'Forbidden') return forbidden()
+    return serverError()
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const user = await requireRole(['ADMIN', 'MANAGER'])
+    const existing = await db.project.findFirst({
+      where: { id: params.id, organizationId: user.organizationId },
+    })
+    if (!existing) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
+    await db.project.delete({ where: { id: params.id } })
+    await logAudit(user.id, 'DELETE_PROJECT', 'Project', params.id, `Deleted project: ${existing.name}`, user.organizationId)
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    if (e.message === 'Unauthorized') return unauthorized()
+    if (e.message === 'Forbidden') return forbidden()
     return serverError()
   }
 }
