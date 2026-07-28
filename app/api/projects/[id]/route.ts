@@ -59,9 +59,39 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       where: { id: params.id, organizationId: user.organizationId },
     })
     if (!existing) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
-    await db.project.delete({ where: { id: params.id } })
-    await logAudit(user.id, 'DELETE_PROJECT', 'Project', params.id, `Deleted project: ${existing.name}`, user.organizationId)
-    return NextResponse.json({ success: true })
+
+    // Find all checkouts that still hold stock (tools not yet returned)
+    const activeCheckouts = await db.checkout.findMany({
+      where: {
+        projectId: params.id,
+        status: { in: ['ACTIVE', 'PENDING_RETURN'] },
+        organizationId: user.organizationId,
+      },
+    })
+
+    await db.$transaction(async (tx) => {
+      const returnedAt = new Date()
+      for (const co of activeCheckouts) {
+        // Mark checkout as returned and restore tool's current stock
+        await tx.checkout.update({
+          where: { id: co.id },
+          data: { status: 'RETURNED', returnDate: returnedAt },
+        })
+        await tx.tool.update({
+          where: { id: co.toolId },
+          data: { currentStock: { increment: co.quantity } },
+        })
+      }
+      await tx.project.delete({ where: { id: params.id } })
+    })
+
+    const returned = activeCheckouts.length
+    await logAudit(
+      user.id, 'DELETE_PROJECT', 'Project', params.id,
+      `Deleted project: ${existing.name}${returned > 0 ? ` — auto-returned ${returned} checkout(s)` : ''}`,
+      user.organizationId
+    )
+    return NextResponse.json({ success: true, returnedCheckouts: returned })
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()
     if (e.message === 'Forbidden') return forbidden()

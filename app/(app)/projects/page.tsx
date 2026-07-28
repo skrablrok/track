@@ -184,7 +184,11 @@ export default function ProjectsPage() {
                 {isConfirming && (
                   <div className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center gap-3 z-10 p-5">
                     <p className="text-sm font-semibold text-gray-800 text-center">Delete &ldquo;{project.name}&rdquo;?</p>
-                    <p className="text-xs text-gray-400 text-center">This cannot be undone. Existing checkouts will remain but lose their project link.</p>
+                    <p className="text-xs text-gray-400 text-center">
+                      {project._count.checkouts > 0
+                        ? `${project._count.checkouts} active checkout(s) will be auto-returned and stock restored.`
+                        : 'This cannot be undone.'}
+                    </p>
                     <div className="flex gap-2 w-full">
                       <button onClick={() => setConfirmDeleteId(null)}
                         className="flex-1 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
