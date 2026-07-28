@@ -258,14 +258,14 @@ export default function UsersPage() {
                           onClick={() => saveRole(user)}
                           disabled={savingRoleId === user.id}
                           className="p-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-                          title="Save"
+                          title={t('save')}
                         >
                           <Check size={12} />
                         </button>
                         <button
                           onClick={() => setEditingRoleId(null)}
                           className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                          title="Cancel"
+                          title={t('cancel')}
                         >
                           <X size={12} />
                         </button>
@@ -274,7 +274,7 @@ export default function UsersPage() {
                       <button
                         onClick={() => startEditRole(user)}
                         className={`group flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${roleColor[user.role] || 'bg-gray-100 text-gray-600'} hover:ring-2 hover:ring-blue-300 transition-all`}
-                        title="Change role"
+                        title={t('changeRole')}
                       >
                         {user.role}
                         <Pencil size={10} className="opacity-0 group-hover:opacity-60 transition-opacity" />

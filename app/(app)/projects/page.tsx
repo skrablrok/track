@@ -219,20 +219,20 @@ export default function ProjectsPage() {
                 {/* Delete confirm overlay */}
                 {isConfirming && (
                   <div className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center gap-3 z-10 p-5">
-                    <p className="text-sm font-semibold text-gray-800 text-center">Delete &ldquo;{project.name}&rdquo;?</p>
+                    <p className="text-sm font-semibold text-gray-800 text-center">{t('delete')} &ldquo;{project.name}&rdquo;?</p>
                     <p className="text-xs text-gray-400 text-center">
                       {project._count.checkouts > 0
-                        ? `${project._count.checkouts} active checkout(s) will be auto-returned and stock restored.`
-                        : 'This cannot be undone.'}
+                        ? `${project._count.checkouts} ${t('checkoutsAutoReturn')}`
+                        : t('deleteCannotUndo')}
                     </p>
                     <div className="flex gap-2 w-full">
                       <button onClick={() => setConfirmDeleteId(null)}
                         className="flex-1 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
-                        Cancel
+                        {t('cancel')}
                       </button>
                       <button onClick={() => handleDelete(project.id)} disabled={deleting}
                         className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-medium disabled:opacity-60">
-                        {deleting ? 'Deleting…' : 'Delete'}
+                        {deleting ? t('deleting') : t('delete')}
                       </button>
                     </div>
                   </div>
@@ -307,7 +307,7 @@ export default function ProjectsPage() {
                         <button
                           onClick={() => startEditForeman(project)}
                           className="ml-auto p-1 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
-                          title="Change foreman"
+                          title={t('changeForeman')}
                         >
                           <Pencil size={11} />
                         </button>
