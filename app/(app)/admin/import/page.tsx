@@ -49,6 +49,7 @@ export default function ImportPage() {
   const [roles, setRoles] = useState<ColumnRole[]>([])
   const [headerRowIndex, setHeaderRowIndex] = useState(-1)
   const [defaultType, setDefaultType] = useState<'TOOL' | 'MATERIAL'>('TOOL')
+  const [selectedCol, setSelectedCol] = useState<number | null>(null)
 
   const [parsing, setParsing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -62,7 +63,6 @@ export default function ImportPage() {
     ? parseRows(rawRows, hasHeaders, roles, hasHeaders ? headerRowIndex : undefined, defaultType)
     : { tools: [], projects: [] }
 
-  const previewRows = rawRows.slice(dataStartIdx, dataStartIdx + 5)
   const totalRows = Math.max(0, rawRows.length - dataStartIdx)
   const validTools = tools.filter((r) => r.status === 'ok')
   const validProjects = projects.filter((r) => r.status === 'ok')
@@ -121,6 +121,7 @@ export default function ImportPage() {
 
   function switchSheet(name: string) {
     setActiveSheet(name)
+    setSelectedCol(null)
     applyDetection(sheetData[name] ?? [], name)
   }
 
@@ -155,6 +156,7 @@ export default function ImportPage() {
       setSheetData({})
       setActiveSheet('')
       setRoles([])
+      setSelectedCol(null)
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -232,7 +234,7 @@ export default function ImportPage() {
           )}
 
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            {/* Header: stats + controls */}
+            {/* Top bar */}
             <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-gray-800">
@@ -241,7 +243,7 @@ export default function ImportPage() {
                   {projects.length > 0 && ` · ${validProjects.length} projects ready`}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Set the role for each column, or skip columns you don't need.
+                  Click any column to select it, then assign its role below.
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
@@ -258,45 +260,119 @@ export default function ImportPage() {
               </div>
             </div>
 
-            {/* Column cards */}
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {roles.map((role, ci) => {
-                const hRow = rawRows[headerRowIndex >= 0 ? headerRowIndex : 0]
-                const headerLabel = hasHeaders && hRow ? String(hRow[ci] ?? '').trim() : ''
-                const colLabel = headerLabel || `Column ${ci + 1}`
-                const samples = previewRows
-                  .map((row) => String(row[ci] ?? '').trim())
-                  .filter(Boolean)
-                  .slice(0, 4)
-                const isSkip = role === 'skip'
-                return (
-                  <div key={ci} className={`rounded-xl border p-3 transition-all ${
-                    isSkip ? 'bg-gray-50 border-gray-100' : 'bg-white border-blue-100 shadow-sm'
-                  }`}>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className={`text-xs font-semibold truncate leading-tight pt-0.5 ${isSkip ? 'text-gray-400' : 'text-gray-700'}`}>
-                        {colLabel}
-                      </span>
-                      <select
-                        value={role}
-                        onChange={(e) => setRole(ci, e.target.value as ColumnRole)}
-                        className={`flex-shrink-0 text-xs px-2 py-1 rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-400 ${
-                          isSkip
-                            ? 'bg-gray-100 text-gray-400 border-gray-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200 font-semibold'
-                        }`}
-                      >
-                        {ROLE_OPTIONS.map((r) => (
-                          <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <p className={`text-xs truncate ${isSkip ? 'text-gray-300' : 'text-gray-400'}`}>
-                      {samples.length ? samples.join(' · ') : <span className="italic">—</span>}
-                    </p>
-                  </div>
-                )
-              })}
+            {/* Role picker bar */}
+            <div className={`px-4 py-2.5 border-b flex flex-wrap items-center gap-2 min-h-[44px] transition-colors ${
+              selectedCol !== null ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'
+            }`}>
+              {selectedCol !== null ? (
+                <>
+                  <span className="text-xs font-semibold text-blue-800 mr-1">
+                    {(() => {
+                      const hRow = rawRows[headerRowIndex >= 0 ? headerRowIndex : 0]
+                      const lbl = hasHeaders && hRow ? String(hRow[selectedCol] ?? '').trim() : ''
+                      return (lbl || `Column ${selectedCol + 1}`) + ':'
+                    })()}
+                  </span>
+                  {ROLE_OPTIONS.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setRole(selectedCol, r)}
+                      className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
+                        roles[selectedCol] === r
+                          ? r === 'skip'
+                            ? 'bg-gray-400 text-white'
+                            : 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-700'
+                      }`}
+                    >
+                      {ROLE_LABELS[r]}
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <p className="text-xs text-gray-400">Click any column in the table below to assign its role.</p>
+              )}
+            </div>
+
+            {/* Spreadsheet table */}
+            <div className="overflow-auto max-h-[55vh]">
+              <table className="text-xs border-collapse">
+                <thead>
+                  <tr className="sticky top-0 z-20">
+                    <th className="sticky left-0 z-30 bg-white border-b-2 border-r border-gray-200 w-8 min-w-[2rem]" />
+                    {roles.map((role, ci) => {
+                      const isSelected = selectedCol === ci
+                      const hRow = rawRows[headerRowIndex >= 0 ? headerRowIndex : 0]
+                      const colLabel = hasHeaders && hRow ? String(hRow[ci] ?? '').trim() : ''
+                      return (
+                        <th
+                          key={ci}
+                          onClick={() => setSelectedCol(isSelected ? null : ci)}
+                          className={`px-2 py-1.5 text-left font-medium cursor-pointer select-none border-b-2 border-r whitespace-nowrap transition-colors ${
+                            isSelected
+                              ? 'bg-blue-100 border-blue-300 text-blue-800'
+                              : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                          }`}
+                        >
+                          <div className="flex flex-col gap-0.5 min-w-[70px] max-w-[150px]">
+                            <span className="truncate text-[11px]">{colLabel || `Col ${ci + 1}`}</span>
+                            {role !== 'skip' ? (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold self-start ${
+                                isSelected ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {ROLE_LABELS[role]}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-gray-300">—</span>
+                            )}
+                          </div>
+                        </th>
+                      )
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rawRows.slice(0, 500).map((row, ri) => {
+                    const isHeaderRow = hasHeaders && ri === headerRowIndex
+                    return (
+                      <tr key={ri} className={`border-b border-gray-50 ${isHeaderRow ? 'bg-amber-50' : 'hover:bg-gray-50/50'}`}>
+                        <td className={`sticky left-0 z-10 px-2 py-1 text-right border-r border-gray-100 font-mono text-[10px] text-gray-300 select-none ${
+                          isHeaderRow ? 'bg-amber-50' : 'bg-white'
+                        }`}>
+                          {ri + 1}
+                        </td>
+                        {roles.map((role, ci) => {
+                          const isSelected = selectedCol === ci
+                          const val = String(row[ci] ?? '')
+                          return (
+                            <td
+                              key={ci}
+                              onClick={() => setSelectedCol(isSelected ? null : ci)}
+                              title={val}
+                              className={`px-2 py-1 border-r border-gray-50 cursor-pointer whitespace-nowrap transition-colors ${
+                                isSelected
+                                  ? 'bg-blue-50 text-blue-800'
+                                  : role === 'skip'
+                                  ? 'text-gray-300'
+                                  : 'text-gray-700'
+                              }`}
+                            >
+                              {val}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })}
+                  {rawRows.length > 500 && (
+                    <tr>
+                      <td colSpan={roles.length + 1} className="px-3 py-2 text-center text-gray-400 border-t">
+                        … {rawRows.length - 500} more rows not shown
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
