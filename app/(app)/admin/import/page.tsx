@@ -237,11 +237,11 @@ export default function ImportPage() {
               <div>
                 <p className="text-sm font-semibold text-gray-800">
                   {activeSheet} — {totalRows} rows
-                  {tools.length > 0 && ` · ${validTools.length} tools/materials`}
-                  {projects.length > 0 && ` · ${validProjects.length} projects`}
+                  {tools.length > 0 && ` · ${validTools.length} items ready`}
+                  {projects.length > 0 && ` · ${validProjects.length} projects ready`}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Assign a role to each column. The system auto-detected them — correct any mistakes below.
+                  Set the role for each column, or skip columns you don't need.
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
@@ -258,60 +258,45 @@ export default function ImportPage() {
               </div>
             </div>
 
-            {/* Column mapping + preview table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  {/* Role selectors */}
-                  <tr className="bg-blue-50 border-b border-blue-100">
-                    {roles.map((role, ci) => (
-                      <th key={ci} className="px-3 py-2 text-left font-medium min-w-[140px]">
-                        <select
-                          value={role}
-                          onChange={(e) => setRole(ci, e.target.value as ColumnRole)}
-                          className={`w-full text-xs px-2 py-1.5 rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-400 ${
-                            role === 'skip'
-                              ? 'bg-gray-100 text-gray-400 border-gray-200'
-                              : 'bg-white text-blue-700 border-blue-200 font-semibold'
-                          }`}
-                        >
-                          {ROLE_OPTIONS.map((r) => (
-                            <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                          ))}
-                        </select>
-                      </th>
-                    ))}
-                  </tr>
-                  {/* Original header row (if hasHeaders) */}
-                  {hasHeaders && rawRows[headerRowIndex >= 0 ? headerRowIndex : 0] && (
-                    <tr className="bg-gray-50 border-b border-gray-100">
-                      {rawRows[headerRowIndex >= 0 ? headerRowIndex : 0].map((h, ci) => (
-                        <th key={ci} className="px-3 py-2 text-left text-xs text-gray-500 font-normal">
-                          {String(h)}
-                        </th>
-                      ))}
-                    </tr>
-                  )}
-                </thead>
-                <tbody>
-                  {previewRows.map((row, ri) => (
-                    <tr key={ri} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
-                      {roles.map((role, ci) => (
-                        <td key={ci} className={`px-3 py-2 text-xs ${role === 'skip' ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {String(row[ci] ?? '')}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                  {totalRows > 5 && (
-                    <tr>
-                      <td colSpan={roles.length} className="px-3 py-2 text-xs text-gray-400 text-center">
-                        … {totalRows - 5} more rows
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            {/* Column cards */}
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {roles.map((role, ci) => {
+                const hRow = rawRows[headerRowIndex >= 0 ? headerRowIndex : 0]
+                const headerLabel = hasHeaders && hRow ? String(hRow[ci] ?? '').trim() : ''
+                const colLabel = headerLabel || `Column ${ci + 1}`
+                const samples = previewRows
+                  .map((row) => String(row[ci] ?? '').trim())
+                  .filter(Boolean)
+                  .slice(0, 4)
+                const isSkip = role === 'skip'
+                return (
+                  <div key={ci} className={`rounded-xl border p-3 transition-all ${
+                    isSkip ? 'bg-gray-50 border-gray-100' : 'bg-white border-blue-100 shadow-sm'
+                  }`}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className={`text-xs font-semibold truncate leading-tight pt-0.5 ${isSkip ? 'text-gray-400' : 'text-gray-700'}`}>
+                        {colLabel}
+                      </span>
+                      <select
+                        value={role}
+                        onChange={(e) => setRole(ci, e.target.value as ColumnRole)}
+                        className={`flex-shrink-0 text-xs px-2 py-1 rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+                          isSkip
+                            ? 'bg-gray-100 text-gray-400 border-gray-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200 font-semibold'
+                        }`}
+                      >
+                        {ROLE_OPTIONS.map((r) => (
+                          <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <p className={`text-xs truncate ${isSkip ? 'text-gray-300' : 'text-gray-400'}`}>
+                      {samples.length ? samples.join(' · ') : <span className="italic">—</span>}
+                    </p>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
