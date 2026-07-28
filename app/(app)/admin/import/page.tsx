@@ -49,7 +49,9 @@ export default function ImportPage() {
   const [roles, setRoles] = useState<ColumnRole[]>([])
   const [headerRowIndex, setHeaderRowIndex] = useState(-1)
   const [defaultType, setDefaultType] = useState<'TOOL' | 'MATERIAL'>('TOOL')
-  const [selectedCol, setSelectedCol] = useState<number | null>(null)
+  // { row: -1 } means whole column selected via header click; row >= 0 means specific cell
+  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null)
+  const [excludedRows, setExcludedRows] = useState<number[]>([])
 
   const [parsing, setParsing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -59,11 +61,13 @@ export default function ImportPage() {
   // ── derived parsed preview ────────────────────────────────────────────────
   const rawRows = sheetData[activeSheet] ?? []
   const dataStartIdx = hasHeaders ? Math.max(headerRowIndex, 0) + 1 : 0
+  const excludedRowsSet = new Set(excludedRows)
   const { tools, projects } = rawRows.length && roles.length
-    ? parseRows(rawRows, hasHeaders, roles, hasHeaders ? headerRowIndex : undefined, defaultType)
+    ? parseRows(rawRows, hasHeaders, roles, hasHeaders ? headerRowIndex : undefined, defaultType, excludedRowsSet)
     : { tools: [], projects: [] }
 
   const totalRows = Math.max(0, rawRows.length - dataStartIdx)
+  const selectedCol = selectedCell?.col ?? null
   const validTools = tools.filter((r) => r.status === 'ok')
   const validProjects = projects.filter((r) => r.status === 'ok')
 
@@ -121,7 +125,8 @@ export default function ImportPage() {
 
   function switchSheet(name: string) {
     setActiveSheet(name)
-    setSelectedCol(null)
+    setSelectedCell(null)
+    setExcludedRows([])
     applyDetection(sheetData[name] ?? [], name)
   }
 
@@ -156,7 +161,8 @@ export default function ImportPage() {
       setSheetData({})
       setActiveSheet('')
       setRoles([])
-      setSelectedCol(null)
+      setSelectedCell(null)
+      setExcludedRows([])
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -239,11 +245,12 @@ export default function ImportPage() {
               <div>
                 <p className="text-sm font-semibold text-gray-800">
                   {activeSheet} — {totalRows} rows
-                  {tools.length > 0 && ` · ${validTools.length} items ready`}
-                  {projects.length > 0 && ` · ${validProjects.length} projects ready`}
+                  {validTools.length > 0 && ` · ${validTools.length} items ready`}
+                  {validProjects.length > 0 && ` · ${validProjects.length} projects ready`}
+                  {excludedRows.length > 0 && ` · ${excludedRows.length} excluded`}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Click any column to select it, then assign its role below.
+                  Click a cell to select its column. Click a row number to exclude that row.
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
@@ -260,37 +267,55 @@ export default function ImportPage() {
               </div>
             </div>
 
-            {/* Role picker bar */}
+            {/* Role picker / row action bar */}
             <div className={`px-4 py-2.5 border-b flex flex-wrap items-center gap-2 min-h-[44px] transition-colors ${
-              selectedCol !== null ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'
+              selectedCell !== null ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'
             }`}>
-              {selectedCol !== null ? (
+              {selectedCell !== null ? (
                 <>
                   <span className="text-xs font-semibold text-blue-800 mr-1">
                     {(() => {
                       const hRow = rawRows[headerRowIndex >= 0 ? headerRowIndex : 0]
-                      const lbl = hasHeaders && hRow ? String(hRow[selectedCol] ?? '').trim() : ''
-                      return (lbl || `Column ${selectedCol + 1}`) + ':'
+                      const lbl = hasHeaders && hRow ? String(hRow[selectedCell.col] ?? '').trim() : ''
+                      return (lbl || `Column ${selectedCell.col + 1}`) + ':'
                     })()}
                   </span>
                   {ROLE_OPTIONS.map((r) => (
                     <button
                       key={r}
-                      onClick={() => setRole(selectedCol, r)}
+                      onClick={() => { setRole(selectedCell.col, r) }}
                       className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                        roles[selectedCol] === r
-                          ? r === 'skip'
-                            ? 'bg-gray-400 text-white'
-                            : 'bg-blue-600 text-white shadow-sm'
+                        roles[selectedCell.col] === r
+                          ? r === 'skip' ? 'bg-gray-400 text-white' : 'bg-blue-600 text-white shadow-sm'
                           : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-700'
                       }`}
                     >
                       {ROLE_LABELS[r]}
                     </button>
                   ))}
+                  {selectedCell.row >= 0 && selectedCell.row !== headerRowIndex && (
+                    <>
+                      <span className="text-gray-200 mx-1">|</span>
+                      <button
+                        onClick={() => {
+                          const ri = selectedCell.row
+                          setExcludedRows(prev => prev.includes(ri) ? prev.filter(r => r !== ri) : [...prev, ri])
+                        }}
+                        className={`text-xs px-2.5 py-1 rounded-lg font-medium border transition-all ${
+                          excludedRows.includes(selectedCell.row)
+                            ? 'bg-red-500 text-white border-red-500'
+                            : 'bg-white text-red-500 border-red-200 hover:bg-red-50'
+                        }`}
+                      >
+                        {excludedRows.includes(selectedCell.row) ? 'Include row' : 'Exclude row'}
+                      </button>
+                    </>
+                  )}
                 </>
               ) : (
-                <p className="text-xs text-gray-400">Click any column in the table below to assign its role.</p>
+                <p className="text-xs text-gray-400">
+                  Click a cell to assign its column role — or click a row number on the left to exclude that row.
+                </p>
               )}
             </div>
 
@@ -301,15 +326,15 @@ export default function ImportPage() {
                   <tr className="sticky top-0 z-20">
                     <th className="sticky left-0 z-30 bg-white border-b-2 border-r border-gray-200 w-8 min-w-[2rem]" />
                     {roles.map((role, ci) => {
-                      const isSelected = selectedCol === ci
+                      const isColSelected = selectedCol === ci
                       const hRow = rawRows[headerRowIndex >= 0 ? headerRowIndex : 0]
                       const colLabel = hasHeaders && hRow ? String(hRow[ci] ?? '').trim() : ''
                       return (
                         <th
                           key={ci}
-                          onClick={() => setSelectedCol(isSelected ? null : ci)}
+                          onClick={() => setSelectedCell(prev => (prev?.col === ci && prev.row === -1) ? null : { row: -1, col: ci })}
                           className={`px-2 py-1.5 text-left font-medium cursor-pointer select-none border-b-2 border-r whitespace-nowrap transition-colors ${
-                            isSelected
+                            isColSelected
                               ? 'bg-blue-100 border-blue-300 text-blue-800'
                               : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
                           }`}
@@ -318,7 +343,7 @@ export default function ImportPage() {
                             <span className="truncate text-[11px]">{colLabel || `Col ${ci + 1}`}</span>
                             {role !== 'skip' ? (
                               <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold self-start ${
-                                isSelected ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+                                isColSelected ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
                               }`}>
                                 {ROLE_LABELS[role]}
                               </span>
@@ -334,24 +359,45 @@ export default function ImportPage() {
                 <tbody>
                   {rawRows.slice(0, 500).map((row, ri) => {
                     const isHeaderRow = hasHeaders && ri === headerRowIndex
+                    const isExcluded = excludedRowsSet.has(ri)
                     return (
-                      <tr key={ri} className={`border-b border-gray-50 ${isHeaderRow ? 'bg-amber-50' : 'hover:bg-gray-50/50'}`}>
-                        <td className={`sticky left-0 z-10 px-2 py-1 text-right border-r border-gray-100 font-mono text-[10px] text-gray-300 select-none ${
-                          isHeaderRow ? 'bg-amber-50' : 'bg-white'
-                        }`}>
-                          {ri + 1}
+                      <tr key={ri} className={`border-b border-gray-50 ${
+                        isExcluded ? 'bg-red-50' : isHeaderRow ? 'bg-amber-50' : 'hover:bg-gray-50/50'
+                      }`}>
+                        {/* Row number — click to exclude/include */}
+                        <td
+                          onClick={() => {
+                            if (isHeaderRow) return
+                            setExcludedRows(prev => prev.includes(ri) ? prev.filter(r => r !== ri) : [...prev, ri])
+                            setSelectedCell(null)
+                          }}
+                          title={isHeaderRow ? 'Header row' : isExcluded ? 'Click to include row' : 'Click to exclude row'}
+                          className={`sticky left-0 z-10 px-2 py-1 text-right border-r border-gray-100 font-mono text-[10px] select-none transition-colors ${
+                            isHeaderRow
+                              ? 'bg-amber-50 text-amber-400 cursor-default'
+                              : isExcluded
+                              ? 'bg-red-100 text-red-400 cursor-pointer hover:bg-red-200'
+                              : 'bg-white text-gray-300 cursor-pointer hover:text-red-400 hover:bg-red-50'
+                          }`}
+                        >
+                          {isExcluded ? '✕' : ri + 1}
                         </td>
                         {roles.map((role, ci) => {
-                          const isSelected = selectedCol === ci
+                          const isCellSelected = selectedCell?.row === ri && selectedCell?.col === ci
+                          const isColSelected = selectedCol === ci
                           const val = String(row[ci] ?? '')
                           return (
                             <td
                               key={ci}
-                              onClick={() => setSelectedCol(isSelected ? null : ci)}
+                              onClick={() => setSelectedCell(prev => (prev?.row === ri && prev?.col === ci) ? null : { row: ri, col: ci })}
                               title={val}
                               className={`px-2 py-1 border-r border-gray-50 cursor-pointer whitespace-nowrap transition-colors ${
-                                isSelected
+                                isCellSelected
+                                  ? 'bg-blue-200 text-blue-900 font-semibold'
+                                  : isColSelected
                                   ? 'bg-blue-50 text-blue-800'
+                                  : isExcluded
+                                  ? 'text-red-300 line-through'
                                   : role === 'skip'
                                   ? 'text-gray-300'
                                   : 'text-gray-700'

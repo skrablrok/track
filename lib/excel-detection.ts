@@ -223,7 +223,8 @@ export function parseRows(
   hasHeaders: boolean,
   roles: ColumnRole[],
   headerRowIndex?: number,
-  defaultType: 'TOOL' | 'MATERIAL' = 'TOOL'
+  defaultType: 'TOOL' | 'MATERIAL' = 'TOOL',
+  excludedRows?: Set<number>
 ): { tools: ParsedTool[]; projects: ParsedProject[] } {
   const dataStart =
     headerRowIndex !== undefined && headerRowIndex >= 0
@@ -243,7 +244,10 @@ export function parseRows(
   const tools: ParsedTool[] = []
   const projects: ParsedProject[] = []
 
-  for (const row of dataRows) {
+  for (let i = 0; i < dataRows.length; i++) {
+    const originalIdx = dataStart + i
+    if (excludedRows?.has(originalIdx)) continue
+    const row = dataRows[i]
     if (isProjectSheet) {
       const name = get(row, 'projectName')
       if (!name) continue
