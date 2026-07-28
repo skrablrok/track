@@ -164,6 +164,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
         emailError = 'SMTP_USER or SMTP_PASS not configured on this server'
       } else {
+        // Increment org delivery note counter + fetch logo in one atomic update
+        const org = await db.organization.update({
+          where: { id: admin.organizationId },
+          data: { deliveryNoteCount: { increment: 1 } },
+          select: { deliveryNoteCount: true, logoUrl: true },
+        })
+
         const deliveryRecipients = Array.from(new Set([
           updated.requester.email,
           admin.email,
@@ -185,6 +192,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             confirmedAt: new Date(),
             items: noteItems,
             adminNotes: adminNotes || null,
+            orgLogoUrl: org.logoUrl || null,
+            deliveryNoteNumber: org.deliveryNoteCount,
           })
         } catch (e: any) {
           emailError = e.message

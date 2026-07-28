@@ -102,14 +102,18 @@ export async function sendDeliveryNoteEmail(
     confirmedAt: Date
     items: { name: string; requestedQty: number; approvedQty: number }[]
     adminNotes?: string | null
+    orgLogoUrl?: string | null
+    deliveryNoteNumber?: number
   }
 ) {
   if (to.length === 0) return
 
   const appUrl = (process.env.NEXTAUTH_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || 'http://localhost:3000').replace(/\/$/, '')
-  const { requestId, requesterName, confirmedByName, projectName, status, confirmedAt, items, adminNotes } = details
+  const { requestId, requesterName, confirmedByName, projectName, status, confirmedAt, items, adminNotes, orgLogoUrl, deliveryNoteNumber } = details
 
-  const refNumber = requestId.slice(-8).toUpperCase()
+  const refNumber = deliveryNoteNumber
+    ? String(deliveryNoteNumber).padStart(4, '0')
+    : requestId.slice(-8).toUpperCase()
   const dateStr = confirmedAt.toLocaleDateString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const timeStr = confirmedAt.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })
 
@@ -194,7 +198,7 @@ export async function sendDeliveryNoteEmail(
     </div>
   `
 
-  const pdfBuffer = await generateDeliveryNotePdf(details)
+  const pdfBuffer = await generateDeliveryNotePdf({ ...details, orgLogoUrl, deliveryNoteNumber })
   const pdfFilename = `Dobavnica_${refNumber}.pdf`
 
   const transporter = createTransporter()

@@ -53,6 +53,7 @@ export default function ImportPage() {
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null)
   const [excludedRows, setExcludedRows] = useState<number[]>([])
   const [skippedCells, setSkippedCells] = useState<Set<string>>(new Set())
+  const [cellRoles, setCellRoles] = useState<Record<string, ColumnRole>>({})
   // { sheetName: { rowIndex: dataUrl } } — extracted from the xlsx server-side
   const [sheetImageMap, setSheetImageMap] = useState<Record<string, Record<number, string>>>({})
   const [imagesLoading, setImagesLoading] = useState(false)
@@ -153,6 +154,7 @@ export default function ImportPage() {
     setSelectedCell(null)
     setExcludedRows([])
     setSkippedCells(new Set())
+    setCellRoles({})
     applyDetection(sheetData[name] ?? [], name)
   }
 
@@ -179,10 +181,32 @@ export default function ImportPage() {
         ...tool,
         imageUrl: imageMap[tool.rowIndex] ?? undefined,
       }))
+
+      // Extract any individually cell-tagged project names
+      const processedRows = new Set<number>()
+      const cellTaggedProjects: { name: string; location?: string; status: 'ok' }[] = []
+      for (const [key, role] of Object.entries(cellRoles)) {
+        if (role !== 'projectName') continue
+        const [rowStr, colStr] = key.split(':')
+        const ri = parseInt(rowStr)
+        if (processedRows.has(ri)) continue
+        processedRows.add(ri)
+        const row = rawRows[ri]
+        const name = String(row?.[parseInt(colStr)] ?? '').trim()
+        if (!name) continue
+        const locEntry = Object.entries(cellRoles).find(([k, r]) => r === 'projectLocation' && parseInt(k.split(':')[0]) === ri)
+        const locVal = locEntry ? String(rawRows[ri]?.[parseInt(locEntry[0].split(':')[1])] ?? '').trim() : undefined
+        cellTaggedProjects.push({ name, location: locVal, status: 'ok' })
+      }
+      const allProjects = [
+        ...validProjects,
+        ...cellTaggedProjects.filter((p) => !validProjects.some((vp) => vp.name === p.name)),
+      ]
+
       const res = await fetch('/api/admin/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tools: toolsWithImages, projects: validProjects }),
+        body: JSON.stringify({ tools: toolsWithImages, projects: allProjects }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Import failed')
@@ -194,6 +218,7 @@ export default function ImportPage() {
       setSelectedCell(null)
       setExcludedRows([])
       setSkippedCells(new Set())
+      setCellRoles({})
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -410,20 +435,30 @@ export default function ImportPage() {
                             {excludedRows.includes(selectedCell.row) ? 'Include row' : 'Exclude row'}
                           </button>
                         )}
-                        <span className="text-gray-300 text-xs">| Column role:</span>
-                        {ROLE_OPTIONS.map((r) => (
-                          <button
-                            key={r}
-                            onClick={() => { setRole(selectedCell.col, r) }}
-                            className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                              roles[selectedCell.col] === r
-                                ? r === 'skip' ? 'bg-gray-400 text-white' : 'bg-blue-600 text-white shadow-sm'
-                                : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-700'
-                            }`}
-                          >
-                            {ROLE_LABELS[r]}
-                          </button>
-                        ))}
+                        <span className="text-gray-300 text-xs">| Tag as:</span>
+                        {ROLE_OPTIONS.filter((r) => r !== 'skip').map((r) => {
+                          const currentCellRole = cellRoles[cellKey]
+                          return (
+                            <button
+                              key={r}
+                              onClick={() => {
+                                setCellRoles((prev) => {
+                                  const next = { ...prev }
+                                  if (next[cellKey] === r) delete next[cellKey]
+                                  else next[cellKey] = r
+                                  return next
+                                })
+                              }}
+                              className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
+                                currentCellRole === r
+                                  ? 'bg-green-600 text-white shadow-sm'
+                                  : 'bg-white text-gray-600 border border-gray-200 hover:border-green-300 hover:text-green-700'
+                              }`}
+                            >
+                              {ROLE_LABELS[r]}
+                            </button>
+                          )
+                        })}
                       </>
                     )
                   })()}
@@ -516,20 +551,24 @@ export default function ImportPage() {
                           </td>
                         )}
                         {roles.map((role, ci) => {
+                          const cellKey = `${ri}:${ci}`
                           const isCellSelected = selectedCell?.row === ri && selectedCell?.col === ci
                           const isColSelected = isColumnMode && selectedCol === ci
-                          const isCellSkipped = skippedCells.has(`${ri}:${ci}`)
+                          const isCellSkipped = skippedCells.has(cellKey)
+                          const cellRole = cellRoles[cellKey]
                           const val = String(row[ci] ?? '')
                           return (
                             <td
                               key={ci}
                               onClick={() => setSelectedCell(prev => (prev?.row === ri && prev?.col === ci) ? null : { row: ri, col: ci })}
-                              title={val}
+                              title={cellRole ? `Tagged: ${ROLE_LABELS[cellRole]}` : val}
                               className={`px-2 py-1 border-r border-gray-50 cursor-pointer whitespace-nowrap transition-colors ${
                                 isCellSelected
                                   ? 'bg-blue-200 text-blue-900 font-semibold'
                                   : isCellSkipped
                                   ? 'text-gray-300 line-through bg-orange-50'
+                                  : cellRole
+                                  ? 'bg-green-100 text-green-900 ring-1 ring-inset ring-green-400'
                                   : isColSelected
                                   ? 'bg-blue-50 text-blue-800'
                                   : isExcluded
@@ -540,6 +579,11 @@ export default function ImportPage() {
                               }`}
                             >
                               {val}
+                              {cellRole && (
+                                <span className="ml-1 text-[9px] bg-green-600 text-white px-1 py-0.5 rounded font-semibold">
+                                  {ROLE_LABELS[cellRole]}
+                                </span>
+                              )}
                             </td>
                           )
                         })}

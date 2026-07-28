@@ -31,7 +31,6 @@ const COL = {
   yellowBdr: [253, 230, 138],
 }
 
-// Fonts are loaded once per process and cached
 let _fontRegular: Buffer | null = null
 let _fontBold: Buffer | null = null
 
@@ -53,6 +52,8 @@ export async function generateDeliveryNotePdf(details: {
   confirmedAt: Date
   items: Item[]
   adminNotes?: string | null
+  orgLogoUrl?: string | null
+  deliveryNoteNumber?: number
 }): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create()
   pdfDoc.registerFontkit(fontkit)
@@ -63,7 +64,6 @@ export async function generateDeliveryNotePdf(details: {
 
   const page = pdfDoc.addPage([PAGE_W, PAGE_H])
 
-  // pdf-lib origin is bottom-left; layout values use "from-top" — these helpers convert.
   const pdfY = (fromTop: number) => PAGE_H - fromTop
 
   function fillRect(x: number, yTop: number, w: number, h: number, col: number[]) {
@@ -96,23 +96,63 @@ export async function generateDeliveryNotePdf(details: {
     page.drawLine({ start: { x, y: pdfY(yTop1) }, end: { x, y: pdfY(yTop2) }, thickness: lw, color: c(col) })
   }
 
-  const { requestId, requesterName, confirmedByName, projectName, status, confirmedAt, items, adminNotes } = details
+  const { requestId, requesterName, confirmedByName, projectName, status, confirmedAt, items, adminNotes, orgLogoUrl, deliveryNoteNumber } = details
   const ref     = requestId.slice(-8).toUpperCase()
   const dateStr = confirmedAt.toLocaleDateString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const timeStr = confirmedAt.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })
   const statusLabel = status === 'APPROVED' ? 'POTRJENO' : 'DELNO POTRJENO'
   const statusCol   = status === 'APPROVED' ? COL.green   : COL.amber
   const statusBgCol = status === 'APPROVED' ? COL.greenBg : COL.amberBg
+  const noteNumStr  = deliveryNoteNumber ? String(deliveryNoteNumber).padStart(4, '0') : null
 
   // ── Header bar ──────────────────────────────────────────────────────────
-  fillRect(MARGIN, 45, USABLE_W, 52, COL.darkBlue)
-  drawText('BuildFlow', MARGIN + 12, 54, 18, bold, COL.white)
-  drawText('Upravljanje inventarja orodij', MARGIN + 12, 74, 9, regular, COL.white)
-  drawTextRight('DOBAVNICA', PAGE_W - MARGIN, 54, 22, bold, COL.white)
-  drawTextRight('Delivery Note', PAGE_W - MARGIN, 74, 9, regular, COL.white)
+  const headerTop = 45
+  const headerH   = 54
+  fillRect(MARGIN, headerTop, USABLE_W, headerH, COL.darkBlue)
+
+  // Left side: logo image or fallback text
+  let logoEmbedded = false
+  if (orgLogoUrl) {
+    try {
+      const match = orgLogoUrl.match(/^data:([^;]+);base64,(.+)$/)
+      if (match) {
+        const [, mime, b64] = match
+        const logoBytes = Buffer.from(b64, 'base64')
+        const logoImg = mime.includes('jpeg') || mime.includes('jpg')
+          ? await pdfDoc.embedJpg(logoBytes)
+          : await pdfDoc.embedPng(logoBytes)
+        const maxW = 110
+        const maxH = headerH - 10
+        const dims = logoImg.scaleToFit(maxW, maxH)
+        const logoX = MARGIN + 10
+        const logoY = pdfY(headerTop + (headerH + dims.height) / 2)
+        page.drawImage(logoImg, { x: logoX, y: logoY, width: dims.width, height: dims.height })
+        logoEmbedded = true
+      }
+    } catch {
+      // fall through to text
+    }
+  }
+  if (!logoEmbedded) {
+    drawText('BuildFlow', MARGIN + 12, headerTop + 12, 18, bold, COL.white)
+    drawText('Upravljanje inventarja orodij', MARGIN + 12, headerTop + 32, 9, regular, COL.white)
+  }
+
+  // Right side: DOBAVNICA + sequential number
+  drawTextRight('DOBAVNICA', PAGE_W - MARGIN, headerTop + 10, 22, bold, COL.white)
+  if (noteNumStr) {
+    drawTextRight(`Številka: ${noteNumStr}`, PAGE_W - MARGIN, headerTop + 34, 9, regular, COL.white)
+  } else {
+    drawTextRight('Delivery Note', PAGE_W - MARGIN, headerTop + 34, 9, regular, COL.white)
+  }
+
+  // If logo was embedded, show small "BuildFlow" credit below header
+  if (logoEmbedded) {
+    drawText('BuildFlow · Upravljanje inventarja orodij', MARGIN, headerTop + headerH + 8, 7, regular, COL.gray400)
+  }
 
   // ── Reference / date strip ───────────────────────────────────────────
-  const stripY = 108
+  const stripY = logoEmbedded ? headerTop + headerH + 20 : 108
   drawText(`Ref: #${ref}`, MARGIN, stripY, 9, regular, COL.gray700)
   drawTextRight(`Datum: ${dateStr}  ob  ${timeStr}`, PAGE_W - MARGIN, stripY, 9, regular, COL.gray700)
 
@@ -122,11 +162,12 @@ export async function generateDeliveryNotePdf(details: {
   drawTextCenter(statusLabel, badgeX, badgeW, stripY + 1, 8, bold, statusCol)
 
   // ── Divider ─────────────────────────────────────────────────────────
-  hline(130, MARGIN, PAGE_W - MARGIN, COL.gray200)
+  const divY = stripY + 18
+  hline(divY, MARGIN, PAGE_W - MARGIN, COL.gray200)
 
   // ── Parties ──────────────────────────────────────────────────────────
   const halfW = USABLE_W / 2 - 8
-  const boxY  = 138
+  const boxY  = divY + 8
 
   fillRect(MARGIN, boxY, halfW, 64, COL.gray50)
   drawText('NAROČNIK', MARGIN + 8, boxY + 8, 7, bold, COL.gray400)
@@ -199,7 +240,9 @@ export async function generateDeliveryNotePdf(details: {
 
   // ── Footer ───────────────────────────────────────────────────────────
   hline(775, MARGIN, PAGE_W - MARGIN, COL.gray200)
-  const footerStr = `BuildFlow · Dobavnica #${ref} · ${dateStr}`
+  const footerStr = noteNumStr
+    ? `BuildFlow · Dobavnica Številka ${noteNumStr} · ${dateStr}`
+    : `BuildFlow · Dobavnica #${ref} · ${dateStr}`
   drawTextCenter(footerStr, 0, PAGE_W, 780, 7.5, regular, COL.gray400)
 
   const pdfBytes = await pdfDoc.save()
