@@ -26,6 +26,7 @@ export type ParsedTool = {
   description?: string
   warehouse?: string
   status: 'ok' | 'missingName'
+  rowIndex: number
 }
 
 export type ParsedProject = {
@@ -272,6 +273,7 @@ export function parseRows(
         description: get(row, 'description') || undefined,
         warehouse: get(row, 'warehouse') || undefined,
         status: 'ok',
+        rowIndex: originalIdx,
       })
     }
   }

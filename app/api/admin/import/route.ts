@@ -13,6 +13,7 @@ type ToolRow = {
   maxStock?: number
   description?: string
   warehouse?: string
+  imageUrl?: string
 }
 
 type ProjectRow = {
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
             name,
             description: row.description || null,
             category: row.category || null,
+            imageUrl: row.imageUrl || null,
             type: row.type === 'MATERIAL' ? 'MATERIAL' : 'TOOL',
             totalStock: quantity,
             currentStock: quantity,

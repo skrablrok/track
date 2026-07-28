@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
-import { FileSpreadsheet, FileText, Download, Upload, CheckCircle2, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
+import { FileSpreadsheet, FileText, Download, Upload, CheckCircle2, AlertTriangle, Loader2, RefreshCw, Image as ImageIcon } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import {
   type ColumnRole, type ParsedTool, type ParsedProject,
@@ -52,6 +52,9 @@ export default function ImportPage() {
   // { row: -1 } means whole column selected via header click; row >= 0 means specific cell
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null)
   const [excludedRows, setExcludedRows] = useState<number[]>([])
+  // { sheetName: { rowIndex: dataUrl } } — extracted from the xlsx server-side
+  const [sheetImageMap, setSheetImageMap] = useState<Record<string, Record<number, string>>>({})
+  const [imagesLoading, setImagesLoading] = useState(false)
 
   const [parsing, setParsing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -68,6 +71,8 @@ export default function ImportPage() {
 
   const totalRows = Math.max(0, rawRows.length - dataStartIdx)
   const selectedCol = selectedCell?.col ?? null
+  const imageMap: Record<number, string> = sheetImageMap[activeSheet] ?? {}
+  const hasImages = Object.keys(imageMap).length > 0
   const validTools = tools.filter((r) => r.status === 'ok')
   const validProjects = projects.filter((r) => r.status === 'ok')
 
@@ -76,6 +81,7 @@ export default function ImportPage() {
     if (!file) return
     setError('')
     setResults(null)
+    setSheetImageMap({})
     setParsing(true)
     try {
       const buf = await file.arrayBuffer()
@@ -106,6 +112,8 @@ export default function ImportPage() {
         setSheetData(allSheets)
         setActiveSheet(firstSheet)
         applyDetection(allSheets[firstSheet] ?? [], firstSheet)
+        // Extract images in the background (non-blocking)
+        extractImages(file)
       }
     } catch (e: any) {
       setError(e.message || 'Could not read this file')
@@ -121,6 +129,20 @@ export default function ImportPage() {
     setRoles(detected.roles)
     setHeaderRowIndex(detected.headerRowIndex)
     setDefaultType(detected.defaultType)
+  }
+
+  async function extractImages(file: File) {
+    setImagesLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/admin/import/extract-images', { method: 'POST', body: fd })
+      if (res.ok) setSheetImageMap(await res.json())
+    } catch {
+      // silently ignore — images are optional
+    } finally {
+      setImagesLoading(false)
+    }
   }
 
   function switchSheet(name: string) {
@@ -149,10 +171,14 @@ export default function ImportPage() {
     setSubmitting(true)
     setError('')
     try {
+      const toolsWithImages = validTools.map((tool) => ({
+        ...tool,
+        imageUrl: imageMap[tool.rowIndex] ?? undefined,
+      }))
       const res = await fetch('/api/admin/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tools: validTools, projects: validProjects }),
+        body: JSON.stringify({ tools: toolsWithImages, projects: validProjects }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Import failed')
@@ -248,9 +274,11 @@ export default function ImportPage() {
                   {validTools.length > 0 && ` · ${validTools.length} items ready`}
                   {validProjects.length > 0 && ` · ${validProjects.length} projects ready`}
                   {excludedRows.length > 0 && ` · ${excludedRows.length} excluded`}
+                  {hasImages && ` · ${Object.keys(imageMap).length} images`}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
                   Click a cell to select its column. Click a row number to exclude that row.
+                  {imagesLoading && <span className="flex items-center gap-1 text-blue-400"><Loader2 size={10} className="animate-spin" /> extracting images…</span>}
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
@@ -325,6 +353,11 @@ export default function ImportPage() {
                 <thead>
                   <tr className="sticky top-0 z-20">
                     <th className="sticky left-0 z-30 bg-white border-b-2 border-r border-gray-200 w-8 min-w-[2rem]" />
+                    {hasImages && (
+                      <th className="sticky left-8 z-30 bg-white border-b-2 border-r border-gray-200 w-8 px-1 text-center">
+                        <ImageIcon size={11} className="text-gray-400 mx-auto" />
+                      </th>
+                    )}
                     {roles.map((role, ci) => {
                       const isColSelected = selectedCol === ci
                       const hRow = rawRows[headerRowIndex >= 0 ? headerRowIndex : 0]
@@ -382,6 +415,15 @@ export default function ImportPage() {
                         >
                           {isExcluded ? '✕' : ri + 1}
                         </td>
+                        {hasImages && (
+                          <td className={`sticky left-8 z-10 border-r border-gray-100 p-0.5 ${isHeaderRow ? 'bg-amber-50' : isExcluded ? 'bg-red-50' : 'bg-white'}`}>
+                            {imageMap[ri] ? (
+                              <img src={imageMap[ri]} alt="" className="w-7 h-7 object-cover rounded" />
+                            ) : (
+                              <span className="w-7 h-7 block" />
+                            )}
+                          </td>
+                        )}
                         {roles.map((role, ci) => {
                           const isCellSelected = selectedCell?.row === ri && selectedCell?.col === ci
                           const isColSelected = selectedCol === ci
@@ -432,6 +474,11 @@ export default function ImportPage() {
                     r.status === 'ok' ? 'bg-gray-50' : 'bg-amber-50'
                   }`}>
                     <div className="flex items-center gap-2 min-w-0">
+                      {'rowIndex' in r && imageMap[r.rowIndex] ? (
+                        <img src={imageMap[r.rowIndex]} alt="" className="w-8 h-8 object-cover rounded flex-shrink-0" />
+                      ) : (
+                        <span className="w-8 h-8 rounded bg-gray-100 flex-shrink-0" />
+                      )}
                       <span className="text-gray-800 font-medium truncate">{r.name || '—'}</span>
                       {'type' in r && r.status === 'ok' && (
                         <span className="text-xs text-gray-400 whitespace-nowrap">
