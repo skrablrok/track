@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, UserCheck, UserX, X, Mail, Trash2 } from 'lucide-react'
+import { Plus, UserCheck, UserX, X, Mail, Trash2, Pencil, Check } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 type User = {
@@ -13,6 +13,8 @@ type User = {
   setupComplete: boolean
   createdAt: string
 }
+
+const ROLES = ['EMPLOYEE', 'FOREMAN', 'MANAGER', 'ADMIN'] as const
 
 export default function UsersPage() {
   const { t } = useLanguage()
@@ -26,6 +28,9 @@ export default function UsersPage() {
   const [inviteUrl, setInviteUrl] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
+  const [pendingRole, setPendingRole] = useState<string>('')
+  const [savingRoleId, setSavingRoleId] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -97,6 +102,30 @@ export default function UsersPage() {
     load()
   }
 
+  function startEditRole(user: User) {
+    setEditingRoleId(user.id)
+    setPendingRole(user.role)
+  }
+
+  async function saveRole(user: User) {
+    if (pendingRole === user.role) { setEditingRoleId(null); return }
+    setSavingRoleId(user.id)
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: pendingRole }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed')
+      load()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setSavingRoleId(null)
+      setEditingRoleId(null)
+    }
+  }
+
   const roleColor: Record<string, string> = {
     ADMIN:    'bg-red-100 text-red-700',
     MANAGER:  'bg-amber-100 text-amber-700',
@@ -143,6 +172,10 @@ export default function UsersPage() {
         </div>
       )}
 
+      {error && (
+        <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm">{error}</div>
+      )}
+
       {showForm && (
         <div className="bg-white rounded-2xl border border-blue-100 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -152,7 +185,6 @@ export default function UsersPage() {
             </div>
             <button onClick={() => setShowForm(false)}><X size={18} className="text-gray-400" /></button>
           </div>
-          {error && <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm mb-4">{error}</div>}
           <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               required
@@ -195,72 +227,112 @@ export default function UsersPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {users.map((user) => (
-            <div key={user.id} className={`bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3 transition-opacity ${!user.active ? 'opacity-50' : ''}`}>
-              {/* Avatar */}
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 text-sm font-semibold flex-shrink-0">
-                {avatarLetter(user)}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                  <span className="font-semibold text-gray-900 text-sm truncate">{displayName(user)}</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${roleColor[user.role] || 'bg-gray-100 text-gray-600'}`}>
-                    {user.role}
-                  </span>
+          {users.map((user) => {
+            const isEditingRole = editingRoleId === user.id
+            return (
+              <div key={user.id} className={`bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3 transition-opacity ${!user.active ? 'opacity-50' : ''}`}>
+                {/* Avatar */}
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 text-sm font-semibold flex-shrink-0">
+                  {avatarLetter(user)}
                 </div>
-                <p className="text-xs text-gray-400 truncate">{user.email}</p>
-                <div className="mt-1">
-                  {!user.setupComplete ? (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                      {t('invitePending')}
-                    </span>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                    <span className="font-semibold text-gray-900 text-sm truncate">{displayName(user)}</span>
+
+                    {/* Role badge / editor */}
+                    {isEditingRole ? (
+                      <div className="flex items-center gap-1">
+                        <select
+                          autoFocus
+                          value={pendingRole}
+                          onChange={(e) => setPendingRole(e.target.value)}
+                          className="text-xs border border-blue-300 rounded-lg px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        >
+                          {ROLES.map((r) => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => saveRole(user)}
+                          disabled={savingRoleId === user.id}
+                          className="p-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+                          title="Save"
+                        >
+                          <Check size={12} />
+                        </button>
+                        <button
+                          onClick={() => setEditingRoleId(null)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                          title="Cancel"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEditRole(user)}
+                        className={`group flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${roleColor[user.role] || 'bg-gray-100 text-gray-600'} hover:ring-2 hover:ring-blue-300 transition-all`}
+                        title="Change role"
+                      >
+                        {user.role}
+                        <Pencil size={10} className="opacity-0 group-hover:opacity-60 transition-opacity" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                  <div className="mt-1">
+                    {!user.setupComplete ? (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                        {t('invitePending')}
+                      </span>
+                    ) : (
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${user.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {user.active ? t('statusActive') : t('statusDisabled')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {user.setupComplete && (
+                    <button onClick={() => toggleActive(user)}
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
+                      title={user.active ? t('disableUser') : t('enableUser')}>
+                      {user.active ? <UserX size={16} /> : <UserCheck size={16} />}
+                    </button>
+                  )}
+                  {confirmDeleteId === user.id ? (
+                    <>
+                      <button
+                        onClick={() => handleDeleteUser(user.id)}
+                        disabled={deletingId === user.id}
+                        className="text-xs px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors disabled:opacity-60"
+                      >
+                        {deletingId === user.id ? '…' : t('confirmQuestion')}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
+                      >
+                        <X size={15} />
+                      </button>
+                    </>
                   ) : (
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${user.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {user.active ? t('statusActive') : t('statusDisabled')}
-                    </span>
+                    <button
+                      onClick={() => setConfirmDeleteId(user.id)}
+                      className="p-2 text-red-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                      title={t('delete')}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   )}
                 </div>
               </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {user.setupComplete && (
-                  <button onClick={() => toggleActive(user)}
-                    className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
-                    title={user.active ? t('disableUser') : t('enableUser')}>
-                    {user.active ? <UserX size={16} /> : <UserCheck size={16} />}
-                  </button>
-                )}
-                {confirmDeleteId === user.id ? (
-                  <>
-                    <button
-                      onClick={() => handleDeleteUser(user.id)}
-                      disabled={deletingId === user.id}
-                      className="text-xs px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors disabled:opacity-60"
-                    >
-                      {deletingId === user.id ? '…' : t('confirmQuestion')}
-                    </button>
-                    <button
-                      onClick={() => setConfirmDeleteId(null)}
-                      className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
-                    >
-                      <X size={15} />
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setConfirmDeleteId(user.id)}
-                    className="p-2 text-red-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
-                    title={t('delete')}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
