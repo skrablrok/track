@@ -142,7 +142,7 @@ export async function sendDeliveryNoteEmail(
         <!-- Header row -->
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:2px solid #1e40af;padding-bottom:16px;">
           <div>
-            <h2 style="color:#1e293b;margin:0 0 4px;font-size:20px;font-weight:700;">DOBAVNICA</h2>
+            <h2 style="color:#1e293b;margin:0 0 4px;font-size:20px;font-weight:700;">IZDAJNICA</h2>
             <p style="color:#64748b;margin:0;font-size:13px;">Delivery Note</p>
           </div>
           <div style="text-align:right;">
@@ -199,10 +199,10 @@ export async function sendDeliveryNoteEmail(
   `
 
   const pdfBuffer = await generateDeliveryNotePdf({ ...details, orgLogoUrl, deliveryNoteNumber })
-  const pdfFilename = `Dobavnica_${refNumber}.pdf`
+  const pdfFilename = `Izdajnica_${refNumber}.pdf`
 
   const transporter = createTransporter()
-  const subject = `Dobavnica #${refNumber} – ${statusLabel}`
+  const subject = `Izdajnica #${refNumber} – ${statusLabel}`
   await Promise.all(
     to.map((recipient) =>
       transporter.sendMail({

@@ -138,8 +138,8 @@ export async function generateDeliveryNotePdf(details: {
     drawText('Upravljanje inventarja orodij', MARGIN + 12, headerTop + 32, 9, regular, COL.white)
   }
 
-  // Right side: DOBAVNICA + sequential number
-  drawTextRight('DOBAVNICA', PAGE_W - MARGIN, headerTop + 10, 22, bold, COL.white)
+  // Right side: IZDAJNICA + sequential number
+  drawTextRight('IZDAJNICA', PAGE_W - MARGIN, headerTop + 10, 22, bold, COL.white)
   if (noteNumStr) {
     drawTextRight(`Številka: ${noteNumStr}`, PAGE_W - MARGIN, headerTop + 34, 9, regular, COL.white)
   } else {
@@ -241,8 +241,8 @@ export async function generateDeliveryNotePdf(details: {
   // ── Footer ───────────────────────────────────────────────────────────
   hline(775, MARGIN, PAGE_W - MARGIN, COL.gray200)
   const footerStr = noteNumStr
-    ? `BuildFlow · Dobavnica Številka ${noteNumStr} · ${dateStr}`
-    : `BuildFlow · Dobavnica #${ref} · ${dateStr}`
+    ? `BuildFlow · Izdajnica Številka ${noteNumStr} · ${dateStr}`
+    : `BuildFlow · Izdajnica #${ref} · ${dateStr}`
   drawTextCenter(footerStr, 0, PAGE_W, 780, 7.5, regular, COL.gray400)
 
   const pdfBytes = await pdfDoc.save()
