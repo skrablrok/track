@@ -41,8 +41,10 @@ model User {
   role           String         @default("EMPLOYEE")
   active         Boolean        @default(true)
   setupComplete  Boolean        @default(true)
-  inviteToken    String?        @unique
-  inviteExpiry   DateTime?
+  inviteToken      String?        @unique
+  inviteExpiry     DateTime?
+  resetToken       String?        @unique
+  resetTokenExpiry DateTime?
   organizationId String
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt

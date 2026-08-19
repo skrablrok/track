@@ -132,6 +132,12 @@ export default function LoginPage() {
             </button>
           </form>
 
+          <div className="mt-3 text-center">
+            <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+              {t(lang, 'forgotPassword')}
+            </a>
+          </div>
+
           <div className="mt-6 pt-6 border-t border-gray-100 text-center space-y-2">
             <p className="text-xs text-gray-400">{t(lang, 'forAccess')}</p>
             <p className="text-sm text-gray-500">

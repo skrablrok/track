@@ -222,6 +222,39 @@ export async function sendDeliveryNoteEmail(
   )
 }
 
+export async function sendPasswordResetEmail(to: string, token: string) {
+  const appUrl = (process.env.NEXTAUTH_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || 'http://localhost:3000').replace(/\/$/, '')
+  const resetUrl = `${appUrl}/reset-password/${token}`
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#f8fafc;padding:32px;border-radius:12px;">
+      <div style="background:#1e40af;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
+        <h1 style="color:white;margin:0;font-size:22px;">BuildFlow</h1>
+        <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">Upravljanje inventarja orodij</p>
+      </div>
+      <div style="background:white;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
+        <h2 style="color:#1e293b;margin:0 0 12px;">Ponastavitev gesla</h2>
+        <p style="color:#475569;margin:0 0 20px;">Prejeli smo zahtevo za ponastavitev gesla za vaš račun BuildFlow. Kliknite spodnji gumb za nastavitev novega gesla.</p>
+        <p style="color:#64748b;font-size:13px;margin:0 0 24px;">Ta povezava poteče čez <strong>1 uro</strong>. Če niste zahtevali ponastavitve, to e-pošto varno prezrite.</p>
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
+            Ponastavi geslo
+          </a>
+        </div>
+        <p style="color:#94a3b8;font-size:12px;margin:0;">Ali kopirajte to povezavo:<br/><span style="color:#2563eb;">${resetUrl}</span></p>
+      </div>
+    </div>
+  `
+
+  const transporter = createTransporter()
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to,
+    subject: 'BuildFlow – Ponastavitev gesla',
+    html,
+  })
+}
+
 export async function sendNewItemsAddedEmail(
   to: string[],
   details: {
