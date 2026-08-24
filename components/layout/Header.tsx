@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, ChevronDown, X, CheckCheck, AlertTriangle, CheckCircle2, Info } from 'lucide-react'
+import { Bell, ChevronDown, X, CheckCheck, AlertTriangle, CheckCircle2, Info, Receipt } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
@@ -35,6 +35,7 @@ const notifIcon = (type: string) => {
   if (type.includes('STOCK')) return <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
   if (type.includes('APPROVED')) return <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
   if (type.includes('REJECTED')) return <X size={14} className="text-red-500 flex-shrink-0" />
+  if (type.includes('PURCHASE')) return <Receipt size={14} className="text-purple-500 flex-shrink-0" />
   return <Info size={14} className="text-blue-500 flex-shrink-0" />
 }
 

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Wrench, QrCode, ClipboardList,
-  FolderOpen, BarChart3, Users, LogOut, ClipboardCheck, ShoppingCart, FileSpreadsheet, Building2,
+  FolderOpen, BarChart3, Users, LogOut, ClipboardCheck, ShoppingCart, FileSpreadsheet, Building2, Receipt,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
@@ -19,6 +19,7 @@ export default function Sidebar({ role, orgName }: { role: string; orgName?: str
     { href: '/tools',       key: 'nav_tools',      icon: Wrench,          roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
     { href: '/scan',        key: 'nav_scan',       icon: QrCode,          roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
     { href: '/requests',    key: 'nav_requests',   icon: ClipboardCheck,  roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+    { href: '/purchases',   key: 'nav_purchases',  icon: Receipt,         roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
     { href: '/checkouts',   key: 'nav_checkouts',  icon: ClipboardList,   roles: ['ADMIN','MANAGER','EMPLOYEE'] },
     { href: '/projects',    key: 'nav_projects',   icon: FolderOpen,      roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
     { href: '/reports',     key: 'nav_reports',    icon: BarChart3,       roles: ['ADMIN','MANAGER'] },

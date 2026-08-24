@@ -11,7 +11,7 @@ datasource db {
 // ProjectStatus values: ACTIVE, COMPLETED, ON_HOLD
 // CheckoutStatus values: ACTIVE, PENDING_RETURN, RETURNED, CONSUMED
 // RequestStatus values: PENDING, APPROVED, PARTIALLY_APPROVED, REJECTED
-// NotificationType values: REQUEST_SUBMITTED, REQUEST_REVIEWED, STOCK_LOW, STOCK_NEGATIVE
+// NotificationType values: REQUEST_SUBMITTED, REQUEST_REVIEWED, STOCK_LOW, STOCK_NEGATIVE, PURCHASE_LOGGED
 // ToolType values: TOOL, MATERIAL
 // RequestItem.toolId is null for custom items not in inventory; itemName holds the free-text name in that case
 
@@ -31,6 +31,7 @@ model Organization {
   requests      Request[]
   auditLogs     AuditLog[]
   notifications Notification[]
+  purchases     Purchase[]
 }
 
 model User {
@@ -54,6 +55,7 @@ model User {
   requests       Request[]
   notifications  Notification[]
   ledProjects    Project[]      @relation("ProjectForeman")
+  purchases      Purchase[]
 }
 
 model Tool {
@@ -171,6 +173,17 @@ model Notification {
   createdAt      DateTime @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id])
   user           User?    @relation(fields: [userId], references: [id])
+}
+
+model Purchase {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  photoUrl       String
+  note           String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
 }
 
 model AuditLog {
