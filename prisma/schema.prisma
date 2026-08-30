@@ -12,6 +12,7 @@ datasource db {
 // CheckoutStatus values: ACTIVE, PENDING_RETURN, RETURNED, CONSUMED
 // RequestStatus values: PENDING, APPROVED, PARTIALLY_APPROVED, REJECTED
 // NotificationType values: REQUEST_SUBMITTED, REQUEST_REVIEWED, STOCK_LOW, STOCK_NEGATIVE, PURCHASE_LOGGED
+// Purchase.items shape (nullable, set by AI receipt extraction): [{ name: string, quantity: number, unitPrice: number }]
 // ToolType values: TOOL, MATERIAL
 // RequestItem.toolId is null for custom items not in inventory; itemName holds the free-text name in that case
 
@@ -181,6 +182,8 @@ model Purchase {
   organizationId String
   photoUrl       String
   note           String?
+  items          Json?
+  totalPrice     Float?
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id])
   user           User         @relation(fields: [userId], references: [id])

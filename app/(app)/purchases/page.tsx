@@ -7,12 +7,20 @@ import { format } from 'date-fns'
 import { Receipt, Plus, Search, X, Trash2, User } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
+type ReceiptItem = { name: string; quantity: number; unitPrice: number }
+
 type Purchase = {
   id: string
   photoUrl: string
   note?: string | null
+  items?: ReceiptItem[] | null
+  totalPrice?: number | null
   createdAt: string
   user: { id: string; name: string; email: string }
+}
+
+function formatPrice(n: number) {
+  return `${n.toFixed(2)} €`
 }
 
 export default function PurchasesPage() {
@@ -110,6 +118,9 @@ export default function PurchasesPage() {
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
                   {isPrivileged && <span className="flex items-center gap-1"><User size={11} />{p.user.name}</span>}
                   <span>{format(new Date(p.createdAt), 'MMM d, yyyy · HH:mm')}</span>
+                  {typeof p.totalPrice === 'number' && (
+                    <span className="font-medium text-gray-700">{formatPrice(p.totalPrice)}</span>
+                  )}
                 </div>
               </div>
             </button>
@@ -133,6 +144,36 @@ export default function PurchasesPage() {
                 <span>{format(new Date(viewing.createdAt), 'MMM d, yyyy · HH:mm')}</span>
               </div>
               {viewing.note && <p className="text-sm text-gray-700">{viewing.note}</p>}
+              {viewing.items && viewing.items.length > 0 && (
+                <div className="border border-gray-100 rounded-xl overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gray-50 text-gray-500">
+                        <th className="text-left font-medium px-3 py-2">{t('receiptItems')}</th>
+                        <th className="text-center font-medium px-2 py-2">{t('qty')}</th>
+                        <th className="text-right font-medium px-3 py-2">{t('unitPrice')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewing.items.map((item, idx) => (
+                        <tr key={idx} className="border-t border-gray-100">
+                          <td className="px-3 py-2 text-gray-800">{item.name}</td>
+                          <td className="px-2 py-2 text-center text-gray-500">{item.quantity}</td>
+                          <td className="px-3 py-2 text-right text-gray-700">{formatPrice(item.unitPrice)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {typeof viewing.totalPrice === 'number' && (
+                      <tfoot>
+                        <tr className="border-t border-gray-200 bg-gray-50 font-semibold text-gray-900">
+                          <td className="px-3 py-2" colSpan={2}>{t('total')}</td>
+                          <td className="px-3 py-2 text-right">{formatPrice(viewing.totalPrice)}</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              )}
               {(isPrivileged || viewing.user.id === session?.user?.id) && (
                 <button onClick={() => handleDelete(viewing.id)} disabled={deleting}
                   className="w-full flex items-center justify-center gap-2 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors disabled:opacity-50">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth, logAudit, unauthorized, serverError, badRequest } from '@/lib/utils'
 import { notifyAdmins } from '@/lib/notifications'
+import { extractReceiptData } from '@/lib/receipt-extraction'
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
       return badRequest('A receipt photo is required')
     }
 
-    const purchase = await db.purchase.create({
+    let purchase = await db.purchase.create({
       data: {
         userId: user.id,
         organizationId: user.organizationId,
@@ -52,6 +53,17 @@ export async function POST(req: NextRequest) {
         user: { select: { id: true, name: true, email: true } },
       },
     })
+
+    const extracted = await extractReceiptData(photoUrl)
+    if (extracted) {
+      purchase = await db.purchase.update({
+        where: { id: purchase.id },
+        data: { items: extracted.items, totalPrice: extracted.totalPrice },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+        },
+      })
+    }
 
     await logAudit(user.id, 'CREATE_PURCHASE', 'Purchase', purchase.id,
       `${user.name} logged an independent purchase`, user.organizationId)
