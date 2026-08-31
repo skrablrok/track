@@ -28,6 +28,11 @@ export function LanguageProvider({ children, initialLang }: { children: ReactNod
   function setLang(l: Lang) {
     setLangState(l)
     document.cookie = `lang=${l};path=/;max-age=31536000;SameSite=Lax`
+    fetch('/api/user/preferences', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: l }),
+    }).catch(() => {})
   }
 
   return (

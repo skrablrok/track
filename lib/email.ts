@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer'
 import { generateDeliveryNotePdf } from '@/lib/pdf-delivery-note'
+import { t } from '@/lib/i18n/translations'
 
 function createTransporter() {
   return nodemailer.createTransport({
@@ -255,14 +256,16 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   })
 }
 
-export async function sendNotificationEmail(to: string, title: string, message: string, linkUrl?: string | null) {
+export async function sendNotificationEmail(to: string, title: string, message: string, linkUrl?: string | null, lang?: string) {
   const appUrl = (process.env.NEXTAUTH_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || 'http://localhost:3000').replace(/\/$/, '')
+  const tagline = t(lang, 'notifEmailTagline')
+  const openButton = t(lang, 'notifEmailOpenButton')
 
   const html = `
     <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#f8fafc;padding:32px;border-radius:12px;">
       <div style="background:#1e40af;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
         <h1 style="color:white;margin:0;font-size:22px;">BuildFlow</h1>
-        <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">Upravljanje inventarja orodij</p>
+        <p style="color:#93c5fd;margin:4px 0 0;font-size:13px;">${tagline}</p>
       </div>
       <div style="background:white;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
         <h2 style="color:#1e293b;margin:0 0 12px;">${title}</h2>
@@ -270,7 +273,7 @@ export async function sendNotificationEmail(to: string, title: string, message: 
         ${linkUrl ? `
         <div style="text-align:center;">
           <a href="${appUrl}${linkUrl}" style="display:inline-block;background:#2563eb;color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
-            Odpri v BuildFlow
+            ${openButton}
           </a>
         </div>` : ''}
       </div>

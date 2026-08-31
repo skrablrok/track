@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     else if (fullyApproved && approvedItems.length === totalItems) status = 'APPROVED'
     else status = 'PARTIALLY_APPROVED'
 
-    const stockWarnings: string[] = []
+    const stockWarnings: { name: string; stock: number; negative: boolean }[] = []
 
     await db.$transaction(async (tx) => {
       for (const item of items) {
@@ -79,9 +79,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           })
           if (updatedTool) {
             if (updatedTool.currentStock < 0) {
-              stockWarnings.push(`${updatedTool.name}: stock is now ${updatedTool.currentStock} (needs reorder)`)
+              stockWarnings.push({ name: updatedTool.name, stock: updatedTool.currentStock, negative: true })
             } else if (updatedTool.currentStock <= updatedTool.minStock) {
-              stockWarnings.push(`${updatedTool.name}: stock is low (${updatedTool.currentStock} remaining)`)
+              stockWarnings.push({ name: updatedTool.name, stock: updatedTool.currentStock, negative: false })
             }
           }
         } else {
@@ -93,9 +93,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             })
 
             if (tool.currentStock < 0) {
-              stockWarnings.push(`${tool.name}: stock is now ${tool.currentStock} (needs reorder)`)
+              stockWarnings.push({ name: tool.name, stock: tool.currentStock, negative: true })
             } else if (tool.currentStock <= tool.minStock) {
-              stockWarnings.push(`${tool.name}: stock is low (${tool.currentStock} remaining)`)
+              stockWarnings.push({ name: tool.name, stock: tool.currentStock, negative: false })
             }
 
             const isMaterial = tool.type === 'MATERIAL'
@@ -128,22 +128,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       admin.organizationId
     )
 
-    const statusLabel = { APPROVED: 'approved', PARTIALLY_APPROVED: 'partially approved', REJECTED: 'rejected' }[status] || status
     await notifyUser(
       request.requesterId,
       admin.organizationId,
-      'REQUEST_REVIEWED',
-      `Request ${statusLabel}`,
-      `Your tool request has been ${statusLabel}${adminNotes ? `: "${adminNotes}"` : '.'}`,
+      { type: 'REQUEST_REVIEWED', status: status as 'APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED', notes: adminNotes },
       `/requests/${params.id}`
     )
 
     if (stockWarnings.length > 0) {
       await notifyAdmins(
         admin.organizationId,
-        'STOCK_NEGATIVE',
-        '⚠️ Stock Replenishment Needed',
-        stockWarnings.join(' | '),
+        { type: 'STOCK_NEGATIVE', warnings: stockWarnings },
         '/reports'
       )
     }

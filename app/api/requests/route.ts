@@ -177,11 +177,15 @@ export async function POST(req: NextRequest) {
 
     await notifyAdmins(
       user.organizationId,
-      'REQUEST_SUBMITTED',
-      procurementCount > 0 ? '⚠️ Item Needed — Not In Stock' : 'New Tool Request',
-      procurementCount > 0
-        ? `${user.name} requested ${items.length} item(s) for ${projectName} — ${procurementCount} item(s) need procurement: ${[...neverStocked.map((i) => i.name), ...lowStock.map((i) => `${i.name} (qty ${i.qty}, ${i.currentStock} in stock)`)].join(', ')}`
-        : `${user.name} requested ${items.length} item(s) for ${projectName}`,
+      {
+        type: 'REQUEST_SUBMITTED',
+        userName: user.name as string,
+        count: items.length,
+        projectName,
+        procurementItems: procurementCount > 0
+          ? [...neverStocked.map((i) => ({ name: i.name })), ...lowStock.map((i) => ({ name: i.name, qty: i.qty, stock: i.currentStock }))]
+          : undefined,
+      },
       `/requests/${request.id}`
     )
 

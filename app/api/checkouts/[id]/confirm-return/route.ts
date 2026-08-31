@@ -45,9 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       await notifyUser(
         checkout.userId,
         user.organizationId,
-        'RETURN_CONFIRMED',
-        'Return Confirmed',
-        `Your return of ${checkout.tool.name} has been approved.`,
+        { type: 'RETURN_CONFIRMED', toolName: checkout.tool.name },
         `/checkouts`
       )
     } else {
@@ -68,9 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       await notifyUser(
         checkout.userId,
         user.organizationId,
-        'RETURN_REJECTED',
-        'Return Not Confirmed',
-        `Your return of ${checkout.tool.name} was not confirmed. Please bring the tool to the warehouse.`,
+        { type: 'RETURN_REJECTED', toolName: checkout.tool.name },
         `/checkouts`
       )
     }

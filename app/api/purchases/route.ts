@@ -70,11 +70,7 @@ export async function POST(req: NextRequest) {
 
     await notifyAdmins(
       user.organizationId,
-      'PURCHASE_LOGGED',
-      'New Purchase Logged',
-      note?.trim()
-        ? `${user.name} logged a purchase: ${note.trim()}`
-        : `${user.name} logged a new purchase receipt`,
+      { type: 'PURCHASE_LOGGED', userName: user.name as string, note: note?.trim() || null },
       '/purchases'
     )
 

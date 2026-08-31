@@ -4,12 +4,7 @@ import { requireRole, logAudit, unauthorized, forbidden, serverError, badRequest
 import { notifyUser } from '@/lib/notifications'
 
 const STAGES = ['PENDING_PURCHASE', 'ORDERED', 'RECEIVED', 'COMPLETED']
-
-const STAGE_MESSAGE: Record<string, string> = {
-  ORDERED: 'has been ordered',
-  RECEIVED: 'has arrived and is ready for pickup',
-  COMPLETED: 'has been completed',
-}
+const NOTIFY_STAGES = ['ORDERED', 'RECEIVED', 'COMPLETED'] as const
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -47,13 +42,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       admin.organizationId
     )
 
-    if (STAGE_MESSAGE[status]) {
+    if ((NOTIFY_STAGES as readonly string[]).includes(status)) {
       await notifyUser(
         item.request.requesterId,
         admin.organizationId,
-        'PROCUREMENT_UPDATE',
-        'Item update',
-        `Your requested item "${itemLabel}" ${STAGE_MESSAGE[status]}.`,
+        { type: 'PROCUREMENT_UPDATE', itemLabel, stage: status as 'ORDERED' | 'RECEIVED' | 'COMPLETED' },
         `/requests/${item.requestId}`
       )
     }

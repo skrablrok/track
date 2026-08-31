@@ -46,9 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     await notifyAdmins(
       user.organizationId,
-      'RETURN_REQUESTED',
-      'Tool Return Requested',
-      `${user.name} requested to return ${checkout.tool.name}. Please confirm the return.`,
+      { type: 'RETURN_REQUESTED', userName: user.name as string, toolName: checkout.tool.name },
       `/checkouts`
     )
 
