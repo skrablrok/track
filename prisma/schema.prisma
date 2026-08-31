@@ -47,6 +47,7 @@ model User {
   inviteExpiry     DateTime?
   resetToken       String?        @unique
   resetTokenExpiry DateTime?
+  emailNotifications Boolean      @default(false)
   organizationId String
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -57,6 +58,7 @@ model User {
   notifications  Notification[]
   ledProjects    Project[]      @relation("ProjectForeman")
   purchases      Purchase[]
+  pushSubscriptions PushSubscription[]
 }
 
 model Tool {
@@ -187,6 +189,16 @@ model Purchase {
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id])
   user           User         @relation(fields: [userId], references: [id])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {

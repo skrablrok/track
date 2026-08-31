@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { LANGUAGES, type Lang } from '@/lib/i18n/translations'
 import InstallButton from '@/components/InstallButton'
+import NotificationPrefsMenu from '@/components/NotificationPrefsMenu'
 
 interface Props {
   user: { name?: string | null; email?: string | null; role: string }
@@ -187,11 +188,12 @@ export default function Header({ user, orgName }: Props) {
           </button>
 
           {userOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-lg border border-gray-100 py-1 z-50">
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-lg border border-gray-100 py-1 z-50">
               <div className="px-4 py-2 border-b border-gray-100">
                 <p className="text-sm font-medium text-gray-800">{user.name}</p>
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>
+              <NotificationPrefsMenu />
               <button
                 onClick={() => signOut({ callbackUrl: '/login' })}
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
