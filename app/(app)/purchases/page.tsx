@@ -34,6 +34,13 @@ export default function PurchasesPage() {
 
   const isPrivileged = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
 
+  useEffect(() => {
+    if (!viewing) return
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = original }
+  }, [viewing])
+
   async function load() {
     setLoading(true)
     const res = await fetch('/api/purchases')
@@ -129,7 +136,7 @@ export default function PurchasesPage() {
       )}
 
       {viewing && (
-        <div className="fixed inset-0 bg-black/70 z-50 overflow-y-auto p-4" onClick={() => setViewing(null)}>
+        <div className="fixed inset-0 bg-black/70 z-50 overflow-y-auto overscroll-contain p-4" onClick={() => setViewing(null)}>
           <div className="min-h-full flex items-center justify-center">
           <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden my-8" onClick={(e) => e.stopPropagation()}>
             <div className="relative bg-gray-50">
