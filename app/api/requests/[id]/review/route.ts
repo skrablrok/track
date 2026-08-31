@@ -20,6 +20,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!request) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
     if (request.status !== 'PENDING') return badRequest('Request has already been reviewed')
 
+    for (const item of items) {
+      if (!request.items.some((ri) => ri.id === item.requestItemId)) {
+        return badRequest('Invalid item in request')
+      }
+    }
+
     const totalItems = items.length
     const approvedItems = items.filter((i: any) => parseInt(i.approvedQty) > 0)
     const fullyApproved = approvedItems.every((a: any) => {

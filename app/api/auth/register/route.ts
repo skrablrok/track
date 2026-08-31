@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { badRequest, serverError } from '@/lib/utils'
 import { sendNewOrgNotificationEmail } from '@/lib/email'
+import { checkRegisterRateLimit, recordRegisterAttempt } from '@/lib/rateLimit'
 
 const PASSWORD_RE = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]).{15,}$/
 
@@ -12,6 +13,18 @@ function slugify(name: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      req.headers.get('x-real-ip') ||
+      'unknown'
+
+    const { allowed, retryAfterSecs } = checkRegisterRateLimit(ip)
+    if (!allowed) {
+      const mins = Math.ceil((retryAfterSecs ?? 0) / 60)
+      return badRequest(`Too many registration attempts. Try again in ${mins} minute(s).`)
+    }
+    recordRegisterAttempt(ip)
+
     const { orgName, name, email, password } = await req.json()
 
     if (!orgName?.trim()) return badRequest('Organization name is required')
