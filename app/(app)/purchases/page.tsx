@@ -129,8 +129,9 @@ export default function PurchasesPage() {
       )}
 
       {viewing && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setViewing(null)}>
-          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 z-50 overflow-y-auto p-4" onClick={() => setViewing(null)}>
+          <div className="min-h-full flex items-center justify-center">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden my-8" onClick={(e) => e.stopPropagation()}>
             <div className="relative bg-gray-50">
               <img src={viewing.photoUrl} alt="" className="w-full max-h-[60vh] object-contain" />
               <button onClick={() => setViewing(null)}
@@ -181,6 +182,7 @@ export default function PurchasesPage() {
                 </button>
               )}
             </div>
+          </div>
           </div>
         </div>
       )}
