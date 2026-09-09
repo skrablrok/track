@@ -30,7 +30,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     const user = await requireRole(['ADMIN', 'MANAGER'])
     const body = await req.json()
-    const { name, description, category, imageUrl, type, totalStock, minStock, maxStock, active, warehouseStocks } = body
+    const {
+      name, description, category, imageUrl, type, totalStock, minStock, maxStock, active, warehouseStocks,
+      manufacturer, serialNumber, binLocation, purchasePrice, purchaseDate, warrantyUntil, lastServiceDate,
+    } = body
 
     const existing = await db.tool.findFirst({ where: { id: params.id, organizationId: user.organizationId } })
     if (!existing) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
@@ -63,6 +66,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           ...(minStock !== undefined && { minStock: parseInt(minStock) }),
           ...(maxStock !== undefined && { maxStock: parseInt(maxStock) }),
           ...(active !== undefined && { active }),
+          ...(manufacturer !== undefined && { manufacturer: manufacturer || null }),
+          ...(serialNumber !== undefined && { serialNumber: serialNumber || null }),
+          ...(binLocation !== undefined && { binLocation: binLocation || null }),
+          ...(purchasePrice !== undefined && { purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null }),
+          ...(purchaseDate !== undefined && { purchaseDate: purchaseDate ? new Date(purchaseDate) : null }),
+          ...(warrantyUntil !== undefined && { warrantyUntil: warrantyUntil ? new Date(warrantyUntil) : null }),
+          ...(lastServiceDate !== undefined && { lastServiceDate: lastServiceDate ? new Date(lastServiceDate) : null }),
         },
       })
 

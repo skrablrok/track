@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import colors from 'tailwindcss/colors'
 
 const config: Config = {
   darkMode: ['class'],
@@ -15,6 +16,9 @@ const config: Config = {
     },
     extend: {
       colors: {
+        // Brand accent moves from blue to orange — every bg-blue-*/text-blue-*
+        // class already used across the app inherits this automatically.
+        blue: colors.orange,
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',

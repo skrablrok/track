@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireAuth()
     const body = await req.json()
-    const { toolId, projectId, quantity, notes } = body
+    const { toolId, projectId, quantity, notes, dueDate } = body
 
     if (!toolId) return badRequest('Tool ID is required')
 
@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
           projectId: projectId || null,
           quantity: qty,
           notes,
+          dueDate: !isMaterial && dueDate ? new Date(dueDate) : null,
           status: isMaterial ? 'CONSUMED' : 'ACTIVE',
           organizationId: user.organizationId,
           ...(isMaterial && { returnDate: new Date() }),

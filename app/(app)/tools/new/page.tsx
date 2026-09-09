@@ -25,6 +25,8 @@ export default function NewToolPage() {
   const [form, setForm] = useState({
     name: '', description: '', category: '', imageUrl: '', type: 'TOOL',
     totalStock: '1', minStock: '2', maxStock: '10',
+    manufacturer: '', serialNumber: '', binLocation: '', purchasePrice: '',
+    purchaseDate: '', warrantyUntil: '', lastServiceDate: '',
   })
   const [warehouseStocks, setWarehouseStocks] = useState<WarehouseRow[]>([])
   const [error, setError] = useState('')
@@ -198,6 +200,48 @@ export default function NewToolPage() {
 
           <div className="sm:col-span-2">
             <PhotoInput value={form.imageUrl} onChange={(dataUrl) => update('imageUrl', dataUrl)} />
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100 pt-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">{t('colDetails')}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('manufacturer')}</label>
+              <input value={form.manufacturer} onChange={(e) => update('manufacturer', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('serialNumber')}</label>
+              <input value={form.serialNumber} onChange={(e) => update('serialNumber', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('binLocation')}</label>
+              <input value={form.binLocation} onChange={(e) => update('binLocation', e.target.value)}
+                placeholder="npr. R-02 · P3"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('purchasePrice')} (€)</label>
+              <input type="number" min="0" step="0.01" value={form.purchasePrice} onChange={(e) => update('purchasePrice', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('purchaseDate')}</label>
+              <input type="date" value={form.purchaseDate} onChange={(e) => update('purchaseDate', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('warrantyUntil')}</label>
+              <input type="date" value={form.warrantyUntil} onChange={(e) => update('warrantyUntil', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('lastService')}</label>
+              <input type="date" value={form.lastServiceDate} onChange={(e) => update('lastServiceDate', e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+            </div>
           </div>
         </div>
 

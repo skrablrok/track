@@ -75,6 +75,13 @@ model Tool {
   maxStock        Int                  @default(10)
   qrCode          String               @default(cuid())
   active          Boolean              @default(true)
+  manufacturer    String?
+  serialNumber    String?
+  binLocation     String?
+  purchasePrice   Float?
+  purchaseDate    DateTime?
+  warrantyUntil   DateTime?
+  lastServiceDate DateTime?
   organizationId  String
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -120,6 +127,7 @@ model Checkout {
   requestId      String?
   quantity       Int       @default(1)
   checkoutDate   DateTime  @default(now())
+  dueDate        DateTime?
   returnDate     DateTime?
   durationMins   Int?
   notes          String?

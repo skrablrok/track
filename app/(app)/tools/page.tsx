@@ -1,12 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Search, Plus, Wrench, AlertTriangle, Warehouse, Trash2, X, Check, CheckSquare } from 'lucide-react'
+import {
+  Search, Plus, Wrench, AlertTriangle, Trash2, X, Check, CheckSquare,
+  MoreHorizontal, SlidersHorizontal, ChevronLeft, ChevronRight, FileSpreadsheet, Package,
+} from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import CheckoutModal from '@/components/checkouts/CheckoutModal'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import { shortCode } from '@/lib/utils'
+import { formatDistanceToNow } from 'date-fns'
 
 type WarehouseStock = { warehouse: string; quantity: number }
 
@@ -21,10 +26,14 @@ type Tool = {
   currentStock: number
   minStock: number
   maxStock: number
+  binLocation?: string | null
   warehouseStocks: WarehouseStock[]
   qrCode: string
+  updatedAt: string
   checkouts: Array<{ id: string; user: { name: string }; project?: { name: string; location?: string } }>
 }
+
+const PAGE_SIZE = 12
 
 export default function ToolsPage() {
   const { data: session } = useSession()
@@ -33,6 +42,7 @@ export default function ToolsPage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [warehouseFilter, setWarehouseFilter] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [filter, setFilter] = useState<'all' | 'available' | 'inuse' | 'lowstock'>('all')
   const [loading, setLoading] = useState(true)
   const [checkoutTool, setCheckoutTool] = useState<Tool | null>(null)
@@ -42,6 +52,9 @@ export default function ToolsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const router = useRouter()
   const role = session?.user?.role || ''
@@ -62,12 +75,22 @@ export default function ToolsPage() {
   }
 
   useEffect(() => { loadTools() }, [search, category])
+  useEffect(() => { setPage(1) }, [search, category, warehouseFilter, filter])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenuId(null)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   async function handleDeleteTool(toolId: string) {
     setDeletingId(toolId)
     const res = await fetch(`/api/tools/${toolId}`, { method: 'DELETE' })
     setDeletingId(null)
     setConfirmDeleteId(null)
+    setOpenMenuId(null)
     if (res.ok) loadTools()
   }
 
@@ -110,39 +133,52 @@ export default function ToolsPage() {
   }
   const translateCat = (c: string) => catKeyMap[c] ? t(catKeyMap[c]) : c
 
-  const filtered = tools.filter((tool) => {
+  const byTab = {
+    all: tools,
+    available: tools.filter((tool) => tool.currentStock > 0),
+    inuse: tools.filter((tool) => tool.checkouts.length > 0),
+    lowstock: tools.filter((tool) => tool.currentStock <= tool.minStock),
+  }
+
+  const filtered = byTab[filter].filter((tool) => {
     if (warehouseFilter && !tool.warehouseStocks.some((ws) => ws.warehouse === warehouseFilter)) return false
-    if (filter === 'available') return tool.currentStock > 0
-    if (filter === 'inuse') return tool.checkouts.length > 0
-    if (filter === 'lowstock') return tool.currentStock <= tool.minStock
     return true
   })
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const needsAttentionCount = tools.filter((tool) => tool.currentStock <= tool.minStock).length
 
   function stockColor(tool: Tool) {
     if (tool.currentStock === 0) return 'bg-red-100 text-red-700'
     if (tool.currentStock <= tool.minStock) return 'bg-amber-100 text-amber-700'
+    if (tool.checkouts.length > 0) return 'bg-blue-100 text-blue-700'
     return 'bg-green-100 text-green-700'
   }
 
   function stockLabel(tool: Tool) {
-    if (tool.currentStock === 0) return t('outOfStock')
-    if (tool.currentStock <= tool.minStock) return `${t('lowStock')}: ${tool.currentStock}/${tool.totalStock}`
-    return `${tool.currentStock}/${tool.totalStock} ${t('available')}`
+    if (tool.currentStock === 0) return t('stockCritical')
+    if (tool.currentStock <= tool.minStock) return t('stockOrderNeeded')
+    if (tool.checkouts.length > 0) return t('inUse')
+    return t('available')
   }
 
   const filterTabs = [
-    { key: 'all' as const,       label: t('allTools') },
-    { key: 'available' as const, label: t('available') },
-    { key: 'inuse' as const,     label: t('inUse') },
-    { key: 'lowstock' as const,  label: t('lowStock') },
+    { key: 'all' as const,       label: t('allTools'),  count: byTab.all.length },
+    { key: 'available' as const, label: t('available'), count: byTab.available.length },
+    { key: 'inuse' as const,     label: t('inUse'),      count: byTab.inuse.length },
+    { key: 'lowstock' as const,  label: t('lowStock'),   count: byTab.lowstock.length },
   ]
 
   return (
     <div className="space-y-6 fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t('tools')}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{filtered.length} {t('tools').toLowerCase()}</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {tools.length} {t('tools').toLowerCase()}
+            {needsAttentionCount > 0 && <> · <span className="text-amber-600 font-medium">{needsAttentionCount} {t('needAttention')}</span></>}
+          </p>
         </div>
         {isAdminOrManager && (
           <div className="flex items-center gap-2">
@@ -154,13 +190,19 @@ export default function ToolsPage() {
                   : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
               }`}>
               <CheckSquare size={16} />
-              {selectionMode ? 'Cancel' : 'Select'}
+              {selectionMode ? t('cancel') : 'Select'}
             </button>
             {!selectionMode && (
-              <Link href="/tools/new"
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
-                <Plus size={16} />{t('addTool')}
-              </Link>
+              <>
+                <Link href="/admin/import"
+                  className="hidden sm:flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
+                  <FileSpreadsheet size={16} />{t('importXlsx')}
+                </Link>
+                <Link href="/tools/new"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
+                  <Plus size={16} />{t('addTool')}
+                </Link>
+              </>
             )}
           </div>
         )}
@@ -173,41 +215,51 @@ export default function ToolsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
         </div>
-        {categories.length > 0 && (
-          <select value={category} onChange={(e) => setCategory(e.target.value)}
-            className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-            <option value="">{t('allCategories')}</option>
-            {categories.map((c) => <option key={c} value={c!}>{translateCat(c!)}</option>)}
-          </select>
-        )}
-        {warehouses.length > 0 && (
-          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)}
-            className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-            <option value="">{t('allWarehouses')}</option>
-            {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
-          </select>
-        )}
+        <button
+          onClick={() => setFiltersOpen((v) => !v)}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+            filtersOpen || category || warehouseFilter ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+          }`}
+        >
+          <SlidersHorizontal size={15} />{t('filtersLabel')}
+        </button>
       </div>
 
+      {filtersOpen && (categories.length > 0 || warehouses.length > 0) && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          {categories.length > 0 && (
+            <select value={category} onChange={(e) => setCategory(e.target.value)}
+              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="">{t('allCategories')}</option>
+              {categories.map((c) => <option key={c} value={c!}>{translateCat(c!)}</option>)}
+            </select>
+          )}
+          {warehouses.length > 0 && (
+            <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)}
+              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="">{t('allWarehouses')}</option>
+              {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
+            </select>
+          )}
+        </div>
+      )}
+
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {filterTabs.map(({ key, label }) => (
+        {filterTabs.map(({ key, label, count }) => (
           <button key={key} onClick={() => setFilter(key)}
-            className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+            className={`whitespace-nowrap flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               filter === key ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
             }`}>
             {label}
+            <span className={filter === key ? 'text-blue-100' : 'text-gray-400'}>{count}</span>
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse">
-              <div className="w-full h-40 bg-gray-100 rounded-xl mb-3" />
-              <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-gray-100 rounded w-1/2" />
-            </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -216,163 +268,257 @@ export default function ToolsPage() {
           <p className="text-gray-400">{t('noTools')}</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((tool) => {
-            const isSelected = selectedIds.has(tool.id)
-            return (
-            <div
-              key={tool.id}
-              onClick={selectionMode ? () => toggleSelect(tool.id) : undefined}
-              className={`relative bg-white rounded-2xl border overflow-hidden transition-all ${
-                selectionMode
-                  ? isSelected
-                    ? 'border-blue-500 ring-2 ring-blue-500 cursor-pointer shadow-sm'
-                    : 'border-gray-200 cursor-pointer hover:border-blue-300'
-                  : 'border-gray-100 hover:shadow-md hover:border-blue-100 group'
-              }`}>
-              {/* Selection checkbox */}
-              {selectionMode && (
-                <div className={`absolute top-2 left-2 z-20 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                  isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white/90 border-gray-300'
-                }`}>
-                  {isSelected && <Check size={13} className="text-white" />}
-                </div>
-              )}
-              {selectionMode ? (
-                <div className="w-full h-44 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
-                  {tool.imageUrl ? (
-                    <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Wrench className="w-16 h-16 text-gray-300" />
-                  )}
-                </div>
-              ) : (
-                <Link href={`/tools/${tool.id}`} className="block">
-                  <div className="w-full h-44 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
-                    {tool.imageUrl ? (
-                      <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      <Wrench className="w-16 h-16 text-gray-300" />
-                    )}
-                  </div>
-                </Link>
-              )}
-              <div className="p-4">
-                <Link href={`/tools/${tool.id}`} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors text-sm leading-tight block mb-1">
-                  {tool.name}
-                </Link>
-                <div className="flex items-center gap-1.5 mb-1">
-                  {tool.category && <p className="text-xs text-gray-400">{translateCat(tool.category)}</p>}
-                  {tool.type === 'MATERIAL' && (
-                    <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
-                      {t('itemTypeMaterial')}
-                    </span>
-                  )}
-                </div>
-                {tool.warehouseStocks.length > 0 && (
-                  <div className="flex flex-col gap-0.5 mb-2">
-                    {tool.warehouseStocks.map((ws) => (
-                      <div key={ws.warehouse} className="flex items-center gap-1">
-                        <Warehouse size={11} className="text-gray-400 flex-shrink-0" />
-                        <span className="text-xs text-gray-500 truncate">{ws.warehouse}: <span className="font-medium">{ws.quantity}</span></span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between mt-2">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${stockColor(tool)}`}>
-                    {stockLabel(tool)}
-                  </span>
-                  {tool.currentStock <= tool.minStock && tool.currentStock > 0 && (
-                    <AlertTriangle size={14} className="text-amber-500" />
-                  )}
-                  {tool.currentStock === 0 && (
-                    <span className="text-xs text-red-500 font-medium">{t('unavailable')}</span>
-                  )}
-                </div>
-
-                {tool.checkouts.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-50">
-                    <p className="text-xs text-gray-500">
-                      {t('inUseBy')}: <span className="font-medium text-gray-700">{tool.checkouts[0].user.name}</span>
-                    </p>
-                    {tool.checkouts[0].project && (
-                      <p className="text-xs text-gray-400 mt-0.5">@ {tool.checkouts[0].project.name}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Per-card actions — hidden in selection mode */}
-                {/* ADMIN: delete button only */}
-                {!selectionMode && isAdminOnly && (
-                  confirmDeleteId === tool.id ? (
-                    <div className="mt-3 flex gap-2">
-                      <button onClick={() => handleDeleteTool(tool.id)} disabled={deletingId === tool.id}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-2 rounded-xl transition-colors disabled:opacity-60">
-                        {deletingId === tool.id ? '…' : t('confirmQuestion')}
-                      </button>
-                      <button onClick={() => setConfirmDeleteId(null)}
-                        className="p-2 border border-gray-200 text-gray-400 hover:bg-gray-50 rounded-xl transition-colors">
-                        <X size={13} />
-                      </button>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          {/* Mobile: stacked cards */}
+          <div className="md:hidden divide-y divide-gray-50">
+            {pageItems.map((tool) => {
+              const isSelected = selectedIds.has(tool.id)
+              const pct = tool.totalStock > 0 ? Math.min(100, Math.round((tool.currentStock / tool.totalStock) * 100)) : 0
+              const Row = (
+                <div className="flex items-start gap-3">
+                  {selectionMode && (
+                    <div className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                      isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                    }`}>
+                      {isSelected && <Check size={11} className="text-white" />}
                     </div>
-                  ) : (
-                    <button onClick={() => setConfirmDeleteId(tool.id)}
-                      className="w-full mt-3 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-medium py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5">
-                      <Trash2 size={13} />
-                      {t('delete')}
-                    </button>
-                  )
-                )}
-
-                {/* MANAGER: checkout + delete */}
-                {!selectionMode && isManager && (
-                  <div className="mt-3 flex gap-2">
-                    {tool.currentStock > 0 && (
-                      <button onClick={() => setCheckoutTool(tool)}
-                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-2 rounded-xl transition-colors">
-                        {tool.type === 'MATERIAL' ? t('useItem') : t('checkOut')}
-                      </button>
-                    )}
-                    {confirmDeleteId === tool.id ? (
-                      <>
-                        <button onClick={() => handleDeleteTool(tool.id)} disabled={deletingId === tool.id}
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-2 rounded-xl transition-colors disabled:opacity-60">
-                          {deletingId === tool.id ? '…' : t('confirmQuestion')}
-                        </button>
-                        <button onClick={() => setConfirmDeleteId(null)}
-                          className="p-2 border border-gray-200 text-gray-400 hover:bg-gray-50 rounded-xl transition-colors">
-                          <X size={13} />
-                        </button>
-                      </>
+                  )}
+                  <div className="w-11 h-11 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                    {tool.imageUrl ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" /> : (tool.type === 'MATERIAL' ? <Package size={16} className="text-gray-400" /> : <Wrench size={16} className="text-gray-400" />)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-gray-900 text-sm truncate">{tool.name}</p>
+                      <span className={`flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${stockColor(tool)}`}>
+                        {stockLabel(tool)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {shortCode(tool)}
+                      {tool.category && ` · ${translateCat(tool.category)}`}
+                      {tool.binLocation && ` · ${tool.binLocation}`}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <div className="flex-1 bg-gray-100 rounded-full h-1">
+                        <div className={`h-1 rounded-full ${pct === 0 ? 'bg-red-400' : pct <= 30 ? 'bg-amber-400' : 'bg-green-400'}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs text-gray-500 whitespace-nowrap">{tool.currentStock}/{tool.totalStock}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+              return (
+                <div key={tool.id} className={`p-3.5 ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                  <div className="flex items-start gap-2">
+                    {selectionMode ? (
+                      <button onClick={() => toggleSelect(tool.id)} className="flex-1 text-left min-w-0">{Row}</button>
                     ) : (
-                      <button onClick={() => setConfirmDeleteId(tool.id)}
-                        className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl transition-colors flex items-center justify-center">
-                        <Trash2 size={13} />
-                      </button>
+                      <Link href={`/tools/${tool.id}`} className="flex-1 min-w-0">{Row}</Link>
+                    )}
+                    {!selectionMode && (
+                      <div ref={openMenuId === tool.id ? menuRef : undefined} className="relative flex-shrink-0">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === tool.id ? null : tool.id)}
+                          className="p-2 -m-1 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+                        >
+                          <MoreHorizontal size={17} />
+                        </button>
+                        {openMenuId === tool.id && (
+                          <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                            {(isManager || (!isAdminOnly && !isManager && !isForeman)) && tool.currentStock > 0 && (
+                              <button onClick={() => { setCheckoutTool(tool); setOpenMenuId(null) }}
+                                className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                                {tool.type === 'MATERIAL' ? t('useItem') : t('checkOut')}
+                              </button>
+                            )}
+                            {isForeman && (
+                              <button onClick={() => router.push(`/requests/new?toolId=${tool.id}`)}
+                                className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                                {t('requestTool')}
+                              </button>
+                            )}
+                            {isAdminOnly && (
+                              <Link href={`/tools/${tool.id}/edit`} className="block px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                                {t('edit')}
+                              </Link>
+                            )}
+                            {(isAdminOnly || isManager) && (
+                              confirmDeleteId === tool.id ? (
+                                <button onClick={() => handleDeleteTool(tool.id)} disabled={deletingId === tool.id}
+                                  className="w-full text-left px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60">
+                                  {deletingId === tool.id ? '…' : t('confirmQuestion')}
+                                </button>
+                              ) : (
+                                <button onClick={() => setConfirmDeleteId(tool.id)}
+                                  className="w-full flex items-center gap-1.5 text-left px-3 py-2.5 text-sm text-red-600 hover:bg-red-50">
+                                  <Trash2 size={13} />{t('delete')}
+                                </button>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
+                </div>
+              )
+            })}
+          </div>
 
-                {/* FOREMAN: request */}
-                {!selectionMode && isForeman && (
-                  <button onClick={() => router.push(`/requests/new?toolId=${tool.id}`)}
-                    className="w-full mt-3 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-medium py-2 rounded-xl transition-colors">
-                    {t('requestTool')}
-                  </button>
-                )}
+          {/* Desktop: table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left text-xs text-gray-400 uppercase tracking-wide">
+                  {selectionMode && <th className="px-4 py-3 w-10"></th>}
+                  <th className="px-4 py-3 font-medium">{t('colItem')}</th>
+                  <th className="px-4 py-3 font-medium hidden md:table-cell">{t('colCategory')}</th>
+                  <th className="px-4 py-3 font-medium hidden lg:table-cell">{t('colLocation')}</th>
+                  <th className="px-4 py-3 font-medium">{t('colStock')}</th>
+                  <th className="px-4 py-3 font-medium">{t('colStatus')}</th>
+                  <th className="px-4 py-3 font-medium hidden lg:table-cell">{t('colUpdated')}</th>
+                  <th className="px-4 py-3 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageItems.map((tool) => {
+                  const isSelected = selectedIds.has(tool.id)
+                  const pct = tool.totalStock > 0 ? Math.min(100, Math.round((tool.currentStock / tool.totalStock) * 100)) : 0
+                  return (
+                    <tr
+                      key={tool.id}
+                      onClick={selectionMode ? () => toggleSelect(tool.id) : undefined}
+                      className={`border-b border-gray-50 last:border-0 transition-colors ${selectionMode ? 'cursor-pointer' : ''} ${isSelected ? 'bg-blue-50/50' : 'hover:bg-gray-50/60'}`}
+                    >
+                      {selectionMode && (
+                        <td className="px-4 py-3">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                            isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                          }`}>
+                            {isSelected && <Check size={11} className="text-white" />}
+                          </div>
+                        </td>
+                      )}
+                      <td className="px-4 py-3 min-w-[180px]">
+                        {selectionMode ? (
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                              {tool.imageUrl ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" /> : (tool.type === 'MATERIAL' ? <Package size={14} className="text-gray-400" /> : <Wrench size={14} className="text-gray-400" />)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{tool.name}</p>
+                              <p className="text-xs text-gray-400">{shortCode(tool)}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <Link href={`/tools/${tool.id}`} className="flex items-center gap-2.5 group">
+                            <div className="w-8 h-8 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                              {tool.imageUrl ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" /> : (tool.type === 'MATERIAL' ? <Package size={14} className="text-gray-400" /> : <Wrench size={14} className="text-gray-400" />)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">{tool.name}</p>
+                              <p className="text-xs text-gray-400">{shortCode(tool)}</p>
+                            </div>
+                          </Link>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {tool.category && (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{translateCat(tool.category)}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-gray-500 whitespace-nowrap">
+                        {tool.binLocation || <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 min-w-[100px]">
+                        <div className="flex items-center gap-1 text-gray-700 whitespace-nowrap">
+                          <span className="font-medium">{tool.currentStock}</span>
+                          <span className="text-gray-300">/</span>
+                          <span className="text-gray-400">{tool.totalStock}</span>
+                        </div>
+                        <div className="w-16 bg-gray-100 rounded-full h-1 mt-1">
+                          <div className={`h-1 rounded-full ${pct === 0 ? 'bg-red-400' : pct <= 30 ? 'bg-amber-400' : 'bg-green-400'}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${stockColor(tool)}`}>
+                          {stockLabel(tool)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-gray-400 whitespace-nowrap">
+                        {formatDistanceToNow(new Date(tool.updatedAt), { addSuffix: true })}
+                      </td>
+                      <td className="px-4 py-3 relative" onClick={(e) => e.stopPropagation()}>
+                        {!selectionMode && (
+                          <div ref={openMenuId === tool.id ? menuRef : undefined} className="relative">
+                            <button
+                              onClick={() => setOpenMenuId(openMenuId === tool.id ? null : tool.id)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+                            >
+                              <MoreHorizontal size={16} />
+                            </button>
+                            {openMenuId === tool.id && (
+                              <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                                {(isManager || (!isAdminOnly && !isManager && !isForeman)) && tool.currentStock > 0 && (
+                                  <button onClick={() => { setCheckoutTool(tool); setOpenMenuId(null) }}
+                                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    {tool.type === 'MATERIAL' ? t('useItem') : t('checkOut')}
+                                  </button>
+                                )}
+                                {isForeman && (
+                                  <button onClick={() => router.push(`/requests/new?toolId=${tool.id}`)}
+                                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    {t('requestTool')}
+                                  </button>
+                                )}
+                                {isAdminOnly && (
+                                  <Link href={`/tools/${tool.id}/edit`} className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    {t('edit')}
+                                  </Link>
+                                )}
+                                {(isAdminOnly || isManager) && (
+                                  confirmDeleteId === tool.id ? (
+                                    <button onClick={() => handleDeleteTool(tool.id)} disabled={deletingId === tool.id}
+                                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60">
+                                      {deletingId === tool.id ? '…' : t('confirmQuestion')}
+                                    </button>
+                                  ) : (
+                                    <button onClick={() => setConfirmDeleteId(tool.id)}
+                                      className="w-full flex items-center gap-1.5 text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                                      <Trash2 size={13} />{t('delete')}
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
 
-                {/* EMPLOYEE: checkout */}
-                {!selectionMode && !isAdminOnly && !isManager && !isForeman && tool.currentStock > 0 && (
-                  <button onClick={() => setCheckoutTool(tool)}
-                    className="w-full mt-3 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-2 rounded-xl transition-colors">
-                    {tool.type === 'MATERIAL' ? t('useItem') : t('checkOut')}
-                  </button>
-                )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+              <span>
+                {t('view')} {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} {t('of')} {filtered.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+                  className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">
+                  <ChevronLeft size={15} />
+                </button>
+                <span className="px-2 font-medium text-gray-700">{page}</span>
+                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                  className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">
+                  <ChevronRight size={15} />
+                </button>
               </div>
             </div>
-          )})}
+          )}
         </div>
       )}
 
@@ -381,9 +527,8 @@ export default function ToolsPage() {
           onSuccess={() => { setCheckoutTool(null); loadTools() }} />
       )}
 
-      {/* Sticky bulk-action bar */}
       {selectionMode && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl">
+        <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-wrap items-center justify-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl max-w-[calc(100vw-2rem)]">
           <span className="text-sm font-medium">
             {selectedIds.size === 0 ? 'Select items to delete' : `${selectedIds.size} selected`}
           </span>

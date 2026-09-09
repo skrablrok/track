@@ -4,13 +4,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { cookies } from 'next/headers'
 import { format } from 'date-fns'
-import { formatMinutes } from '@/lib/utils'
+import { formatMinutes, shortCode } from '@/lib/utils'
 import { t as tr, DEFAULT_LANG, type Lang } from '@/lib/i18n/translations'
-import {
-  ArrowLeft, Wrench, MapPin, User, Clock, Calendar,
-  Package, QrCode, AlertTriangle, Warehouse, ClipboardList,
-} from 'lucide-react'
+import { ArrowLeft, Wrench, Package, AlertTriangle, User, MapPin, Calendar, Clock } from 'lucide-react'
 import type { TranslationKey } from '@/lib/i18n/translations'
+import Link from 'next/link'
+import ToolQRCode from '@/components/tools/ToolQRCode'
+import ToolDetailActions from '@/components/tools/ToolDetailActions'
+import RestockButton from '@/components/tools/RestockButton'
 
 const CATEGORY_KEY_MAP: Record<string, TranslationKey> = {
   'Power Tools': 'catPowerTools',
@@ -20,10 +21,18 @@ const CATEGORY_KEY_MAP: Record<string, TranslationKey> = {
   'Lifting Equipment': 'catLiftingEquipment',
   'Other': 'catOther',
 }
-import Link from 'next/link'
-import ToolQRCode from '@/components/tools/ToolQRCode'
-import ReturnButton from '@/components/checkouts/ReturnButton'
-import RestockButton from '@/components/tools/RestockButton'
+
+const DOT_COLORS = ['bg-blue-500', 'bg-teal-500', 'bg-purple-500', 'bg-emerald-500', 'bg-rose-400']
+function dotColor(key: string) {
+  let hash = 0
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0
+  return DOT_COLORS[hash % DOT_COLORS.length]
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/)
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'U'
+}
 
 export default async function ToolDetailPage({ params }: { params: { id: string } }) {
   const lang = ((await cookies()).get('lang')?.value || DEFAULT_LANG) as Lang
@@ -45,211 +54,282 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
   if (!tool) notFound()
 
   const activeCheckouts = tool.checkouts.filter((c) => c.status === 'ACTIVE' || c.status === 'PENDING_RETURN')
-  const history = tool.checkouts.filter((c) => c.status === 'RETURNED' || c.status === 'CONSUMED')
   const isLowStock = tool.currentStock <= tool.minStock
-  const isAdmin = ['ADMIN', 'MANAGER'].includes(session?.user?.role || '')
   const isMaterial = tool.type === 'MATERIAL'
+  const Icon = isMaterial ? Package : Wrench
 
-  const stockPct = Math.min(100, Math.max(0, Math.round((tool.currentStock / tool.totalStock) * 100)))
+  const distribution = activeCheckouts.reduce((acc, c) => {
+    const key = c.project?.id || '__none__'
+    const label = c.project?.name || tr(lang, 'noSite')
+    if (!acc[key]) acc[key] = { label, qty: 0 }
+    acc[key].qty += c.quantity
+    return acc
+  }, {} as Record<string, { label: string; qty: number }>)
+  const distributionRows = Object.entries(distribution).sort((a, b) => b[1].qty - a[1].qty)
+  const maxQty = Math.max(1, ...distributionRows.map(([, v]) => v.qty))
+
+  const singleActiveCheckout = activeCheckouts.length === 1 ? activeCheckouts[0] : null
+  const currentCheckout = activeCheckouts[0]
+  const overdue = currentCheckout?.dueDate ? new Date(currentCheckout.dueDate).getTime() < Date.now() : false
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 fade-in">
-      <div className="flex items-center gap-3">
-        <Link href="/tools" className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
-          <ArrowLeft size={20} className="text-gray-600" />
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">{tool.name}</h1>
-        <span className={`text-xs px-2 py-1 rounded-full font-medium ${isMaterial ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-          {isMaterial ? tr(lang, 'itemTypeMaterial') : tr(lang, 'itemTypeTool')}
-        </span>
-        {isLowStock && (
-          <span className="flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
-            <AlertTriangle size={12} /> {tr(lang, 'lowStock')}
-          </span>
-        )}
-      </div>
+    <div className="max-w-6xl mx-auto space-y-6 fade-in">
+      <Link href="/tools" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors w-fit">
+        <ArrowLeft size={15} />
+        {tr(lang, 'backTo')} {tr(lang, 'tools')}
+      </Link>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="h-56 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-              {tool.imageUrl ? (
-                <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" />
-              ) : (
-                <Wrench className="w-20 h-20 text-gray-300" />
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-start gap-4 min-w-0">
+          <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+            {tool.imageUrl ? (
+              <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover rounded-xl" />
+            ) : (
+              <Icon className="w-6 h-6 text-blue-600" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-gray-900 truncate">{tool.name}</h1>
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              <span className="text-xs font-mono bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{shortCode(tool)}</span>
+              {overdue && (
+                <span className="text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                  {tr(lang, 'stockCritical')} · {formatMinutes(Math.floor((Date.now() - new Date(currentCheckout!.dueDate!).getTime()) / 60000))}
+                </span>
               )}
-            </div>
-            <div className="p-5">
-              {tool.description && <p className="text-gray-600 text-sm mb-4">{tool.description}</p>}
+              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                {isMaterial ? tr(lang, 'itemTypeMaterial') : tr(lang, 'itemTypeTool')}
+              </span>
               {tool.category && (
-                <span className="inline-block text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-medium">
+                <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
                   {CATEGORY_KEY_MAP[tool.category] ? tr(lang, CATEGORY_KEY_MAP[tool.category]) : tool.category}
                 </span>
               )}
             </div>
           </div>
+        </div>
 
+        <ToolDetailActions tool={tool} singleActiveCheckout={singleActiveCheckout ? { id: singleActiveCheckout.id, status: singleActiveCheckout.status } : null} />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <Package size={16} /> {tr(lang, 'stockLevel')}
-            </h3>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">
-                {tool.currentStock} {tr(lang, 'of')} {tool.totalStock} {tr(lang, 'available')}
-              </span>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                tool.currentStock === 0 ? 'bg-red-100 text-red-700' :
-                isLowStock ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-              }`}>
-                {tool.currentStock === 0 ? tr(lang, 'outOfStock') : isLowStock ? tr(lang, 'lowStock') : tr(lang, 'available')}
-              </span>
+            <h3 className="font-semibold text-gray-800 mb-4">{tr(lang, 'colDetails')}</h3>
+            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+              <DetailField label={tr(lang, 'manufacturer')} value={tool.manufacturer} />
+              <DetailField label={tr(lang, 'serialNumber')} value={tool.serialNumber} />
+              <DetailField label={tr(lang, 'binLocation')} value={tool.binLocation} />
+              <DetailField label={tr(lang, 'totalUnits')} value={`${tool.totalStock}`} />
+              <DetailField label={tr(lang, 'purchasePrice')} value={tool.purchasePrice != null ? `${tool.purchasePrice.toFixed(2)} € ${tr(lang, 'perUnit')}` : null} />
+              <DetailField label={tr(lang, 'purchaseDate')} value={tool.purchaseDate ? format(new Date(tool.purchaseDate), 'dd. MM. yyyy') : null} />
+              <DetailField label={tr(lang, 'warrantyUntil')} value={tool.warrantyUntil ? format(new Date(tool.warrantyUntil), 'dd. MM. yyyy') : null} />
+              <DetailField label={tr(lang, 'lastService')} value={tool.lastServiceDate ? format(new Date(tool.lastServiceDate), 'dd. MM. yyyy') : tr(lang, 'notRequired')} />
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-2.5">
-              <div
-                className={`h-2.5 rounded-full transition-all ${
-                  stockPct === 0 ? 'bg-red-500' : stockPct <= 30 ? 'bg-amber-400' : 'bg-green-500'
-                }`}
-                style={{ width: `${stockPct}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-gray-400 mt-1.5">
-              <span>{tr(lang, 'colMin')}: {tool.minStock}</span>
-              {!isMaterial && <span>{tr(lang, 'maxLevelLabel')}: {tool.maxStock}</span>}
-            </div>
-            {isMaterial && isAdmin && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <RestockButton toolId={tool.id} />
+
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-500">
+                  {tool.currentStock} {tr(lang, 'of')} {tool.totalStock} {tr(lang, 'available')}
+                </span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  tool.currentStock === 0 ? 'bg-red-100 text-red-700' :
+                  isLowStock ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  {tool.currentStock === 0 ? tr(lang, 'stockCritical') : isLowStock ? tr(lang, 'stockOrderNeeded') : tr(lang, 'available')}
+                </span>
               </div>
-            )}
+              <div className="w-full bg-gray-100 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    tool.currentStock === 0 ? 'bg-red-500' : isLowStock ? 'bg-amber-400' : 'bg-green-500'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, Math.round((tool.currentStock / tool.totalStock) * 100)))}%` }}
+                />
+              </div>
+              {isMaterial && ['ADMIN', 'MANAGER'].includes(session?.user?.role || '') && (
+                <div className="mt-3"><RestockButton toolId={tool.id} /></div>
+              )}
+            </div>
           </div>
 
-          {tool.warehouseStocks.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="flex items-center justify-between px-5 pt-5 pb-1">
+              <h3 className="font-semibold text-gray-800">{tr(lang, 'checkoutHistory')}</h3>
+              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{tool.checkouts.length}</span>
+            </div>
+            {tool.checkouts.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">{tr(lang, 'noCheckoutHistory')}</p>
+            ) : (
+              <>
+                {/* Mobile: stacked rows */}
+                <div className="md:hidden divide-y divide-gray-50 mt-2">
+                  {tool.checkouts.map((c) => {
+                    const isOpen = c.status === 'ACTIVE' || c.status === 'PENDING_RETURN'
+                    const isConsumed = c.status === 'CONSUMED'
+                    const mins = isOpen
+                      ? Math.floor((Date.now() - new Date(c.checkoutDate).getTime()) / 60000)
+                      : (c.durationMins ?? 0)
+                    return (
+                      <div key={c.id} className="flex items-center gap-3 px-5 py-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold flex items-center justify-center flex-shrink-0">
+                          {initials(c.user.name)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm text-gray-800 truncate">{c.user.name}</p>
+                            {isOpen ? (
+                              <span className="flex-shrink-0 text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{tr(lang, 'openLabel')}</span>
+                            ) : (
+                              <span className="flex-shrink-0 text-xs text-gray-400 whitespace-nowrap">
+                                {c.returnDate ? format(new Date(c.returnDate), 'dd. MM.') : '—'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1.5">
+                            {c.project ? (
+                              <>
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor(c.project.id)}`} />
+                                {c.project.name}
+                              </>
+                            ) : tr(lang, 'noSite')}
+                            {' · '}{isConsumed ? `${c.quantity}x` : formatMinutes(mins)}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden md:block overflow-x-auto mt-2">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-t border-b border-gray-100 text-left text-xs text-gray-400 uppercase tracking-wide">
+                        <th className="px-5 py-2.5 font-medium">{tr(lang, 'colTakenBy')}</th>
+                        <th className="px-5 py-2.5 font-medium">{tr(lang, 'colSite')}</th>
+                        <th className="px-5 py-2.5 font-medium">{tr(lang, 'colDuration')}</th>
+                        <th className="px-5 py-2.5 font-medium">{tr(lang, 'colReturned')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tool.checkouts.map((c) => {
+                        const isOpen = c.status === 'ACTIVE' || c.status === 'PENDING_RETURN'
+                        const isConsumed = c.status === 'CONSUMED'
+                        const mins = isOpen
+                          ? Math.floor((Date.now() - new Date(c.checkoutDate).getTime()) / 60000)
+                          : (c.durationMins ?? 0)
+                        return (
+                          <tr key={c.id} className="border-b border-gray-50 last:border-0">
+                            <td className="px-5 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-gray-100 text-gray-600 text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
+                                  {initials(c.user.name)}
+                                </div>
+                                <span className="text-gray-800 whitespace-nowrap">{c.user.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
+                              {c.project ? (
+                                <span className="flex items-center gap-1.5">
+                                  <span className={`w-1.5 h-1.5 rounded-full ${dotColor(c.project.id)}`} />
+                                  {c.project.name}
+                                </span>
+                              ) : <span className="text-gray-300">{tr(lang, 'noSite')}</span>}
+                            </td>
+                            <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
+                              {isConsumed ? `${c.quantity}x` : formatMinutes(mins)}
+                            </td>
+                            <td className="px-5 py-3 whitespace-nowrap">
+                              {isOpen ? (
+                                <span className="text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{tr(lang, 'openLabel')}</span>
+                              ) : c.returnDate ? (
+                                format(new Date(c.returnDate), 'dd. MM.')
+                              ) : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {currentCheckout && (
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <Warehouse size={16} /> {tr(lang, 'warehouse')}
-              </h3>
-              <div className="space-y-2">
-                {tool.warehouseStocks.map((ws) => (
-                  <div key={ws.warehouse} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                    <span className="text-sm text-gray-700">{ws.warehouse}</span>
-                    <span className="text-sm font-semibold text-gray-900">{ws.quantity}</span>
+              <h3 className="font-semibold text-gray-800 mb-3">{tr(lang, 'currentCheckoutTitle')}</h3>
+              {overdue && currentCheckout.dueDate && (
+                <div className="bg-red-50 border border-red-100 rounded-xl p-3 mb-3 flex items-start gap-2">
+                  <AlertTriangle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700 leading-snug">
+                    {tr(lang, 'overdueSince')} {format(new Date(currentCheckout.dueDate), 'd. M. yyyy')}
+                    {' — '}{tr(lang, 'overdueDurationLabel')} {formatMinutes(Math.floor((Date.now() - new Date(currentCheckout.dueDate).getTime()) / 60000))}
+                  </p>
+                </div>
+              )}
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold flex items-center justify-center flex-shrink-0">
+                  {initials(currentCheckout.user.name)}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{currentCheckout.user.name}</p>
+                  {currentCheckout.project && (
+                    <p className="text-xs text-gray-500 flex items-center gap-1 truncate">
+                      <MapPin size={11} />{currentCheckout.project.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1.5 text-xs text-gray-500">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><Calendar size={12} />{tr(lang, 'takenOn')}</span>
+                  <span className="text-gray-700 font-medium">{format(new Date(currentCheckout.checkoutDate), 'dd. MM. yyyy · HH:mm')}</span>
+                </div>
+                {currentCheckout.dueDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5"><Clock size={12} />{tr(lang, 'dueDate')}</span>
+                    <span className={`font-medium ${overdue ? 'text-red-600' : 'text-gray-700'}`}>{format(new Date(currentCheckout.dueDate), 'dd. MM. yyyy')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {distributionRows.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 className="font-semibold text-gray-800 mb-3">{tr(lang, 'distributionByProject')}</h3>
+              <div className="space-y-3">
+                {distributionRows.map(([key, { label, qty }], i) => (
+                  <div key={key}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-700 truncate">{label}</span>
+                      <span className="text-gray-400 font-medium whitespace-nowrap ml-2">{qty} {tr(lang, 'unitsSuffix')}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div className={`h-1.5 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]}`} style={{ width: `${Math.round((qty / maxQty) * 100)}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {activeCheckouts.length > 0 && (
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">
-              <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
-                {tr(lang, 'currentlyInUse')}
-                {activeCheckouts.some((c) => c.status === 'PENDING_RETURN') && (
-                  <span className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-medium">
-                    {activeCheckouts.filter((c) => c.status === 'PENDING_RETURN').length} {tr(lang, 'pendingReturn')}
-                  </span>
-                )}
-              </h3>
-              <div className="space-y-3">
-                {activeCheckouts.map((checkout) => {
-                  const mins = Math.floor((Date.now() - new Date(checkout.checkoutDate).getTime()) / 60000)
-                  const isOwn = session?.user?.id === checkout.userId
-                  return (
-                    <div key={checkout.id} className="bg-white rounded-xl p-3 border border-amber-100">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
-                            <User size={14} className="text-gray-400" />
-                            {checkout.user.name}
-                          </div>
-                          {checkout.project && (
-                            <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                              <MapPin size={14} className="text-gray-400" />
-                              {checkout.project.name}
-                              {checkout.project.location && ` — ${checkout.project.location}`}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                            <Calendar size={12} />
-                            {format(new Date(checkout.checkoutDate), 'MMM d, yyyy HH:mm')}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                            <Clock size={12} />
-                            {tr(lang, 'outFor')} {formatMinutes(mins)}
-                          </div>
-                        </div>
-                        {(isOwn || isAdmin) && (
-                          <ReturnButton checkoutId={checkout.id} status={checkout.status} />
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-800 mb-4">{tr(lang, 'checkoutHistory')}</h3>
-            {history.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-6">{tr(lang, 'noCheckoutHistory')}</p>
-            ) : (
-              <div className="space-y-3">
-                {history.map((checkout) => {
-                  const consumed = checkout.status === 'CONSUMED'
-                  return (
-                    <div key={checkout.id} className="flex items-start gap-3 py-3 border-b border-gray-50 last:border-0">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${consumed ? 'bg-purple-50' : 'bg-green-50'}`}>
-                        <Clock size={14} className={consumed ? 'text-purple-600' : 'text-green-600'} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium text-gray-800">{checkout.user.name}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${consumed ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
-                            {consumed ? `${tr(lang, 'usedNx')} ${checkout.quantity}x` : checkout.durationMins !== null ? formatMinutes(checkout.durationMins!) : tr(lang, 'returned')}
-                          </span>
-                        </div>
-                        {checkout.project && (
-                          <p className="text-xs text-gray-500 mt-0.5">{checkout.project.name}</p>
-                        )}
-                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                          <span>{format(new Date(checkout.checkoutDate), 'MMM d HH:mm')}</span>
-                          {!consumed && (
-                            <>
-                              <span>→</span>
-                              <span>{checkout.returnDate ? format(new Date(checkout.returnDate), 'MMM d HH:mm') : '—'}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
           <ToolQRCode toolId={tool.id} toolName={tool.name} qrCode={tool.qrCode} />
-
-          <Link
-            href={`/requests/new?toolId=${tool.id}`}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm"
-          >
-            <ClipboardList size={16} />
-            {tr(lang, isMaterial ? 'requestMaterial' : 'requestTool')}
-          </Link>
-
-          {isAdmin && (
-            <Link
-              href={`/tools/${tool.id}/edit`}
-              className="block w-full text-center py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              {tr(lang, 'editTool')}
-            </Link>
-          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function DetailField({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div>
+      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
+      <p className="text-sm font-medium text-gray-900">{value ?? '—'}</p>
     </div>
   )
 }

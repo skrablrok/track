@@ -17,6 +17,7 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
   const [projectId, setProjectId] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [notes, setNotes] = useState('')
+  const [dueInDays, setDueInDays] = useState('7')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -32,10 +33,13 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
     setError('')
     setLoading(true)
     try {
+      const dueDate = !isMaterial && dueInDays
+        ? new Date(Date.now() + parseInt(dueInDays) * 24 * 60 * 60 * 1000).toISOString()
+        : null
       const res = await fetch('/api/checkouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toolId: tool.id, projectId: projectId || null, quantity, notes }),
+        body: JSON.stringify({ toolId: tool.id, projectId: projectId || null, quantity, notes, dueDate }),
       })
       if (!res.ok) {
         const d = await res.json()
@@ -112,6 +116,23 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
             />
           </div>
+
+          {!isMaterial && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('dueDate')}</label>
+              <select
+                value={dueInDays}
+                onChange={(e) => setDueInDays(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+              >
+                <option value="1">1 {t('day')}</option>
+                <option value="3">3 {t('days')}</option>
+                <option value="7">7 {t('days')}</option>
+                <option value="14">14 {t('days')}</option>
+                <option value="">{t('notRequired')}</option>
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">

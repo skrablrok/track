@@ -20,6 +20,16 @@ export function calcDurationMins(start: Date, end: Date): number {
   return Math.floor((end.getTime() - start.getTime()) / (1000 * 60))
 }
 
+// Deterministic display code (e.g. "OR-0142") derived from the tool id — not stored,
+// so it stays stable per tool but isn't a sequential/human-assigned inventory number.
+export function shortCode(tool: { id: string; type?: string | null }): string {
+  const prefix = tool.type === 'MATERIAL' ? 'MT' : 'OR'
+  let hash = 0
+  for (let i = 0; i < tool.id.length; i++) hash = (hash * 31 + tool.id.charCodeAt(i)) >>> 0
+  const num = (hash % 9999) + 1
+  return `${prefix}-${String(num).padStart(4, '0')}`
+}
+
 export async function requireAuth(req?: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) throw new Error('Unauthorized')
