@@ -38,10 +38,9 @@ const STATUS_CONFIG = {
   REJECTED:           { tKey: 'rejected' as const,             color: 'bg-red-100 text-red-800 border-red-200',        icon: XCircle },
 }
 
-const PROCUREMENT_BADGE: Record<string, { tKey: 'procurementPending' | 'procurementOrdered' | 'procurementReceived' | 'procurementCompleted'; color: string }> = {
+const PROCUREMENT_BADGE: Record<string, { tKey: 'procurementPending' | 'procurementOrdered' | 'procurementCompleted'; color: string }> = {
   PENDING_PURCHASE: { tKey: 'procurementPending',  color: 'bg-amber-100 text-amber-700' },
   ORDERED:          { tKey: 'procurementOrdered',  color: 'bg-blue-100 text-blue-700' },
-  RECEIVED:         { tKey: 'procurementReceived', color: 'bg-purple-100 text-purple-700' },
   COMPLETED:        { tKey: 'procurementCompleted',color: 'bg-green-100 text-green-700' },
 }
 

@@ -7,7 +7,7 @@ export type NotifType =
   | { type: 'REQUEST_SUBMITTED'; userName: string; count: number; projectName: string; procurementItems?: { name: string; qty?: number; stock?: number }[] }
   | { type: 'REQUEST_REVIEWED'; status: 'APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED'; notes?: string | null }
   | { type: 'STOCK_NEGATIVE'; warnings: { name: string; stock: number; negative: boolean }[] }
-  | { type: 'PROCUREMENT_UPDATE'; itemLabel: string; stage: 'ORDERED' | 'RECEIVED' | 'COMPLETED' }
+  | { type: 'PROCUREMENT_UPDATE'; itemLabel: string; stage: 'ORDERED' | 'COMPLETED' }
   | { type: 'PROCUREMENT_MISMATCH'; itemNames: string[] }
   | { type: 'RETURN_REQUESTED'; userName: string; toolName: string }
   | { type: 'RETURN_CONFIRMED'; toolName: string }
@@ -67,7 +67,6 @@ function renderNotification(lang: string, n: NotifType): { title: string; body: 
     case 'PROCUREMENT_UPDATE': {
       const bodyKey =
         n.stage === 'ORDERED' ? 'notifItemOrderedBody' :
-        n.stage === 'RECEIVED' ? 'notifItemReceivedBody' :
         'notifItemCompletedBody'
       return { title: t(lang, 'notifItemUpdateTitle'), body: render(t(lang, bodyKey), { itemLabel: n.itemLabel }) }
     }

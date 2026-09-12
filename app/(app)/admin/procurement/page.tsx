@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { ShoppingCart, AlertTriangle, Package, Truck, CheckCircle2, CheckSquare, Check, X, Receipt, ChevronDown } from 'lucide-react'
+import { ShoppingCart, AlertTriangle, Truck, CheckCircle2, CheckSquare, Check, X, Receipt, ChevronDown } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import ReceiptVerifyModal from '@/components/procurement/ReceiptVerifyModal'
 import MarkOrderedModal from '@/components/procurement/MarkOrderedModal'
@@ -30,7 +30,7 @@ type ProcurementItem = {
 
 type Batch = { batchId: string; deliverTo: string; orderedAt: string; status: string; items: ProcurementItem[] }
 
-const STAGES = ['PENDING_PURCHASE', 'ORDERED', 'RECEIVED', 'COMPLETED'] as const
+const STAGES = ['PENDING_PURCHASE', 'ORDERED', 'COMPLETED'] as const
 type StatusFilter = 'ALL' | typeof STAGES[number] | 'NOT_ON_RECEIPT'
 
 export default function ProcurementPage() {
@@ -114,8 +114,7 @@ export default function ProcurementPage() {
 
   const statusConfig: Record<string, { label: string; color: string; icon: any; nextLabel?: string }> = {
     PENDING_PURCHASE: { label: t('procurementPending'),   color: 'bg-amber-100 text-amber-700',  icon: AlertTriangle, nextLabel: t('markOrdered') },
-    ORDERED:           { label: t('procurementOrdered'),  color: 'bg-blue-100 text-blue-700',    icon: Truck,         nextLabel: t('markReceived') },
-    RECEIVED:          { label: t('procurementReceived'), color: 'bg-purple-100 text-purple-700', icon: Package,      nextLabel: t('markCompleted') },
+    ORDERED:           { label: t('procurementOrdered'),  color: 'bg-blue-100 text-blue-700',    icon: Truck,         nextLabel: t('markCompleted') },
     COMPLETED:         { label: t('procurementCompleted'), color: 'bg-green-100 text-green-700',  icon: CheckCircle2 },
     NOT_ON_RECEIPT:    { label: t('notOnReceipt'),         color: 'bg-red-100 text-red-700',      icon: AlertTriangle },
   }

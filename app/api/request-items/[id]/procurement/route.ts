@@ -3,15 +3,14 @@ import { db } from '@/lib/db'
 import { requireRole, logAudit, unauthorized, forbidden, serverError, badRequest } from '@/lib/utils'
 import { notifyUser } from '@/lib/notifications'
 
-const STAGES = ['PENDING_PURCHASE', 'ORDERED', 'RECEIVED', 'COMPLETED', 'NOT_ON_RECEIPT']
-const NOTIFY_STAGES = ['ORDERED', 'RECEIVED', 'COMPLETED'] as const
+const STAGES = ['PENDING_PURCHASE', 'ORDERED', 'COMPLETED', 'NOT_ON_RECEIPT']
+const NOTIFY_STAGES = ['ORDERED', 'COMPLETED'] as const
 
 // Normal sequential advance, plus manual recovery moves out of NOT_ON_RECEIPT
 // (set by the bulk receipt-verification flow when an ordered item isn't found on the receipt).
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   PENDING_PURCHASE: ['ORDERED'],
-  ORDERED: ['RECEIVED'],
-  RECEIVED: ['COMPLETED'],
+  ORDERED: ['COMPLETED'],
   COMPLETED: [],
   NOT_ON_RECEIPT: ['ORDERED', 'PENDING_PURCHASE'],
 }
@@ -54,7 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       await notifyUser(
         item.request.requesterId,
         admin.organizationId,
-        { type: 'PROCUREMENT_UPDATE', itemLabel, stage: status as 'ORDERED' | 'RECEIVED' | 'COMPLETED' },
+        { type: 'PROCUREMENT_UPDATE', itemLabel, stage: status as 'ORDERED' | 'COMPLETED' },
         `/requests/${item.requestId}`
       )
     }
