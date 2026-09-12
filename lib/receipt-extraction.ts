@@ -68,7 +68,7 @@ export async function extractReceiptData(photoDataUrl: string): Promise<ReceiptE
 }
 
 export type ExpectedItem = { id: string; name: string }
-export type ReceiptMatch = { expectedId: string; found: boolean }
+export type ReceiptMatch = { expectedId: string; found: boolean; quantity: number }
 export type ReceiptMatchResult = ReceiptExtraction & { matches: ReceiptMatch[] }
 
 const RECEIPT_MATCH_SCHEMA = {
@@ -82,8 +82,9 @@ const RECEIPT_MATCH_SCHEMA = {
         properties: {
           expectedId: { type: 'string' },
           found: { type: 'boolean' },
+          quantity: { type: 'number' },
         },
-        required: ['expectedId', 'found'],
+        required: ['expectedId', 'found', 'quantity'],
         additionalProperties: false,
       },
     },
@@ -122,7 +123,7 @@ export async function matchReceiptItems(
                 'This is a photo of a store receipt or invoice. Extract every line item with its name, quantity, and unit price, plus the total price printed on the receipt. If a quantity is not shown for an item, use 1. Use the numbers exactly as printed, without a currency symbol.\n\n' +
                 'We also expected the following items to be on this receipt (id: name):\n' +
                 expectedList +
-                '\n\nFor each expected item, decide whether it actually appears on the receipt, allowing for abbreviations, different wording, or partial matches (e.g. "BOSCH DRILL 18V" matches "Bosch Cordless Drill 18V"). Return one entry per expected id in `matches` with `found: true` if it appears on the receipt, `found: false` otherwise.',
+                '\n\nFor each expected item, decide whether it actually appears on the receipt, allowing for abbreviations, different wording, or partial matches (e.g. "BOSCH DRILL 18V" matches "Bosch Cordless Drill 18V"). Return one entry per expected id in `matches`: if it appears on the receipt, set `found: true` and `quantity` to the quantity printed for that line on the receipt (the actual amount purchased, which may differ from what was expected); if it does not appear, set `found: false` and `quantity: 0`.',
             },
           ],
         },

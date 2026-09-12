@@ -18,7 +18,7 @@ type ProcurementItem = {
   deliverTo?: string | null
   orderedAt?: string | null
   requestId: string
-  tool: { id: string; name: string; imageUrl?: string; currentStock: number } | null
+  tool: { id: string; name: string; imageUrl?: string; currentStock: number; minStock: number; maxStock: number } | null
   purchase: { id: string; photoUrl: string } | null
   request: {
     id: string
@@ -208,6 +208,7 @@ export default function ProcurementPage() {
             const isCustom = !item.tool
             const isSelected = selectedIds.has(item.id)
             const isNotOnReceipt = item.procurementStatus === 'NOT_ON_RECEIPT'
+            const isPending = item.procurementStatus === 'PENDING_PURCHASE'
 
             const Row = (
               <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -218,8 +219,12 @@ export default function ProcurementPage() {
                     {isSelected && <Check size={11} className="text-white" />}
                   </div>
                 )}
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
-                  <Icon size={18} />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden ${cfg.color}`}>
+                  {isPending && item.tool?.imageUrl ? (
+                    <img src={item.tool.imageUrl} alt={item.tool.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Icon size={18} />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -236,7 +241,16 @@ export default function ProcurementPage() {
                     <span>{item.request.requester.name}</span>
                     {item.request.project && <span>· {item.request.project.name}</span>}
                     <span>· {format(new Date(item.request.createdAt), 'MMM d, yyyy')}</span>
-                    <span>· {item.requestedQty} {t('unitsRequested')}</span>
+                    {isPending ? (
+                      !isCustom && (
+                        <>
+                          <span>· {t('minLevelLabel')}: {item.tool!.minStock}</span>
+                          <span>· {t('maxLevelLabel')}: {item.tool!.maxStock}</span>
+                        </>
+                      )
+                    ) : (
+                      <span>· {item.requestedQty} {t('unitsRequested')}</span>
+                    )}
                     {!isCustom && <span>· {item.tool!.currentStock} {t('inStock')}</span>}
                     {isNotOnReceipt && item.deliverTo && <span>· {t('deliverToLabel')}: {item.deliverTo}</span>}
                     {item.purchase && !selectionMode && (

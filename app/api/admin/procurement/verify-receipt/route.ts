@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     const result = await matchReceiptItems(photoUrl, expected)
     if (!result) return badRequest('Could not read the receipt, please retake the photo')
 
+    const matchByItemId = new Map(result.matches.map((m) => [m.expectedId, m]))
     const foundIds = new Set(result.matches.filter((m) => m.found).map((m) => m.expectedId))
     const matchedItems = items.filter((i) => foundIds.has(i.id))
     const unmatchedItems = items.filter((i) => !foundIds.has(i.id))
@@ -44,19 +45,25 @@ export async function POST(req: NextRequest) {
           data: { procurementStatus: 'COMPLETED', procurementUpdatedAt: new Date(), purchaseId: purchase.id },
         })
 
-        // Items that showed up on the receipt actually arrived — add the ordered
-        // quantity back into stock (mirrors the restock endpoint's logic).
+        // Items that showed up on the receipt actually arrived — add however much the
+        // receipt says was bought (not the originally requested amount, since the actual
+        // purchase can run higher or lower) back into stock.
         const qtyByToolId = new Map<string, number>()
         for (const item of matchedItems) {
           if (!item.toolId) continue
-          qtyByToolId.set(item.toolId, (qtyByToolId.get(item.toolId) || 0) + item.requestedQty)
+          const receiptQty = matchByItemId.get(item.id)?.quantity
+          const qty = receiptQty && receiptQty > 0 ? receiptQty : item.requestedQty
+          qtyByToolId.set(item.toolId, (qtyByToolId.get(item.toolId) || 0) + qty)
         }
         for (const [toolId, qty] of Array.from(qtyByToolId.entries())) {
-          const tool = await tx.tool.findUnique({ where: { id: toolId }, select: { currentStock: true, totalStock: true } })
+          const tool = await tx.tool.findUnique({ where: { id: toolId }, select: { currentStock: true, totalStock: true, maxStock: true } })
           if (!tool) continue
           const newCurrentStock = tool.currentStock + qty
           const newTotalStock = Math.max(tool.totalStock, newCurrentStock)
-          await tx.tool.update({ where: { id: toolId }, data: { currentStock: newCurrentStock, totalStock: newTotalStock } })
+          // If this purchase ran bigger than the item's usual max stock level, that's the
+          // new normal order size — raise the ceiling to match instead of leaving it stale.
+          const newMaxStock = Math.max(tool.maxStock, qty)
+          await tx.tool.update({ where: { id: toolId }, data: { currentStock: newCurrentStock, totalStock: newTotalStock, maxStock: newMaxStock } })
         }
       }
 

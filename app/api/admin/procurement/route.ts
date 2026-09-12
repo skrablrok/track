@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
         request: { organizationId: user.organizationId },
       },
       include: {
-        tool: { select: { id: true, name: true, imageUrl: true, currentStock: true } },
+        tool: { select: { id: true, name: true, imageUrl: true, currentStock: true, minStock: true, maxStock: true } },
         purchase: { select: { id: true, photoUrl: true } },
         request: {
           select: {
