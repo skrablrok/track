@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Building2, Lock, Mail, User, Eye, EyeOff, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react'
 import { LANGUAGES, DEFAULT_LANG, t, type Lang } from '@/lib/i18n/translations'
+import LogoMark from '@/components/Logo'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -68,7 +69,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
 
       {/* Language dropdown — fixed top-right corner */}
       <div ref={langRef} className="fixed top-10 right-10 z-50">
@@ -99,7 +100,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-2xl mb-4 shadow-xl">
-            <Building2 className="w-8 h-8 text-white" />
+            <LogoMark className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white">BuildFlow</h1>
           <p className="text-blue-300 mt-1 text-sm">{t(lang, 'createOrgAccount')}</p>

@@ -5,13 +5,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Wrench, QrCode, ClipboardList,
-  FolderOpen, BarChart3, Users, LogOut, ClipboardCheck, ShoppingCart, FileSpreadsheet, Building2, Receipt,
+  FolderOpen, BarChart3, Users, LogOut, ClipboardCheck, ShoppingCart, FileSpreadsheet, Receipt,
   ChevronDown,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import NotificationPrefsMenu from '@/components/NotificationPrefsMenu'
+import LogoMark from '@/components/Logo'
 
 type Counts = { tools: number; checkouts: number; requests: number }
 
@@ -69,7 +70,7 @@ export default function Sidebar({ role, orgName, userName, counts }: { role: str
     <aside className="hidden md:flex flex-col w-64 bg-zinc-900 h-screen flex-shrink-0">
       <div className="flex items-center gap-3 px-5 py-5">
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Building2 className="w-4 h-4 text-white" />
+          <LogoMark className="w-4 h-4 text-white" />
         </div>
         <span className="font-bold text-white text-base leading-tight truncate">{orgName || 'BuildFlow'}</span>
       </div>
