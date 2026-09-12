@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     // Fetch current stock for validation and procurement flagging (scoped to org)
     const toolIds = items.filter((i: any) => i.toolId).map((i: any) => i.toolId)
     const tools = toolIds.length
-      ? await db.tool.findMany({ where: { id: { in: toolIds }, organizationId: user.organizationId }, select: { id: true, name: true, type: true, currentStock: true } })
+      ? await db.tool.findMany({ where: { id: { in: toolIds }, organizationId: user.organizationId }, select: { id: true, name: true, type: true, currentStock: true, minStock: true } })
       : []
     const toolById = new Map(tools.map((t) => [t.id, t]))
 
@@ -78,7 +78,11 @@ export async function POST(req: NextRequest) {
     const needsProcurement = (i: any) => {
       if (!i.toolId) return true
       const tool = toolById.get(i.toolId)
-      return !!tool && parseInt(i.requestedQty) > tool.currentStock
+      if (!tool) return false
+      const qty = parseInt(i.requestedQty)
+      // Flag it if there isn't enough on hand to cover the request, or if fulfilling
+      // it would leave stock at or below the item's low-stock threshold.
+      return qty > tool.currentStock || tool.currentStock - qty <= tool.minStock
     }
 
     // Auto-create tools for custom items not yet in the system
