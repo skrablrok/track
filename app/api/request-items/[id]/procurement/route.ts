@@ -3,8 +3,18 @@ import { db } from '@/lib/db'
 import { requireRole, logAudit, unauthorized, forbidden, serverError, badRequest } from '@/lib/utils'
 import { notifyUser } from '@/lib/notifications'
 
-const STAGES = ['PENDING_PURCHASE', 'ORDERED', 'RECEIVED', 'COMPLETED']
+const STAGES = ['PENDING_PURCHASE', 'ORDERED', 'RECEIVED', 'COMPLETED', 'NOT_ON_RECEIPT']
 const NOTIFY_STAGES = ['ORDERED', 'RECEIVED', 'COMPLETED'] as const
+
+// Normal sequential advance, plus manual recovery moves out of NOT_ON_RECEIPT
+// (set by the bulk receipt-verification flow when an ordered item isn't found on the receipt).
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  PENDING_PURCHASE: ['ORDERED'],
+  ORDERED: ['RECEIVED'],
+  RECEIVED: ['COMPLETED'],
+  COMPLETED: [],
+  NOT_ON_RECEIPT: ['ORDERED', 'PENDING_PURCHASE'],
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -23,10 +33,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     if (!item.procurementStatus) return badRequest('This item does not need procurement')
 
-    const currentIdx = STAGES.indexOf(item.procurementStatus)
-    const nextIdx = STAGES.indexOf(status)
-    if (nextIdx !== currentIdx + 1) {
-      return badRequest(`Cannot move from ${item.procurementStatus} to ${status} — must advance one stage at a time`)
+    if (!ALLOWED_TRANSITIONS[item.procurementStatus]?.includes(status)) {
+      return badRequest(`Cannot move from ${item.procurementStatus} to ${status}`)
     }
 
     const updated = await db.requestItem.update({
