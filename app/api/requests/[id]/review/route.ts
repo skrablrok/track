@@ -152,9 +152,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const updated = await db.request.findUnique({
       where: { id: params.id },
       include: {
-        requester: { select: { id: true, name: true, email: true } },
+        requester: { select: { id: true, name: true, email: true, role: true } },
         project: true,
-        items: { include: { tool: { select: { id: true, name: true, currentStock: true } } } },
+        items: {
+          include: {
+            tool: {
+              select: { id: true, name: true, imageUrl: true, category: true, currentStock: true, minStock: true, totalStock: true },
+            },
+          },
+        },
       },
     })
 

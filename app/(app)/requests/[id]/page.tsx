@@ -326,7 +326,7 @@ export default function RequestDetailPage() {
       </div>
 
       {isPrivileged && isPending && (
-        <form onSubmit={handleReview} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+        <form id="review-form" onSubmit={handleReview} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
           <h2 className="font-semibold text-gray-800">{t('reviewDecision')}</h2>
           {error && <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm">{error}</div>}
           <div>
