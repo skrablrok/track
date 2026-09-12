@@ -126,6 +126,7 @@ model Checkout {
   projectId      String?
   requestId      String?
   quantity       Int       @default(1)
+  returnedQty    Int       @default(0)
   checkoutDate   DateTime  @default(now())
   dueDate        DateTime?
   returnDate     DateTime?

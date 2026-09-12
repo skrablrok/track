@@ -44,7 +44,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const hasStocks = stocks.length > 0
 
     let newTotal: number | undefined
-    if (Array.isArray(warehouseStocks)) {
+    if (Array.isArray(warehouseStocks) && warehouseStocks.length > 0) {
       newTotal = hasStocks ? stocks.reduce((sum: number, w: any) => sum + parseInt(w.quantity), 0) : 0
     } else if (totalStock !== undefined) {
       newTotal = parseInt(totalStock)

@@ -6,6 +6,7 @@ import { formatMinutes } from '@/lib/utils'
 import { Search, Clock, MapPin, User, Wrench, CornerDownLeft, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import ReturnMaterialButton from '@/components/checkouts/ReturnMaterialButton'
 
 type Checkout = {
   id: string
@@ -14,6 +15,7 @@ type Checkout = {
   durationMins?: number
   status: 'ACTIVE' | 'RETURNED' | 'CONSUMED' | 'PENDING_RETURN'
   quantity: number
+  returnedQty: number
   notes?: string
   tool: { id: string; name: string; imageUrl?: string; category?: string; type?: string }
   user: { id: string; name: string; email: string }
@@ -199,7 +201,7 @@ export default function CheckoutsPage() {
               <div className="space-y-3">
                 {consumed.map((c) => (
                   <CheckoutRow key={c.id} checkout={c} onReturn={handleReturn} onAdminAction={handleAdminAction}
-                    returning={false} armed={false} adminAction={null}
+                    returning={false} armed={false} adminAction={null} onMaterialReturned={load}
                     session={session} isAdmin={isAdmin} t={t} />
                 ))}
               </div>
@@ -218,13 +220,14 @@ export default function CheckoutsPage() {
   )
 }
 
-function CheckoutRow({ checkout: c, onReturn, onAdminAction, returning, armed, adminAction, session, isAdmin, t }: {
+function CheckoutRow({ checkout: c, onReturn, onAdminAction, returning, armed, adminAction, onMaterialReturned, session, isAdmin, t }: {
   checkout: Checkout
   onReturn: (id: string) => void
   onAdminAction: (id: string, action: 'confirm' | 'reject') => void
   returning: boolean
   armed: boolean
   adminAction: 'confirm' | 'reject' | null
+  onMaterialReturned?: () => void
   session: any
   isAdmin: boolean
   t: (key: any) => string
@@ -302,9 +305,19 @@ function CheckoutRow({ checkout: c, onReturn, onAdminAction, returning, armed, a
                   )}
                 </>
               ) : c.status === 'CONSUMED' ? (
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
-                  {t('consumed')} ({c.quantity}x)
-                </span>
+                <>
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                    {t('consumed')} ({c.quantity}x)
+                    {c.returnedQty > 0 && ` · ${c.returnedQty} ${t('returnedLabel').toLowerCase()}`}
+                  </span>
+                  {(isOwn || isAdmin) && c.quantity - c.returnedQty > 0 && onMaterialReturned && (
+                    <ReturnMaterialButton
+                      checkoutId={c.id}
+                      remaining={c.quantity - c.returnedQty}
+                      onReturned={onMaterialReturned}
+                    />
+                  )}
+                </>
               ) : (
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
                   {c.durationMins ? formatMinutes(c.durationMins) : t('returned')}
