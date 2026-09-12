@@ -31,6 +31,13 @@ type RequestDetail = {
   }>
 }
 
+const ROLE_LABEL_KEY: Record<string, any> = {
+  ADMIN: 'roleAdmin',
+  MANAGER: 'roleManager',
+  EMPLOYEE: 'roleEmployee',
+  FOREMAN: 'roleForeman',
+}
+
 const STATUS_CONFIG = {
   PENDING:            { tKey: 'pendingReview' as const,        color: 'bg-amber-100 text-amber-800 border-amber-200',  icon: Clock },
   APPROVED:           { tKey: 'approved' as const,             color: 'bg-green-100 text-green-800 border-green-200',  icon: CheckCircle2 },
@@ -201,7 +208,7 @@ export default function RequestDetailPage() {
         <div className="flex items-center gap-2 text-sm text-gray-700">
           <User size={15} className="text-gray-400" />
           <span className="font-medium">{request.requester.name}</span>
-          <span className="text-gray-400 text-xs">({request.requester.role})</span>
+          <span className="text-gray-400 text-xs">({t(ROLE_LABEL_KEY[request.requester.role] || 'roleEmployee')})</span>
         </div>
         {request.project && (
           <div className="flex items-center gap-2 text-sm text-gray-700">

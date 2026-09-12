@@ -133,6 +133,14 @@ export default function UsersPage() {
     FOREMAN:  'bg-purple-100 text-purple-700',
   }
 
+  const roleLabelKey: Record<string, any> = {
+    ADMIN: 'roleAdmin',
+    MANAGER: 'roleManager',
+    EMPLOYEE: 'roleEmployee',
+    FOREMAN: 'roleForeman',
+  }
+  const roleLabel = (r: string) => t(roleLabelKey[r] || 'roleEmployee')
+
   function displayName(user: User) {
     return user.name || user.email
   }
@@ -251,7 +259,7 @@ export default function UsersPage() {
                           className="text-xs border border-blue-300 rounded-lg px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                         >
                           {ROLES.map((r) => (
-                            <option key={r} value={r}>{r}</option>
+                            <option key={r} value={r}>{roleLabel(r)}</option>
                           ))}
                         </select>
                         <button
@@ -276,7 +284,7 @@ export default function UsersPage() {
                         className={`group flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${roleColor[user.role] || 'bg-gray-100 text-gray-600'} hover:ring-2 hover:ring-blue-300 transition-all`}
                         title={t('changeRole')}
                       >
-                        {user.role}
+                        {roleLabel(user.role)}
                         <Pencil size={10} className="opacity-0 group-hover:opacity-60 transition-opacity" />
                       </button>
                     )}
