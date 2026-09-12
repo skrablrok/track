@@ -28,6 +28,7 @@ type Tool = {
   maxStock: number
   binLocation?: string | null
   warehouseStocks: WarehouseStock[]
+  orderedQty?: number
   qrCode: string
   updatedAt: string
   checkouts: Array<{ id: string; user: { name: string }; project?: { name: string; location?: string } }>
@@ -303,6 +304,9 @@ export default function ToolsPage() {
                         <div className={`h-1 rounded-full ${pct === 0 ? 'bg-red-400' : pct <= 30 ? 'bg-amber-400' : 'bg-green-400'}`} style={{ width: `${pct}%` }} />
                       </div>
                       <span className="text-xs text-gray-500 whitespace-nowrap">{tool.currentStock}/{tool.totalStock}</span>
+                      {!!tool.orderedQty && (
+                        <span className="text-xs text-blue-600 whitespace-nowrap">· {tool.orderedQty} {t('orderedQtyLabel')}</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -439,6 +443,9 @@ export default function ToolsPage() {
                         <div className="w-16 bg-gray-100 rounded-full h-1 mt-1">
                           <div className={`h-1 rounded-full ${pct === 0 ? 'bg-red-400' : pct <= 30 ? 'bg-amber-400' : 'bg-green-400'}`} style={{ width: `${pct}%` }} />
                         </div>
+                        {!!tool.orderedQty && (
+                          <div className="text-xs text-blue-600 whitespace-nowrap mt-0.5">{tool.orderedQty} {t('orderedQtyLabel')}</div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${stockColor(tool)}`}>

@@ -53,6 +53,12 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
 
   if (!tool) notFound()
 
+  const onOrder = await db.requestItem.aggregate({
+    where: { toolId: tool.id, procurementStatus: 'ORDERED' },
+    _sum: { requestedQty: true },
+  })
+  const orderedQty = onOrder._sum.requestedQty || 0
+
   const activeCheckouts = tool.checkouts.filter((c) => c.status === 'ACTIVE' || c.status === 'PENDING_RETURN')
   const isLowStock = tool.currentStock <= tool.minStock
   const isMaterial = tool.type === 'MATERIAL'
@@ -131,6 +137,9 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-500">
                   {tool.currentStock} {tr(lang, 'of')} {tool.totalStock} {tr(lang, 'available')}
+                  {orderedQty > 0 && (
+                    <span className="text-blue-600"> · {orderedQty} {tr(lang, 'orderedQtyLabel')}</span>
+                  )}
                 </span>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                   tool.currentStock === 0 ? 'bg-red-100 text-red-700' :

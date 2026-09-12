@@ -30,7 +30,15 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' },
     })
 
-    const tools = lowStock ? allTools.filter((t) => t.currentStock <= t.minStock) : allTools
+    const onOrder = await db.requestItem.groupBy({
+      by: ['toolId'],
+      where: { toolId: { in: allTools.map((t) => t.id) }, procurementStatus: 'ORDERED' },
+      _sum: { requestedQty: true },
+    })
+    const onOrderByToolId = new Map(onOrder.map((o) => [o.toolId, o._sum.requestedQty || 0]))
+    const toolsWithOrders = allTools.map((t) => ({ ...t, orderedQty: onOrderByToolId.get(t.id) || 0 }))
+
+    const tools = lowStock ? toolsWithOrders.filter((t) => t.currentStock <= t.minStock) : toolsWithOrders
     return NextResponse.json(tools)
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()
