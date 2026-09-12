@@ -37,24 +37,36 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    await db.$transaction([
-      ...(matchedItems.length > 0
-        ? [
-            db.requestItem.updateMany({
-              where: { id: { in: matchedItems.map((i) => i.id) } },
-              data: { procurementStatus: 'COMPLETED', procurementUpdatedAt: new Date(), purchaseId: purchase.id },
-            }),
-          ]
-        : []),
-      ...(unmatchedItems.length > 0
-        ? [
-            db.requestItem.updateMany({
-              where: { id: { in: unmatchedItems.map((i) => i.id) } },
-              data: { procurementStatus: 'NOT_ON_RECEIPT', procurementUpdatedAt: new Date(), purchaseId: purchase.id },
-            }),
-          ]
-        : []),
-    ])
+    await db.$transaction(async (tx) => {
+      if (matchedItems.length > 0) {
+        await tx.requestItem.updateMany({
+          where: { id: { in: matchedItems.map((i) => i.id) } },
+          data: { procurementStatus: 'COMPLETED', procurementUpdatedAt: new Date(), purchaseId: purchase.id },
+        })
+
+        // Items that showed up on the receipt actually arrived — add the ordered
+        // quantity back into stock (mirrors the restock endpoint's logic).
+        const qtyByToolId = new Map<string, number>()
+        for (const item of matchedItems) {
+          if (!item.toolId) continue
+          qtyByToolId.set(item.toolId, (qtyByToolId.get(item.toolId) || 0) + item.requestedQty)
+        }
+        for (const [toolId, qty] of Array.from(qtyByToolId.entries())) {
+          const tool = await tx.tool.findUnique({ where: { id: toolId }, select: { currentStock: true, totalStock: true } })
+          if (!tool) continue
+          const newCurrentStock = tool.currentStock + qty
+          const newTotalStock = Math.max(tool.totalStock, newCurrentStock)
+          await tx.tool.update({ where: { id: toolId }, data: { currentStock: newCurrentStock, totalStock: newTotalStock } })
+        }
+      }
+
+      if (unmatchedItems.length > 0) {
+        await tx.requestItem.updateMany({
+          where: { id: { in: unmatchedItems.map((i) => i.id) } },
+          data: { procurementStatus: 'NOT_ON_RECEIPT', procurementUpdatedAt: new Date(), purchaseId: purchase.id },
+        })
+      }
+    })
 
     await logAudit(
       admin.id,
