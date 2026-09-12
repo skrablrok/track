@@ -7,20 +7,17 @@ import { matchReceiptItems } from '@/lib/receipt-extraction'
 export async function POST(req: NextRequest) {
   try {
     const admin = await requireRole(['ADMIN', 'MANAGER'])
-    const { ids, photoUrl } = await req.json()
+    const { batchId, photoUrl } = await req.json()
 
-    if (!Array.isArray(ids) || ids.length === 0) return badRequest('No items selected')
+    if (!batchId || typeof batchId !== 'string') return badRequest('No order selected')
     if (!photoUrl || typeof photoUrl !== 'string') return badRequest('A receipt photo is required')
 
     const items = await db.requestItem.findMany({
-      where: { id: { in: ids }, request: { organizationId: admin.organizationId } },
+      where: { procurementBatchId: batchId, procurementStatus: 'ORDERED', request: { organizationId: admin.organizationId } },
       include: { tool: { select: { name: true } } },
     })
 
-    if (items.length !== ids.length) return badRequest('Some items were not found')
-    if (items.some((i) => i.procurementStatus !== 'ORDERED')) {
-      return badRequest('All selected items must be Ordered')
-    }
+    if (items.length === 0) return badRequest('This order has no items awaiting receipt')
 
     const expected = items.map((i) => ({ id: i.id, name: i.tool?.name || i.itemName || 'item' }))
     const result = await matchReceiptItems(photoUrl, expected)

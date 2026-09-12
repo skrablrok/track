@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { ShoppingCart, AlertTriangle, Package, Truck, CheckCircle2, CheckSquare, Check, X, Receipt } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import ReceiptVerifyModal from '@/components/procurement/ReceiptVerifyModal'
+import MarkOrderedModal from '@/components/procurement/MarkOrderedModal'
 
 type ProcurementItem = {
   id: string
@@ -13,6 +14,8 @@ type ProcurementItem = {
   requestedQty: number
   procurementStatus: string
   procurementUpdatedAt: string
+  procurementBatchId?: string | null
+  deliverTo?: string | null
   requestId: string
   tool: { id: string; name: string; imageUrl?: string; currentStock: number } | null
   purchase: { id: string; photoUrl: string } | null
@@ -23,6 +26,8 @@ type ProcurementItem = {
     project?: { id: string; name: string } | null
   }
 }
+
+type Batch = { batchId: string; deliverTo: string; orderedAt: string; items: ProcurementItem[] }
 
 const STAGES = ['PENDING_PURCHASE', 'ORDERED', 'RECEIVED', 'COMPLETED'] as const
 type StatusFilter = 'ALL' | typeof STAGES[number] | 'NOT_ON_RECEIPT'
@@ -35,8 +40,8 @@ export default function ProcurementPage() {
   const [updating, setUpdating] = useState<string | null>(null)
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [bulkOrdering, setBulkOrdering] = useState(false)
-  const [receiptModalIds, setReceiptModalIds] = useState<string[] | null>(null)
+  const [markOrderedIds, setMarkOrderedIds] = useState<string[] | null>(null)
+  const [receiptModalBatch, setReceiptModalBatch] = useState<Batch | null>(null)
   const [resultBanner, setResultBanner] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -94,30 +99,14 @@ export default function ProcurementPage() {
     await setStatus(item.id, next)
   }
 
-  async function handleBulkOrder() {
-    setBulkOrdering(true)
-    setError('')
-    try {
-      const res = await fetch('/api/admin/procurement/bulk-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: Array.from(selectedIds) }),
-      })
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        setError(d.error || 'Failed')
-        return
-      }
-      exitSelectionMode()
-      await load()
-    } finally {
-      setBulkOrdering(false)
-    }
+  function handleMarkOrderedDone() {
+    setMarkOrderedIds(null)
+    exitSelectionMode()
+    load()
   }
 
   function handleReceiptDone(result: { matched: number; unmatched: number }) {
-    setReceiptModalIds(null)
-    exitSelectionMode()
+    setReceiptModalBatch(null)
     setResultBanner(`${result.matched} ${t('matchedOnReceipt').toLowerCase()} · ${result.unmatched} ${t('notOnReceipt').toLowerCase()}`)
     load()
   }
@@ -131,9 +120,23 @@ export default function ProcurementPage() {
   }
 
   const filterTabs = ['ALL', ...STAGES, 'NOT_ON_RECEIPT'] as const
-  const canBulkOrder = statusFilter === 'PENDING_PURCHASE'
-  const canBulkReceipt = statusFilter === 'ORDERED'
-  const canSelect = canBulkOrder || canBulkReceipt
+  const isOrderedTab = statusFilter === 'ORDERED'
+  const canSelect = statusFilter === 'PENDING_PURCHASE'
+
+  const batches: Batch[] = isOrderedTab
+    ? Object.values(
+        items.reduce((acc, item) => {
+          if (!item.procurementBatchId) return acc
+          const key = item.procurementBatchId
+          if (!acc[key]) {
+            acc[key] = { batchId: key, deliverTo: item.deliverTo || '', orderedAt: item.procurementUpdatedAt, items: [] }
+          }
+          acc[key].items.push(item)
+          return acc
+        }, {} as Record<string, Batch>)
+      )
+    : []
+  const flatItems = isOrderedTab ? items.filter((i) => !i.procurementBatchId) : items
 
   return (
     <div className="space-y-6 fade-in">
@@ -184,7 +187,11 @@ export default function ProcurementPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((item) => {
+          {batches.map((batch) => (
+            <BatchCard key={batch.batchId} batch={batch} t={t} onCheckReceipt={() => setReceiptModalBatch(batch)} />
+          ))}
+
+          {flatItems.map((item) => {
             const cfg = statusConfig[item.procurementStatus] || statusConfig.PENDING_PURCHASE
             const Icon = cfg.icon
             const isCustom = !item.tool
@@ -220,6 +227,7 @@ export default function ProcurementPage() {
                     <span>· {format(new Date(item.request.createdAt), 'MMM d, yyyy')}</span>
                     <span>· {item.requestedQty} {t('unitsRequested')}</span>
                     {!isCustom && <span>· {item.tool!.currentStock} {t('inStock')}</span>}
+                    {isNotOnReceipt && item.deliverTo && <span>· {t('deliverToLabel')}: {item.deliverTo}</span>}
                     {item.purchase && !selectionMode && (
                       <a href={item.purchase.photoUrl} target="_blank" rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -266,10 +274,19 @@ export default function ProcurementPage() {
         </div>
       )}
 
-      {receiptModalIds && (
+      {markOrderedIds && (
+        <MarkOrderedModal
+          itemIds={markOrderedIds}
+          onClose={() => setMarkOrderedIds(null)}
+          onDone={handleMarkOrderedDone}
+        />
+      )}
+
+      {receiptModalBatch && (
         <ReceiptVerifyModal
-          itemIds={receiptModalIds}
-          onClose={() => setReceiptModalIds(null)}
+          batchId={receiptModalBatch.batchId}
+          items={receiptModalBatch.items.map((i) => ({ id: i.id, name: i.tool ? i.tool.name : (i.itemName || 'item') }))}
+          onClose={() => setReceiptModalBatch(null)}
           onDone={handleReceiptDone}
         />
       )}
@@ -286,18 +303,10 @@ export default function ProcurementPage() {
                 className="text-xs text-gray-300 hover:text-white underline">
                 {t('selectAllItems')}
               </button>
-              {canBulkOrder && (
-                <button onClick={handleBulkOrder} disabled={bulkOrdering}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-xl disabled:opacity-60">
-                  {bulkOrdering ? '…' : `${t('markAsOrdered')} (${selectedIds.size})`}
-                </button>
-              )}
-              {canBulkReceipt && (
-                <button onClick={() => setReceiptModalIds(Array.from(selectedIds))}
-                  className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-xl">
-                  <Receipt size={13} /> {t('checkReceipt')} ({selectedIds.size})
-                </button>
-              )}
+              <button onClick={() => setMarkOrderedIds(Array.from(selectedIds))}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-xl">
+                {t('markAsOrdered')} ({selectedIds.size})
+              </button>
             </>
           )}
           <button onClick={exitSelectionMode} className="p-1.5 text-gray-400 hover:text-white">
@@ -305,6 +314,41 @@ export default function ProcurementPage() {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+function BatchCard({ batch, onCheckReceipt, t }: { batch: Batch; onCheckReceipt: () => void; t: (key: any) => string }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Truck size={16} className="text-blue-500" />
+            <span className="font-semibold text-gray-900 text-sm">{batch.deliverTo}</span>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+              {batch.items.length} {t('itemsInOrder')}
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            {t('orderedOnLabel')} {format(new Date(batch.orderedAt), 'MMM d, yyyy')}
+          </p>
+        </div>
+        <button onClick={onCheckReceipt}
+          className="flex-shrink-0 flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-medium transition-colors">
+          <Receipt size={13} /> {t('checkReceipt')}
+        </button>
+      </div>
+      <ul className="mt-3 divide-y divide-gray-50 border-t border-gray-50">
+        {batch.items.map((item) => (
+          <li key={item.id} className="py-2 flex items-center justify-between gap-2">
+            <Link href={`/requests/${item.requestId}`} className="text-sm text-gray-700 hover:underline truncate">
+              {item.tool ? item.tool.name : item.itemName}
+            </Link>
+            <span className="text-xs text-gray-400 flex-shrink-0">{item.requestedQty}× · {item.request.requester.name}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

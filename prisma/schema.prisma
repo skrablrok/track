@@ -171,6 +171,8 @@ model RequestItem {
   procurementUpdatedAt DateTime?
   reservedQty          Int       @default(0)
   purchaseId           String?
+  procurementBatchId   String?
+  deliverTo            String?
   createdAt            DateTime  @default(now())
   request              Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
   tool                 Tool?     @relation(fields: [toolId], references: [id])
