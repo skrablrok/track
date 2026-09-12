@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { ShoppingCart, AlertTriangle, Package, Truck, CheckCircle2, CheckSquare, Check, X, Receipt } from 'lucide-react'
+import { ShoppingCart, AlertTriangle, Package, Truck, CheckCircle2, CheckSquare, Check, X, Receipt, ChevronDown } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import ReceiptVerifyModal from '@/components/procurement/ReceiptVerifyModal'
 import MarkOrderedModal from '@/components/procurement/MarkOrderedModal'
@@ -16,6 +16,7 @@ type ProcurementItem = {
   procurementUpdatedAt: string
   procurementBatchId?: string | null
   deliverTo?: string | null
+  orderedAt?: string | null
   requestId: string
   tool: { id: string; name: string; imageUrl?: string; currentStock: number } | null
   purchase: { id: string; photoUrl: string } | null
@@ -27,7 +28,7 @@ type ProcurementItem = {
   }
 }
 
-type Batch = { batchId: string; deliverTo: string; orderedAt: string; items: ProcurementItem[] }
+type Batch = { batchId: string; deliverTo: string; orderedAt: string; status: string; items: ProcurementItem[] }
 
 const STAGES = ['PENDING_PURCHASE', 'ORDERED', 'RECEIVED', 'COMPLETED'] as const
 type StatusFilter = 'ALL' | typeof STAGES[number] | 'NOT_ON_RECEIPT'
@@ -120,23 +121,29 @@ export default function ProcurementPage() {
   }
 
   const filterTabs = ['ALL', ...STAGES, 'NOT_ON_RECEIPT'] as const
-  const isOrderedTab = statusFilter === 'ORDERED'
+  const groupByBatch = statusFilter === 'ORDERED' || statusFilter === 'COMPLETED'
   const canSelect = statusFilter === 'PENDING_PURCHASE'
 
-  const batches: Batch[] = isOrderedTab
+  const batches: Batch[] = groupByBatch
     ? Object.values(
         items.reduce((acc, item) => {
           if (!item.procurementBatchId) return acc
           const key = item.procurementBatchId
           if (!acc[key]) {
-            acc[key] = { batchId: key, deliverTo: item.deliverTo || '', orderedAt: item.procurementUpdatedAt, items: [] }
+            acc[key] = {
+              batchId: key,
+              deliverTo: item.deliverTo || '',
+              orderedAt: item.orderedAt || item.procurementUpdatedAt,
+              status: item.procurementStatus,
+              items: [],
+            }
           }
           acc[key].items.push(item)
           return acc
         }, {} as Record<string, Batch>)
       )
     : []
-  const flatItems = isOrderedTab ? items.filter((i) => !i.procurementBatchId) : items
+  const flatItems = groupByBatch ? items.filter((i) => !i.procurementBatchId) : items
 
   return (
     <div className="space-y-6 fade-in">
@@ -188,7 +195,12 @@ export default function ProcurementPage() {
       ) : (
         <div className="space-y-3">
           {batches.map((batch) => (
-            <BatchCard key={batch.batchId} batch={batch} t={t} onCheckReceipt={() => setReceiptModalBatch(batch)} />
+            <BatchCard
+              key={batch.batchId}
+              batch={batch}
+              t={t}
+              onCheckReceipt={batch.status === 'ORDERED' ? () => setReceiptModalBatch(batch) : undefined}
+            />
           ))}
 
           {flatItems.map((item) => {
@@ -318,15 +330,19 @@ export default function ProcurementPage() {
   )
 }
 
-function BatchCard({ batch, onCheckReceipt, t }: { batch: Batch; onCheckReceipt: () => void; t: (key: any) => string }) {
+function BatchCard({ batch, onCheckReceipt, t }: { batch: Batch; onCheckReceipt?: () => void; t: (key: any) => string }) {
+  const [expanded, setExpanded] = useState(false)
+  const Icon = batch.status === 'COMPLETED' ? CheckCircle2 : Truck
+  const iconColor = batch.status === 'COMPLETED' ? 'text-green-500' : 'text-blue-500'
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div onClick={() => setExpanded((v) => !v)} className="w-full flex items-start justify-between gap-3 flex-wrap p-4 cursor-pointer">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Truck size={16} className="text-blue-500" />
+            <Icon size={16} className={iconColor} />
             <span className="font-semibold text-gray-900 text-sm">{batch.deliverTo}</span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${batch.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
               {batch.items.length} {t('itemsInOrder')}
             </span>
           </div>
@@ -334,21 +350,38 @@ function BatchCard({ batch, onCheckReceipt, t }: { batch: Batch; onCheckReceipt:
             {t('orderedOnLabel')} {format(new Date(batch.orderedAt), 'MMM d, yyyy')}
           </p>
         </div>
-        <button onClick={onCheckReceipt}
-          className="flex-shrink-0 flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-medium transition-colors">
-          <Receipt size={13} /> {t('checkReceipt')}
-        </button>
+        <div className="flex-shrink-0 flex items-center gap-2">
+          {onCheckReceipt && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCheckReceipt() }}
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-medium transition-colors"
+            >
+              <Receipt size={13} /> {t('checkReceipt')}
+            </button>
+          )}
+          <ChevronDown size={16} className={`text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
       </div>
-      <ul className="mt-3 divide-y divide-gray-50 border-t border-gray-50">
-        {batch.items.map((item) => (
-          <li key={item.id} className="py-2 flex items-center justify-between gap-2">
-            <Link href={`/requests/${item.requestId}`} className="text-sm text-gray-700 hover:underline truncate">
-              {item.tool ? item.tool.name : item.itemName}
-            </Link>
-            <span className="text-xs text-gray-400 flex-shrink-0">{item.requestedQty}× · {item.request.requester.name}</span>
-          </li>
-        ))}
-      </ul>
+      {expanded && (
+        <ul className="divide-y divide-gray-50 border-t border-gray-50 px-4 pb-2">
+          {batch.items.map((item) => (
+            <li key={item.id} className="py-2.5 flex items-center justify-between gap-2 flex-wrap">
+              <Link href={`/requests/${item.requestId}`} className="text-sm text-gray-700 hover:underline truncate">
+                {item.tool ? item.tool.name : item.itemName}
+              </Link>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-gray-400">{item.requestedQty}× · {item.request.requester.name}</span>
+                {item.purchase && (
+                  <a href={item.purchase.photoUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                    <Receipt size={11} />{t('viewReceipt')}
+                  </a>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

@@ -173,6 +173,7 @@ model RequestItem {
   purchaseId           String?
   procurementBatchId   String?
   deliverTo            String?
+  orderedAt            DateTime?
   createdAt            DateTime  @default(now())
   request              Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
   tool                 Tool?     @relation(fields: [toolId], references: [id])

@@ -25,14 +25,16 @@ export async function POST(req: NextRequest) {
     }
 
     const batchId = randomUUID()
+    const now = new Date()
 
     await db.requestItem.updateMany({
       where: { id: { in: ids } },
       data: {
         procurementStatus: 'ORDERED',
-        procurementUpdatedAt: new Date(),
+        procurementUpdatedAt: now,
         procurementBatchId: batchId,
         deliverTo: deliverTo.trim(),
+        orderedAt: now,
       },
     })
 
