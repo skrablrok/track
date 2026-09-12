@@ -55,7 +55,7 @@ export default function RequestDetailPage() {
   const [approvals, setApprovals] = useState<Record<string, number>>({})
   const [adminNotes, setAdminNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [warnings, setWarnings] = useState<string[]>([])
+  const [warnings, setWarnings] = useState<{ name: string; stock: number; negative: boolean }[]>([])
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -161,7 +161,8 @@ export default function RequestDetailPage() {
           <ul className="space-y-1">
             {warnings.map((w, i) => (
               <li key={i} className="text-sm text-amber-700 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-amber-400 rounded-full" /> {w}
+                <span className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                {w.name}: {w.stock}{w.negative ? ' (-)' : ''}
               </li>
             ))}
           </ul>
