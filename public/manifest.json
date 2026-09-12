@@ -4,7 +4,7 @@
   "description": "Construction site inventory and tool management system",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#0F172A",
   "theme_color": "#EA580C",
   "orientation": "portrait-primary",
   "categories": ["business", "productivity"],
