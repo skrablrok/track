@@ -141,3 +141,82 @@ export async function matchReceiptItems(
     return null
   }
 }
+
+export type CatalogItem = { id: string; name: string }
+export type CatalogMatchedItem = ReceiptItem & { toolId: string; isMaterial: boolean }
+export type CatalogMatchResult = { items: CatalogMatchedItem[]; totalPrice: number }
+
+const CATALOG_MATCH_SCHEMA = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          quantity: { type: 'number' },
+          unitPrice: { type: 'number' },
+          toolId: { type: 'string' },
+          isMaterial: { type: 'boolean' },
+        },
+        required: ['name', 'quantity', 'unitPrice', 'toolId', 'isMaterial'],
+        additionalProperties: false,
+      },
+    },
+    totalPrice: { type: 'number' },
+  },
+  required: ['items', 'totalPrice'],
+  additionalProperties: false,
+}
+
+// PhotoInput always compresses to a JPEG data URL, so media_type is fixed.
+export async function matchReceiptToCatalog(
+  photoDataUrl: string,
+  catalog: CatalogItem[]
+): Promise<CatalogMatchResult | null> {
+  const commaIdx = photoDataUrl.indexOf(',')
+  if (!photoDataUrl.startsWith('data:image/jpeg;base64,') || commaIdx === -1) return null
+  const base64Data = photoDataUrl.slice(commaIdx + 1)
+
+  const catalogList = catalog.map((c) => `${c.id}: ${c.name}`).join('\n')
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-opus-5',
+      max_tokens: 2048,
+      output_config: {
+        effort: 'medium',
+        format: { type: 'json_schema', schema: CATALOG_MATCH_SCHEMA },
+      },
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Data } },
+            {
+              type: 'text',
+              text:
+                'This is a photo of a store receipt. Extract every line item with its name, quantity, and unit price, plus the total price printed on the receipt. If a quantity is not shown for an item, use 1. Use the numbers exactly as printed, without a currency symbol.\n\n' +
+                'For each line item, also decide:\n' +
+                '1. `toolId` — whether it matches something already in our inventory (listed below as id: name), allowing for abbreviations, different wording, or partial matches (e.g. "BOSCH DRILL 18V" matches "Bosch Cordless Drill 18V"). Return that id if so, or an empty string "" if not. Be conservative: only return an id when you are confident it is the same item — an empty string is safer than a wrong guess, since a wrong match would corrupt a different item\'s stock count.\n' +
+                '2. `isMaterial` — true if it is a consumable that gets used up (screws, cement, paint, fuel), false if it is reusable equipment someone would use and later return (a drill, a ladder, a saw). Only meaningful when `toolId` is empty.\n\n' +
+                'Our current inventory (id: name):\n' +
+                catalogList,
+            },
+          ],
+        },
+      ],
+    })
+
+    if (response.stop_reason === 'refusal') return null
+
+    const textBlock = response.content.find((b) => b.type === 'text')
+    if (!textBlock || textBlock.type !== 'text') return null
+
+    return JSON.parse(textBlock.text) as CatalogMatchResult
+  } catch (e) {
+    console.error('Receipt catalog matching failed:', e)
+    return null
+  }
+}
