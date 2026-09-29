@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
-import { ClipboardList, Plus, Search, ChevronRight, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { ChevronRight, AlertCircle } from 'lucide-react'
+import { IconNarocilo, IconDodaj, IconIskanje, IconVPripravi, IconPotrjeno, IconZavrnjeno } from '@/components/icons/BuildFlowIcons'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 type Request = {
@@ -61,10 +62,10 @@ export default function RequestsPage() {
   const rest = filtered.filter((r) => r.status !== 'PENDING')
 
   const statusConfig = {
-    PENDING:            { label: t('pending'),           color: 'bg-amber-100 text-amber-700',  icon: Clock },
-    APPROVED:           { label: t('approved'),          color: 'bg-green-100 text-green-700',  icon: CheckCircle2 },
+    PENDING:            { label: t('pending'),           color: 'bg-amber-100 text-amber-700',  icon: IconVPripravi },
+    APPROVED:           { label: t('approved'),          color: 'bg-green-100 text-green-700',  icon: IconPotrjeno },
     PARTIALLY_APPROVED: { label: t('partial'),           color: 'bg-blue-100 text-blue-700',    icon: AlertCircle },
-    REJECTED:           { label: t('rejected'),          color: 'bg-red-100 text-red-700',      icon: XCircle },
+    REJECTED:           { label: t('rejected'),          color: 'bg-red-100 text-red-700',      icon: IconZavrnjeno },
   }
 
   const filterTabs = ['ALL', 'PENDING', 'APPROVED', 'PARTIALLY_APPROVED', 'REJECTED']
@@ -80,13 +81,13 @@ export default function RequestsPage() {
         </div>
         <Link href="/requests/new"
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
-          <Plus size={16} /> {t('newRequest')}
+          <IconDodaj size={16} /> {t('newRequest')}
         </Link>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <IconIskanje className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input type="text" placeholder={t('search') + '…'} value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
@@ -111,7 +112,7 @@ export default function RequestsPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <IconNarocilo className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-400">{t('noRequestsFound')}</p>
           <Link href="/requests/new" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
             {t('submitFirst')}

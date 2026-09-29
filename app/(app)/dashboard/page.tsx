@@ -4,9 +4,10 @@ import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import {
-  Wrench, AlertTriangle, PackageCheck, ClipboardList, ArrowRight, Package,
+  PackageCheck, ClipboardList, ArrowRight,
   Plus, Pencil, Trash2, RotateCcw, ShoppingCart, ClipboardCheck, FileSpreadsheet, Info,
 } from 'lucide-react'
+import { IconOrodje, IconMaterial, IconNizkaZaloga } from '@/components/icons/BuildFlowIcons'
 import { formatMinutes } from '@/lib/utils'
 import { format, formatDistanceToNow } from 'date-fns'
 import { t } from '@/lib/i18n/translations'
@@ -18,7 +19,7 @@ function activityIcon(action: string) {
   if (action.startsWith('UPDATE')) return { Icon: Pencil, color: 'bg-gray-100 text-gray-500' }
   if (action.startsWith('RETURN')) return { Icon: RotateCcw, color: 'bg-blue-50 text-blue-600' }
   if (action === 'CHECKOUT' || action === 'USE_MATERIAL') return { Icon: ClipboardList, color: 'bg-blue-50 text-blue-600' }
-  if (action === 'RESTOCK') return { Icon: Package, color: 'bg-purple-50 text-purple-600' }
+  if (action === 'RESTOCK') return { Icon: IconMaterial, color: 'bg-purple-50 text-purple-600' }
   if (action === 'REVIEW_REQUEST' || action === 'PROCUREMENT_STATUS_CHANGE') return { Icon: ClipboardCheck, color: 'bg-amber-50 text-amber-600' }
   if (action === 'BULK_IMPORT') return { Icon: FileSpreadsheet, color: 'bg-blue-50 text-blue-600' }
   if (action === 'CREATE_PURCHASE') return { Icon: ShoppingCart, color: 'bg-green-50 text-green-600' }
@@ -56,8 +57,8 @@ export default async function DashboardPage() {
   ])
 
   const stats = [
-    { label: t(lang, 'toolsInStock'),      value: toolCount,        icon: Wrench,        color: 'bg-blue-50 text-blue-600' },
-    { label: t(lang, 'materialsInStock'),  value: materialCount,    icon: Package,       color: 'bg-purple-50 text-purple-600' },
+    { label: t(lang, 'toolsInStock'),      value: toolCount,        icon: IconOrodje,        color: 'bg-blue-50 text-blue-600' },
+    { label: t(lang, 'materialsInStock'),  value: materialCount,    icon: IconMaterial,       color: 'bg-purple-50 text-purple-600' },
     { label: t(lang, 'activeCheckouts'),   value: activeCheckouts,  icon: ClipboardList, color: 'bg-amber-50 text-amber-600' },
   ]
 
@@ -102,7 +103,7 @@ export default async function DashboardPage() {
         <div className={`stat-card ${lowStockTools.length > 0 ? 'bg-amber-50 border-amber-200' : ''}`}>
           <div className="flex items-start justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
-              <AlertTriangle size={20} />
+              <IconNizkaZaloga size={20} />
             </div>
             {lowStockTools.length > 0 && (
               <span className="text-[10px] font-semibold text-amber-700 bg-amber-200/60 px-2 py-0.5 rounded-full uppercase tracking-wide">
@@ -156,7 +157,7 @@ export default async function DashboardPage() {
                                   {checkout.tool.imageUrl ? (
                                     <img src={checkout.tool.imageUrl} alt={checkout.tool.name} className="w-full h-full object-cover" />
                                   ) : (
-                                    <Wrench size={14} className="text-gray-400" />
+                                    <IconOrodje size={14} className="text-gray-400" />
                                   )}
                                 </div>
                                 <span className="font-medium text-gray-900 truncate">{checkout.tool.name}</span>
@@ -197,7 +198,7 @@ export default async function DashboardPage() {
                         {checkout.tool.imageUrl ? (
                           <img src={checkout.tool.imageUrl} alt={checkout.tool.name} className="w-full h-full object-cover" />
                         ) : (
-                          <Wrench size={16} className="text-gray-400" />
+                          <IconOrodje size={16} className="text-gray-400" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -227,7 +228,7 @@ export default async function DashboardPage() {
           {lowStockTools.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <IconNizkaZaloga className="w-5 h-5 text-amber-600" />
                 <h2 className="font-semibold text-amber-800">{t(lang, 'lowStockAlert')}</h2>
               </div>
               <div className="space-y-3">

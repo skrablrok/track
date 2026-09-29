@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { FolderOpen, Plus, MapPin, X, User, Trash2, Pencil, Check } from 'lucide-react'
+import { X, User, Check } from 'lucide-react'
+import { IconGradbisce, IconDodaj, IconLokacija, IconIzbrisi, IconUredi } from '@/components/icons/BuildFlowIcons'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
@@ -140,7 +141,7 @@ export default function ProjectsPage() {
         {isAdmin && (
           <button onClick={openForm}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
-            <Plus size={16} /> {t('newProject')}
+            <IconDodaj size={16} /> {t('newProject')}
           </button>
         )}
       </div>
@@ -205,7 +206,7 @@ export default function ProjectsPage() {
         </div>
       ) : projects.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <FolderOpen className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <IconGradbisce className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-400">{t('noProjects')}</p>
         </div>
       ) : (
@@ -240,7 +241,7 @@ export default function ProjectsPage() {
 
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                    <FolderOpen size={18} className="text-blue-500" />
+                    <IconGradbisce size={18} className="text-blue-500" />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</span>
@@ -248,7 +249,7 @@ export default function ProjectsPage() {
                       <button onClick={() => setConfirmDeleteId(project.id)}
                         className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
                         title="Delete project">
-                        <Trash2 size={14} />
+                        <IconIzbrisi size={14} />
                       </button>
                     )}
                   </div>
@@ -257,7 +258,7 @@ export default function ProjectsPage() {
                 <h3 className="font-semibold text-gray-900 text-sm">{project.name}</h3>
                 {project.location && (
                   <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
-                    <MapPin size={12} />{project.location}
+                    <IconLokacija size={12} />{project.location}
                   </div>
                 )}
 
@@ -309,7 +310,7 @@ export default function ProjectsPage() {
                           className="ml-auto p-1 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
                           title={t('changeForeman')}
                         >
-                          <Pencil size={11} />
+                          <IconUredi size={11} />
                         </button>
                       )}
                     </>

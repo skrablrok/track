@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { formatMinutes } from '@/lib/utils'
-import { Search, Clock, MapPin, User, Wrench, CornerDownLeft, Check, X } from 'lucide-react'
+import { Clock, MapPin, User, CornerDownLeft, Check, X } from 'lucide-react'
+import { IconIskanje, IconOrodje } from '@/components/icons/BuildFlowIcons'
 import { useSession } from 'next-auth/react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import ReturnMaterialButton from '@/components/checkouts/ReturnMaterialButton'
@@ -116,7 +117,7 @@ export default function CheckoutsPage() {
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <IconIskanje className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input type="text" placeholder={t('search') + '…'} value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
@@ -249,7 +250,7 @@ function CheckoutRow({ checkout: c, onReturn, onAdminAction, returning, armed, a
         }`}>
           {c.tool.imageUrl
             ? <img src={c.tool.imageUrl} alt={c.tool.name} className="w-full h-full object-cover" />
-            : <Wrench size={16} className={isPending ? 'text-amber-500' : c.status === 'ACTIVE' ? 'text-amber-400' : c.status === 'CONSUMED' ? 'text-purple-400' : 'text-gray-400'} />}
+            : <IconOrodje size={16} className={isPending ? 'text-amber-500' : c.status === 'ACTIVE' ? 'text-amber-400' : c.status === 'CONSUMED' ? 'text-purple-400' : 'text-gray-400'} />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">

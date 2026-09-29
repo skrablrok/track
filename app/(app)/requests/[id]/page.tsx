@@ -6,9 +6,12 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
 import {
-  ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle,
-  User, MapPin, Calendar, Wrench, AlertTriangle, Package,
+  ArrowLeft, AlertCircle,
+  User, AlertTriangle,
 } from 'lucide-react'
+import {
+  IconVPripravi, IconPotrjeno, IconZavrnjeno, IconLokacija, IconOrodje, IconNizkaZaloga,
+} from '@/components/icons/BuildFlowIcons'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 type RequestDetail = {
@@ -39,10 +42,10 @@ const ROLE_LABEL_KEY: Record<string, any> = {
 }
 
 const STATUS_CONFIG = {
-  PENDING:            { tKey: 'pendingReview' as const,        color: 'bg-amber-100 text-amber-800 border-amber-200',  icon: Clock },
-  APPROVED:           { tKey: 'approved' as const,             color: 'bg-green-100 text-green-800 border-green-200',  icon: CheckCircle2 },
+  PENDING:            { tKey: 'pendingReview' as const,        color: 'bg-amber-100 text-amber-800 border-amber-200',  icon: IconVPripravi },
+  APPROVED:           { tKey: 'approved' as const,             color: 'bg-green-100 text-green-800 border-green-200',  icon: IconPotrjeno },
   PARTIALLY_APPROVED: { tKey: 'partiallyApproved' as const,    color: 'bg-blue-100 text-blue-800 border-blue-200',     icon: AlertCircle },
-  REJECTED:           { tKey: 'rejected' as const,             color: 'bg-red-100 text-red-800 border-red-200',        icon: XCircle },
+  REJECTED:           { tKey: 'rejected' as const,             color: 'bg-red-100 text-red-800 border-red-200',        icon: IconZavrnjeno },
 }
 
 const PROCUREMENT_BADGE: Record<string, { tKey: 'procurementPending' | 'procurementOrdered' | 'procurementCompleted'; color: string }> = {
@@ -161,7 +164,7 @@ export default function RequestDetailPage() {
       {done && warnings.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={16} className="text-amber-600" />
+            <IconNizkaZaloga size={16} className="text-amber-600" />
             <p className="font-semibold text-amber-800 text-sm">{t('stockReplenishmentNeeded')}</p>
           </div>
           <ul className="space-y-1">
@@ -177,7 +180,7 @@ export default function RequestDetailPage() {
 
       {done && !warnings.length && (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-green-500" />
+          <IconPotrjeno className="w-5 h-5 text-green-500" />
           <p className="text-green-800 text-sm font-medium">{t('reviewedSuccessfully')}</p>
         </div>
       )}
@@ -212,7 +215,7 @@ export default function RequestDetailPage() {
         </div>
         {request.project && (
           <div className="flex items-center gap-2 text-sm text-gray-700">
-            <MapPin size={15} className="text-gray-400" />
+            <IconLokacija size={15} className="text-gray-400" />
             <span>{request.project.name}</span>
             {request.project.location && <span className="text-gray-400 text-xs">· {request.project.location}</span>}
           </div>
@@ -265,7 +268,7 @@ export default function RequestDetailPage() {
                       ? <AlertTriangle size={16} className="text-purple-400" />
                       : item.tool!.imageUrl
                         ? <img src={item.tool!.imageUrl} alt={item.tool!.name} className="w-full h-full object-cover" />
-                        : <Wrench size={16} className="text-gray-400" />}
+                        : <IconOrodje size={16} className="text-gray-400" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -302,7 +305,7 @@ export default function RequestDetailPage() {
                     )}
                     {wouldGoNeg && isPending && (
                       <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                        <AlertTriangle size={11} /> {t('stockWillGoNeg')}
+                        <IconNizkaZaloga size={11} /> {t('stockWillGoNeg')}
                       </p>
                     )}
                   </div>

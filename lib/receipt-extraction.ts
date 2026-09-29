@@ -48,7 +48,7 @@ export async function extractReceiptData(photoDataUrl: string): Promise<ReceiptE
             { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Data } },
             {
               type: 'text',
-              text: 'This is a photo of a store receipt. Extract every line item with its name, quantity, and unit price, plus the total price printed on the receipt. If a quantity is not shown for an item, use 1. Use the numbers exactly as printed, without a currency symbol.',
+              text: 'This is a photo of a store receipt. It may be in any language (e.g. Slovenian). Extract every line item with its name, quantity, and unit price, plus the total price printed on the receipt. Keep item names in the exact language and wording printed on the receipt — do not translate them. If a quantity is not shown for an item, use 1. Use the numbers exactly as printed, without a currency symbol.',
             },
           ],
         },
@@ -120,7 +120,7 @@ export async function matchReceiptItems(
             {
               type: 'text',
               text:
-                'This is a photo of a store receipt or invoice. Extract every line item with its name, quantity, and unit price, plus the total price printed on the receipt. If a quantity is not shown for an item, use 1. Use the numbers exactly as printed, without a currency symbol.\n\n' +
+                'This is a photo of a store receipt or invoice. It may be in any language (e.g. Slovenian). Extract every line item with its name, quantity, and unit price, plus the total price printed on the receipt. Keep item names in the exact language and wording printed on the receipt — do not translate them. If a quantity is not shown for an item, use 1. Use the numbers exactly as printed, without a currency symbol.\n\n' +
                 'We also expected the following items to be on this receipt (id: name):\n' +
                 expectedList +
                 '\n\nFor each expected item, decide whether it actually appears on the receipt, allowing for abbreviations, different wording, or partial matches (e.g. "BOSCH DRILL 18V" matches "Bosch Cordless Drill 18V"). Return one entry per expected id in `matches`: if it appears on the receipt, set `found: true` and `quantity` to the quantity printed for that line on the receipt (the actual amount purchased, which may differ from what was expected); if it does not appear, set `found: false` and `quantity: 0`.',
@@ -197,7 +197,7 @@ export async function matchReceiptToCatalog(
             {
               type: 'text',
               text:
-                'This is a photo of a store receipt. Extract every line item with its name, quantity, and unit price, plus the total price printed on the receipt. If a quantity is not shown for an item, use 1. Use the numbers exactly as printed, without a currency symbol.\n\n' +
+                'This is a photo of a store receipt. It may be in any language (e.g. Slovenian). Extract every line item with its name, quantity, and unit price, plus the total price printed on the receipt. Keep item names in the exact language and wording printed on the receipt — do not translate them. If a quantity is not shown for an item, use 1. Use the numbers exactly as printed, without a currency symbol.\n\n' +
                 'For each line item, also decide:\n' +
                 '1. `toolId` — whether it matches something already in our inventory (listed below as id: name), allowing for abbreviations, different wording, or partial matches (e.g. "BOSCH DRILL 18V" matches "Bosch Cordless Drill 18V"). Return that id if so, or an empty string "" if not. Be conservative: only return an id when you are confident it is the same item — an empty string is safer than a wrong guess, since a wrong match would corrupt a different item\'s stock count.\n' +
                 '2. `isMaterial` — true if it is a consumable that gets used up (screws, cement, paint, fuel), false if it is reusable equipment someone would use and later return (a drill, a ladder, a saw). Only meaningful when `toolId` is empty.\n\n' +

@@ -1,6 +1,10 @@
 'use client'
 
-import { Bell, ChevronDown, X, CheckCheck, AlertTriangle, CheckCircle2, Info, Receipt, Search, Wrench, Package } from 'lucide-react'
+import { ChevronDown, X, CheckCheck, Info } from 'lucide-react'
+import {
+  IconObvestila, IconIskanje, IconOrodje, IconMaterial,
+  IconNizkaZaloga, IconPotrjeno, IconZavrnjeno, IconDostava,
+} from '@/components/icons/BuildFlowIcons'
 import { useState, useEffect, useRef } from 'react'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
@@ -30,10 +34,10 @@ type Notification = {
 type SearchResult = { id: string; name: string; type?: string; category?: string | null }
 
 const notifIcon = (type: string) => {
-  if (type.includes('STOCK')) return <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
-  if (type.includes('APPROVED')) return <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
-  if (type.includes('REJECTED')) return <X size={14} className="text-red-500 flex-shrink-0" />
-  if (type.includes('PURCHASE')) return <Receipt size={14} className="text-purple-500 flex-shrink-0" />
+  if (type.includes('STOCK')) return <IconNizkaZaloga size={14} className="text-amber-500 flex-shrink-0" />
+  if (type.includes('APPROVED')) return <IconPotrjeno size={14} className="text-green-500 flex-shrink-0" />
+  if (type.includes('REJECTED')) return <IconZavrnjeno size={14} className="text-red-500 flex-shrink-0" />
+  if (type.includes('PURCHASE')) return <IconDostava size={14} className="text-purple-500 flex-shrink-0" />
   return <Info size={14} className="text-blue-500 flex-shrink-0" />
 }
 
@@ -159,7 +163,7 @@ export default function Header({ user, orgName }: Props) {
 
       {/* Global search — desktop only */}
       <div ref={searchRef} className="hidden md:block relative flex-1 max-w-md">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <IconIskanje className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         <input
           ref={searchInputRef}
           type="text"
@@ -185,7 +189,7 @@ export default function Header({ user, orgName }: Props) {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
                 >
                   <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    {r.type === 'MATERIAL' ? <Package size={14} className="text-gray-500" /> : <Wrench size={14} className="text-gray-500" />}
+                    {r.type === 'MATERIAL' ? <IconMaterial size={14} className="text-gray-500" /> : <IconOrodje size={14} className="text-gray-500" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-800 truncate">{r.name}</p>
@@ -210,7 +214,7 @@ export default function Header({ user, orgName }: Props) {
           className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500"
           aria-label={t('searchPlaceholder')}
         >
-          <Search className="w-5 h-5" />
+          <IconIskanje className="w-5 h-5" />
         </button>
 
         {/* Notification Bell */}
@@ -219,7 +223,7 @@ export default function Header({ user, orgName }: Props) {
             onClick={openBell}
             className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors"
           >
-            <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'text-blue-600' : 'text-gray-500'}`} />
+            <IconObvestila className={`w-5 h-5 ${unreadCount > 0 ? 'text-blue-600' : 'text-gray-500'}`} />
             {unreadCount > 0 && (
               <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
                 {unreadCount > 9 ? '9+' : unreadCount}
@@ -350,7 +354,7 @@ export default function Header({ user, orgName }: Props) {
           <div className="bg-white border-b border-gray-100 shadow-xl p-3" onClick={(e) => e.stopPropagation()}>
             <div className="relative flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <IconIskanje className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
                   ref={mobileSearchInputRef}
                   type="text"
@@ -377,7 +381,7 @@ export default function Header({ user, orgName }: Props) {
                       className="w-full flex items-center gap-3 px-6 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
                     >
                       <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        {r.type === 'MATERIAL' ? <Package size={16} className="text-gray-500" /> : <Wrench size={16} className="text-gray-500" />}
+                        {r.type === 'MATERIAL' ? <IconMaterial size={16} className="text-gray-500" /> : <IconOrodje size={16} className="text-gray-500" />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-800 truncate">{r.name}</p>

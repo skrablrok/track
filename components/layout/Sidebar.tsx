@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ShoppingCart, ChevronDown } from 'lucide-react'
 import {
-  LayoutDashboard, Wrench, QrCode, ClipboardList,
-  FolderOpen, BarChart3, Users, LogOut, ClipboardCheck, ShoppingCart, FileSpreadsheet, Receipt,
-  ChevronDown,
-} from 'lucide-react'
+  IconPregled, IconSkladisce, IconSkeniraj, IconPoraba, IconNarocilo,
+  IconGradbisce, IconPorocila, IconDelavci, IconUvoz, IconDostava, IconOdjava,
+} from '@/components/icons/BuildFlowIcons'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
@@ -34,32 +34,32 @@ export default function Sidebar({ role, orgName, userName, counts }: { role: str
     {
       labelKey: 'navGroupMain',
       links: [
-        { href: '/dashboard', key: 'nav_dashboard', icon: LayoutDashboard, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
-        { href: '/scan',      key: 'nav_scan',      icon: QrCode,          roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
-        { href: '/reports',   key: 'nav_reports',   icon: BarChart3,       roles: ['ADMIN','MANAGER'] },
+        { href: '/dashboard', key: 'nav_dashboard', icon: IconPregled, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+        { href: '/scan',      key: 'nav_scan',      icon: IconSkeniraj, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+        { href: '/reports',   key: 'nav_reports',   icon: IconPorocila, roles: ['ADMIN','MANAGER'] },
       ],
     },
     {
       labelKey: 'navGroupWarehouse',
       links: [
-        { href: '/tools',     key: 'nav_tools',     icon: Wrench,         roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'], badge: counts?.tools },
-        { href: '/checkouts', key: 'nav_checkouts', icon: ClipboardList,  roles: ['ADMIN','MANAGER','EMPLOYEE'], badge: counts?.checkouts },
-        { href: '/requests',  key: 'nav_requests',  icon: ClipboardCheck, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'], badge: counts?.requests },
-        { href: '/projects',  key: 'nav_projects',  icon: FolderOpen,     roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+        { href: '/tools',     key: 'nav_tools',     icon: IconSkladisce, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'], badge: counts?.tools },
+        { href: '/checkouts', key: 'nav_checkouts', icon: IconPoraba,    roles: ['ADMIN','MANAGER','EMPLOYEE'], badge: counts?.checkouts },
+        { href: '/requests',  key: 'nav_requests',  icon: IconNarocilo, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'], badge: counts?.requests },
+        { href: '/projects',  key: 'nav_projects',  icon: IconGradbisce, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
       ],
     },
     {
       labelKey: 'navGroupProcurement',
       links: [
-        { href: '/purchases',         key: 'nav_purchases',   icon: Receipt,      roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+        { href: '/purchases',         key: 'nav_purchases',   icon: IconDostava, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
         { href: '/admin/procurement', key: 'nav_procurement', icon: ShoppingCart, roles: ['ADMIN','MANAGER'] },
       ],
     },
     {
       labelKey: 'navGroupSystem',
       links: [
-        { href: '/admin/import', key: 'nav_import', icon: FileSpreadsheet, roles: ['ADMIN','MANAGER'] },
-        { href: '/admin/users',  key: 'nav_users',   icon: Users,          roles: ['ADMIN'] },
+        { href: '/admin/import', key: 'nav_import', icon: IconUvoz,   roles: ['ADMIN','MANAGER'] },
+        { href: '/admin/users',  key: 'nav_users',   icon: IconDelavci, roles: ['ADMIN'] },
       ],
     },
   ]
@@ -123,7 +123,7 @@ export default function Sidebar({ role, orgName, userName, counts }: { role: str
               onClick={() => signOut({ callbackUrl: '/login' })}
               className="w-full flex items-center gap-2 text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
             >
-              <LogOut size={15} />
+              <IconOdjava size={15} />
               {t('nav_signOut')}
             </button>
           </div>

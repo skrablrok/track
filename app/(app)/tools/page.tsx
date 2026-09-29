@@ -3,9 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  Search, Plus, Wrench, AlertTriangle, Trash2, X, Check, CheckSquare,
-  MoreHorizontal, SlidersHorizontal, ChevronLeft, ChevronRight, FileSpreadsheet, Package,
+  X, Check, CheckSquare,
+  MoreHorizontal, ChevronLeft, ChevronRight,
 } from 'lucide-react'
+import {
+  IconIskanje, IconDodaj, IconOrodje, IconIzbrisi,
+  IconFilter, IconUvoz, IconMaterial,
+} from '@/components/icons/BuildFlowIcons'
 import { useSession } from 'next-auth/react'
 import CheckoutModal from '@/components/checkouts/CheckoutModal'
 import { useRouter } from 'next/navigation'
@@ -197,11 +201,11 @@ export default function ToolsPage() {
               <>
                 <Link href="/admin/import"
                   className="hidden sm:flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                  <FileSpreadsheet size={16} />{t('importXlsx')}
+                  <IconUvoz size={16} />{t('importXlsx')}
                 </Link>
                 <Link href="/tools/new"
                   className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
-                  <Plus size={16} />{t('addTool')}
+                  <IconDodaj size={16} />{t('addTool')}
                 </Link>
               </>
             )}
@@ -211,7 +215,7 @@ export default function ToolsPage() {
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <IconIskanje className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input type="text" placeholder={t('search') + '…'} value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
@@ -222,7 +226,7 @@ export default function ToolsPage() {
             filtersOpen || category || warehouseFilter ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
           }`}
         >
-          <SlidersHorizontal size={15} />{t('filtersLabel')}
+          <IconFilter size={15} />{t('filtersLabel')}
         </button>
       </div>
 
@@ -265,7 +269,7 @@ export default function ToolsPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <IconOrodje className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-400">{t('noTools')}</p>
         </div>
       ) : (
@@ -285,7 +289,7 @@ export default function ToolsPage() {
                     </div>
                   )}
                   <div className="w-11 h-11 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
-                    {tool.imageUrl ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" /> : (tool.type === 'MATERIAL' ? <Package size={16} className="text-gray-400" /> : <Wrench size={16} className="text-gray-400" />)}
+                    {tool.imageUrl ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" /> : (tool.type === 'MATERIAL' ? <IconMaterial size={16} className="text-gray-400" /> : <IconOrodje size={16} className="text-gray-400" />)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
@@ -355,7 +359,7 @@ export default function ToolsPage() {
                               ) : (
                                 <button onClick={() => setConfirmDeleteId(tool.id)}
                                   className="w-full flex items-center gap-1.5 text-left px-3 py-2.5 text-sm text-red-600 hover:bg-red-50">
-                                  <Trash2 size={13} />{t('delete')}
+                                  <IconIzbrisi size={13} />{t('delete')}
                                 </button>
                               )
                             )}
@@ -407,7 +411,7 @@ export default function ToolsPage() {
                         {selectionMode ? (
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
-                              {tool.imageUrl ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" /> : (tool.type === 'MATERIAL' ? <Package size={14} className="text-gray-400" /> : <Wrench size={14} className="text-gray-400" />)}
+                              {tool.imageUrl ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" /> : (tool.type === 'MATERIAL' ? <IconMaterial size={14} className="text-gray-400" /> : <IconOrodje size={14} className="text-gray-400" />)}
                             </div>
                             <div className="min-w-0">
                               <p className="font-medium text-gray-900 truncate">{tool.name}</p>
@@ -417,7 +421,7 @@ export default function ToolsPage() {
                         ) : (
                           <Link href={`/tools/${tool.id}`} className="flex items-center gap-2.5 group">
                             <div className="w-8 h-8 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
-                              {tool.imageUrl ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" /> : (tool.type === 'MATERIAL' ? <Package size={14} className="text-gray-400" /> : <Wrench size={14} className="text-gray-400" />)}
+                              {tool.imageUrl ? <img src={tool.imageUrl} alt={tool.name} className="w-full h-full object-cover" /> : (tool.type === 'MATERIAL' ? <IconMaterial size={14} className="text-gray-400" /> : <IconOrodje size={14} className="text-gray-400" />)}
                             </div>
                             <div className="min-w-0">
                               <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">{tool.name}</p>
@@ -492,7 +496,7 @@ export default function ToolsPage() {
                                   ) : (
                                     <button onClick={() => setConfirmDeleteId(tool.id)}
                                       className="w-full flex items-center gap-1.5 text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                                      <Trash2 size={13} />{t('delete')}
+                                      <IconIzbrisi size={13} />{t('delete')}
                                     </button>
                                   )
                                 )}
@@ -561,7 +565,7 @@ export default function ToolsPage() {
               ) : (
                 <button onClick={() => setConfirmBulkDelete(true)}
                   className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-xl">
-                  <Trash2 size={13} /> Delete selected
+                  <IconIzbrisi size={13} /> Delete selected
                 </button>
               )}
             </>

@@ -6,7 +6,8 @@ import { cookies } from 'next/headers'
 import { format } from 'date-fns'
 import { formatMinutes, shortCode } from '@/lib/utils'
 import { t as tr, DEFAULT_LANG, type Lang } from '@/lib/i18n/translations'
-import { ArrowLeft, Wrench, Package, AlertTriangle, User, MapPin, Calendar, Clock } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, User, Calendar, Clock } from 'lucide-react'
+import { IconOrodje, IconMaterial, IconLokacija } from '@/components/icons/BuildFlowIcons'
 import type { TranslationKey } from '@/lib/i18n/translations'
 import Link from 'next/link'
 import ToolQRCode from '@/components/tools/ToolQRCode'
@@ -62,7 +63,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
   const activeCheckouts = tool.checkouts.filter((c) => c.status === 'ACTIVE' || c.status === 'PENDING_RETURN')
   const isLowStock = tool.currentStock <= tool.minStock
   const isMaterial = tool.type === 'MATERIAL'
-  const Icon = isMaterial ? Package : Wrench
+  const Icon = isMaterial ? IconMaterial : IconOrodje
 
   const distribution = activeCheckouts.reduce((acc, c) => {
     const key = c.project?.id || '__none__'
@@ -288,7 +289,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
                   <p className="text-sm font-medium text-gray-800 truncate">{currentCheckout.user.name}</p>
                   {currentCheckout.project && (
                     <p className="text-xs text-gray-500 flex items-center gap-1 truncate">
-                      <MapPin size={11} />{currentCheckout.project.name}
+                      <IconLokacija size={11} />{currentCheckout.project.name}
                     </p>
                   )}
                 </div>

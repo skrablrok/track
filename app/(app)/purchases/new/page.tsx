@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Check, Package, Wrench } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import { IconPotrjeno, IconMaterial, IconOrodje } from '@/components/icons/BuildFlowIcons'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import PhotoInput from '@/components/tools/PhotoInput'
 
@@ -48,12 +49,12 @@ export default function NewPurchasePage() {
       <div className="max-w-2xl mx-auto space-y-6 fade-in">
         <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center space-y-4">
           <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-            <Check className="w-6 h-6 text-green-600" />
+            <IconPotrjeno className="w-6 h-6 text-green-600" />
           </div>
           <h1 className="text-lg font-semibold text-gray-900">{t('addedToInventoryLabel')}</h1>
           <div className="text-left space-y-2">
             {addedItems.map((item, i) => {
-              const Icon = item.isMaterial ? Package : Wrench
+              const Icon = item.isMaterial ? IconMaterial : IconOrodje
               return (
                 <div key={i} className="flex items-center gap-3 border border-gray-100 rounded-xl p-3">
                   <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">

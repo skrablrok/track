@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { format } from 'date-fns'
-import { Receipt, Plus, Search, X, Trash2, User } from 'lucide-react'
+import { X, User, Download } from 'lucide-react'
+import { IconDostava, IconDodaj, IconIskanje, IconIzbrisi } from '@/components/icons/BuildFlowIcons'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import ExportButton from '@/components/ExportButton'
 
 type ReceiptItem = { name: string; quantity: number; unitPrice: number }
 
@@ -81,14 +83,21 @@ export default function PurchasesPage() {
             {isPrivileged ? t('allPurchases') : t('yourPurchases')}
           </p>
         </div>
-        <Link href="/purchases/new"
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
-          <Plus size={16} /> {t('newPurchase')}
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            endpoint="/api/purchases/export"
+            filenamePrefix="BuildFlow_Nakupi"
+            label={t('downloadMonthLabel')}
+          />
+          <Link href="/purchases/new"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
+            <IconDodaj size={16} /> {t('newPurchase')}
+          </Link>
+        </div>
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <IconIskanje className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input type="text" placeholder={t('search') + '…'} value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
@@ -102,7 +111,7 @@ export default function PurchasesPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <Receipt className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <IconDostava className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-400">{t('noPurchasesFound')}</p>
           <Link href="/purchases/new" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
             {t('newPurchase')}
@@ -116,7 +125,7 @@ export default function PurchasesPage() {
               <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gray-50 flex items-center justify-center">
                 {p.photoUrl
                   ? <img src={p.photoUrl} alt="" className="w-full h-full object-cover" />
-                  : <Receipt size={16} className="text-gray-300" />}
+                  : <IconDostava size={16} className="text-gray-300" />}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 text-sm truncate">
@@ -183,9 +192,15 @@ export default function PurchasesPage() {
                 </div>
               )}
               {(isPrivileged || viewing.user.id === session?.user?.id) && (
+                <a href={`/api/purchases/${viewing.id}/export`}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors">
+                  <Download size={14} /> {t('downloadReceiptLabel')}
+                </a>
+              )}
+              {(isPrivileged || viewing.user.id === session?.user?.id) && (
                 <button onClick={() => handleDelete(viewing.id)} disabled={deleting}
                   className="w-full flex items-center justify-center gap-2 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors disabled:opacity-50">
-                  <Trash2 size={14} /> {deleting ? t('submitting') : t('deletePurchase')}
+                  <IconIzbrisi size={14} /> {deleting ? t('submitting') : t('deletePurchase')}
                 </button>
               )}
             </div>

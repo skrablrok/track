@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { QrCode, CheckCircle2, XCircle, Wrench, MapPin, User, ClipboardList, Pencil, ExternalLink, Plus } from 'lucide-react'
+import { User, ExternalLink, Plus } from 'lucide-react'
+import { IconSkeniraj, IconZavrnjeno, IconPotrjeno, IconOrodje, IconLokacija, IconNarocilo, IconUredi } from '@/components/icons/BuildFlowIcons'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import CheckoutModal from '@/components/checkouts/CheckoutModal'
@@ -88,7 +89,7 @@ export default function ScanPage() {
       {!scanning && !result && !successInfo && (
         <div className="bg-white rounded-3xl border border-gray-100 p-8 text-center shadow-sm">
           <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <QrCode className="w-10 h-10 text-blue-500" />
+            <IconSkeniraj className="w-10 h-10 text-blue-500" />
           </div>
           <h2 className="text-lg font-semibold text-gray-800 mb-2">{t('readyToScan')}</h2>
           <p className="text-sm text-gray-500 mb-6">
@@ -120,7 +121,7 @@ export default function ScanPage() {
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
-          <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <IconZavrnjeno className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-red-800">{error}</p>
             <button
@@ -135,7 +136,7 @@ export default function ScanPage() {
 
       {successInfo && (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
-          <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
+          <IconPotrjeno className="w-12 h-12 text-green-500 mx-auto mb-3" />
           <h2 className="font-bold text-green-800 text-lg">{successInfo.title}</h2>
           <p className="text-sm text-green-600 mt-1 mb-4">{successInfo.message}</p>
           <button
@@ -153,7 +154,7 @@ export default function ScanPage() {
             {result.imageUrl ? (
               <img src={result.imageUrl} alt={result.name} className="w-full h-full object-cover" />
             ) : (
-              <Wrench className="w-16 h-16 text-gray-300" />
+              <IconOrodje className="w-16 h-16 text-gray-300" />
             )}
           </div>
 
@@ -179,7 +180,7 @@ export default function ScanPage() {
                   <p className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-2">{t('youCurrentlyHaveThis')}</p>
                   {ownCheckout.project && (
                     <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <MapPin size={14} className="text-gray-400" />
+                      <IconLokacija size={14} className="text-gray-400" />
                       {ownCheckout.project.name}
                     </div>
                   )}
@@ -208,7 +209,7 @@ export default function ScanPage() {
                       </div>
                       {c.project && (
                         <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-                          <MapPin size={11} className="text-gray-400 flex-shrink-0" />
+                          <IconLokacija size={11} className="text-gray-400 flex-shrink-0" />
                           <span className="truncate">{c.project.name}</span>
                         </div>
                       )}
@@ -249,7 +250,7 @@ export default function ScanPage() {
                 href={`/requests/new?toolId=${result.id}`}
                 className="w-full flex items-center justify-center gap-2 py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-2xl text-sm font-medium transition-colors border border-amber-100"
               >
-                <ClipboardList size={15} />
+                <IconNarocilo size={15} />
                 {result.type === 'MATERIAL' ? t('requestMaterial') : t('requestTool')}
               </Link>
 
@@ -258,7 +259,7 @@ export default function ScanPage() {
                   href={`/tools/${result.id}/edit`}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-2xl text-sm font-medium transition-colors border border-gray-100"
                 >
-                  <Pencil size={15} />
+                  <IconUredi size={15} />
                   {t('editTool')}
                 </Link>
               )}

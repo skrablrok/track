@@ -3,25 +3,26 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ShoppingCart, MoreHorizontal } from 'lucide-react'
 import {
-  LayoutDashboard, Wrench, QrCode, ClipboardCheck,
-  FolderOpen, ClipboardList, BarChart3, Users, ShoppingCart, FileSpreadsheet, MoreHorizontal, Receipt,
-} from 'lucide-react'
+  IconPregled, IconSkladisce, IconSkeniraj, IconNarocilo, IconDostava,
+  IconGradbisce, IconPoraba, IconPorocila, IconUvoz, IconDelavci,
+} from '@/components/icons/BuildFlowIcons'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 const ALL_LINKS = [
-  { href: '/dashboard',   key: 'nav_dashboard', icon: LayoutDashboard, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
-  { href: '/tools',       key: 'nav_tools',     icon: Wrench,          roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
-  { href: '/scan',        key: 'nav_scan',      icon: QrCode,          roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
-  { href: '/requests',    key: 'nav_requests',  icon: ClipboardCheck,  roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
-  { href: '/purchases',   key: 'nav_purchases', icon: Receipt,         roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
-  { href: '/projects',    key: 'nav_projects',  icon: FolderOpen,      roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
-  { href: '/checkouts',   key: 'nav_checkouts', icon: ClipboardList,   roles: ['ADMIN','MANAGER','EMPLOYEE'] },
-  { href: '/reports',     key: 'nav_reports',   icon: BarChart3,       roles: ['ADMIN','MANAGER'] },
+  { href: '/dashboard',   key: 'nav_dashboard', icon: IconPregled, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+  { href: '/tools',       key: 'nav_tools',     icon: IconSkladisce, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+  { href: '/scan',        key: 'nav_scan',      icon: IconSkeniraj, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+  { href: '/requests',    key: 'nav_requests',  icon: IconNarocilo,  roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+  { href: '/purchases',   key: 'nav_purchases', icon: IconDostava,  roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+  { href: '/projects',    key: 'nav_projects',  icon: IconGradbisce, roles: ['ADMIN','MANAGER','EMPLOYEE','FOREMAN'] },
+  { href: '/checkouts',   key: 'nav_checkouts', icon: IconPoraba,   roles: ['ADMIN','MANAGER','EMPLOYEE'] },
+  { href: '/reports',     key: 'nav_reports',   icon: IconPorocila, roles: ['ADMIN','MANAGER'] },
   { href: '/admin/procurement', key: 'nav_procurement', icon: ShoppingCart, roles: ['ADMIN','MANAGER'] },
-  { href: '/admin/import', key: 'nav_import', icon: FileSpreadsheet, roles: ['ADMIN','MANAGER'] },
-  { href: '/admin/users', key: 'nav_users',     icon: Users,           roles: ['ADMIN'] },
+  { href: '/admin/import', key: 'nav_import', icon: IconUvoz,   roles: ['ADMIN','MANAGER'] },
+  { href: '/admin/users', key: 'nav_users',     icon: IconDelavci, roles: ['ADMIN'] },
 ] as const
 
 // Pages that always stay visible in the bottom bar — the rest collapse into the dropdown.

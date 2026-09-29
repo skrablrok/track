@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { ShoppingCart, AlertTriangle, Truck, CheckCircle2, CheckSquare, Check, X, Receipt, ChevronDown } from 'lucide-react'
+import { CheckSquare, Check, X, Receipt, ChevronDown, Download } from 'lucide-react'
+import { IconNarocilo, IconVPripravi, IconDostava, IconPotrjeno, IconZavrnjeno } from '@/components/icons/BuildFlowIcons'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import ReceiptVerifyModal from '@/components/procurement/ReceiptVerifyModal'
 import MarkOrderedModal from '@/components/procurement/MarkOrderedModal'
+import ExportButton from '@/components/ExportButton'
 
 type ProcurementItem = {
   id: string
@@ -113,10 +115,10 @@ export default function ProcurementPage() {
   }
 
   const statusConfig: Record<string, { label: string; color: string; icon: any; nextLabel?: string }> = {
-    PENDING_PURCHASE: { label: t('procurementPending'),   color: 'bg-amber-100 text-amber-700',  icon: AlertTriangle, nextLabel: t('markOrdered') },
-    ORDERED:           { label: t('procurementOrdered'),  color: 'bg-blue-100 text-blue-700',    icon: Truck,         nextLabel: t('markCompleted') },
-    COMPLETED:         { label: t('procurementCompleted'), color: 'bg-green-100 text-green-700',  icon: CheckCircle2 },
-    NOT_ON_RECEIPT:    { label: t('notOnReceipt'),         color: 'bg-red-100 text-red-700',      icon: AlertTriangle },
+    PENDING_PURCHASE: { label: t('procurementPending'),   color: 'bg-amber-100 text-amber-700',  icon: IconVPripravi, nextLabel: t('markOrdered') },
+    ORDERED:           { label: t('procurementOrdered'),  color: 'bg-blue-100 text-blue-700',    icon: IconDostava,         nextLabel: t('markCompleted') },
+    COMPLETED:         { label: t('procurementCompleted'), color: 'bg-green-100 text-green-700',  icon: IconPotrjeno },
+    NOT_ON_RECEIPT:    { label: t('notOnReceipt'),         color: 'bg-red-100 text-red-700',      icon: IconZavrnjeno },
   }
 
   const filterTabs = ['ALL', ...STAGES, 'NOT_ON_RECEIPT'] as const
@@ -151,12 +153,19 @@ export default function ProcurementPage() {
           <h1 className="text-2xl font-bold text-gray-900">{t('procurementQueue')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{t('sourcingNeeded')}</p>
         </div>
-        {canSelect && !selectionMode && (
-          <button onClick={() => setSelectionMode(true)}
-            className="flex-shrink-0 flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
-            <CheckSquare size={16} />{t('selectItems')}
-          </button>
-        )}
+        <div className="flex-shrink-0 flex items-center gap-2">
+          <ExportButton
+            endpoint="/api/admin/procurement/export"
+            filenamePrefix="BuildFlow_Nabava"
+            label={t('downloadMonthLabel')}
+          />
+          {canSelect && !selectionMode && (
+            <button onClick={() => setSelectionMode(true)}
+              className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
+              <CheckSquare size={16} />{t('selectItems')}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -188,7 +197,7 @@ export default function ProcurementPage() {
         </div>
       ) : items.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <ShoppingCart className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <IconNarocilo className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-400">{t('noRequestsFound')}</p>
         </div>
       ) : (
@@ -345,7 +354,7 @@ export default function ProcurementPage() {
 
 function BatchCard({ batch, onCheckReceipt, t }: { batch: Batch; onCheckReceipt?: () => void; t: (key: any) => string }) {
   const [expanded, setExpanded] = useState(false)
-  const Icon = batch.status === 'COMPLETED' ? CheckCircle2 : Truck
+  const Icon = batch.status === 'COMPLETED' ? IconPotrjeno : IconDostava
   const iconColor = batch.status === 'COMPLETED' ? 'text-green-500' : 'text-blue-500'
 
   return (
@@ -364,6 +373,13 @@ function BatchCard({ batch, onCheckReceipt, t }: { batch: Batch; onCheckReceipt?
           </p>
         </div>
         <div className="flex-shrink-0 flex items-center gap-2">
+          <a
+            href={`/api/admin/procurement/export?batchId=${batch.batchId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 px-3 py-2 rounded-xl text-xs font-medium transition-colors"
+          >
+            <Download size={13} /> {t('downloadReceiptLabel')}
+          </a>
           {onCheckReceipt && (
             <button
               onClick={(e) => { e.stopPropagation(); onCheckReceipt() }}
