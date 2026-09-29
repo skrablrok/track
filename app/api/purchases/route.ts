@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await requireAuth()
+    const isPrivileged = ['ADMIN', 'MANAGER'].includes(user.role as string)
 
     const body = await req.json()
     const { photoUrl, note } = body
@@ -92,25 +93,35 @@ export async function POST(req: NextRequest) {
             })
           }
 
-          // The item is simultaneously stocked and handed to the buyer, so currentStock
-          // is unaffected — only raise totalStock to reflect a new unit now exists.
-          await tx.tool.update({
-            where: { id: tool.id },
-            data: { totalStock: Math.max(tool.totalStock, tool.currentStock + qty) },
-          })
+          if (isPrivileged) {
+            // An admin/manager is restocking the warehouse, not buying for their own
+            // use — the units go straight into available stock for everyone.
+            const newCurrentStock = tool.currentStock + qty
+            await tx.tool.update({
+              where: { id: tool.id },
+              data: { currentStock: newCurrentStock, totalStock: Math.max(tool.totalStock, newCurrentStock) },
+            })
+          } else {
+            // The item is simultaneously stocked and handed to the buyer, so currentStock
+            // is unaffected — only raise totalStock to reflect a new unit now exists.
+            await tx.tool.update({
+              where: { id: tool.id },
+              data: { totalStock: Math.max(tool.totalStock, tool.currentStock + qty) },
+            })
 
-          await tx.checkout.create({
-            data: {
-              toolId: tool.id,
-              userId: user.id,
-              quantity: qty,
-              notes: 'Via purchase receipt',
-              status: item.isMaterial ? 'CONSUMED' : 'ACTIVE',
-              organizationId: user.organizationId,
-              purchaseId: purchase.id,
-              ...(item.isMaterial && { returnDate: new Date() }),
-            },
-          })
+            await tx.checkout.create({
+              data: {
+                toolId: tool.id,
+                userId: user.id,
+                quantity: qty,
+                notes: 'Via purchase receipt',
+                status: item.isMaterial ? 'CONSUMED' : 'ACTIVE',
+                organizationId: user.organizationId,
+                purchaseId: purchase.id,
+                ...(item.isMaterial && { returnDate: new Date() }),
+              },
+            })
+          }
 
           addedItems.push({ toolId: tool.id, name: tool.name, qty, isMaterial: item.isMaterial, isNew })
         }
