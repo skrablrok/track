@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Lock, Mail, AlertCircle, Eye, EyeOff, ChevronDown } from 'lucide-react'
 import { LANGUAGES, DEFAULT_LANG, t, type Lang } from '@/lib/i18n/translations'
@@ -45,7 +45,8 @@ export default function LoginPage() {
     if (result?.error) {
       setError(result.error === 'CredentialsSignin' ? t(lang, 'invalidCredentials') : result.error)
     } else {
-      router.push('/dashboard')
+      const session = await getSession()
+      router.push(session?.user?.role === 'SUPER_ADMIN' ? '/super-admin' : '/dashboard')
       router.refresh()
     }
   }

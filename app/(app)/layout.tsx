@@ -12,6 +12,8 @@ import { LanguageProvider } from '@/lib/i18n/LanguageContext'
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
+  // The super admin has no organization — their home is the platform control panel
+  if (session.user.role === 'SUPER_ADMIN') redirect('/super-admin')
 
   const lang = cookies().get('lang')?.value || 'sl'
   const orgId = session.user.organizationId
