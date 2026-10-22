@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { requireAuth, logAudit, unauthorized, serverError, badRequest } from '@/lib/utils'
 import { notifyAdmins } from '@/lib/notifications'
 import { matchReceiptToCatalog, type CatalogMatchResult } from '@/lib/receipt-extraction'
+import { assignSerialsToCheckout } from '@/lib/serial-assignment'
 
 function sanitizeItems(raw: unknown): CatalogMatchResult['items'] {
   if (!Array.isArray(raw)) return []
@@ -133,7 +134,7 @@ export async function POST(req: NextRequest) {
               data: { totalStock: Math.max(tool.totalStock, tool.currentStock + qty) },
             })
 
-            await tx.checkout.create({
+            const checkout = await tx.checkout.create({
               data: {
                 toolId: tool.id,
                 userId: user.id,
@@ -145,6 +146,10 @@ export async function POST(req: NextRequest) {
                 ...(item.isMaterial && { returnDate: new Date() }),
               },
             })
+
+            if (!item.isMaterial) {
+              await assignSerialsToCheckout(tx, { toolId: tool.id, checkoutId: checkout.id, organizationId: user.organizationId, quantity: qty })
+            }
           }
 
           addedItems.push({ toolId: tool.id, name: tool.name, qty, isMaterial: item.isMaterial, isNew })

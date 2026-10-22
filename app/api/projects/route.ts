@@ -7,11 +7,13 @@ export async function GET(req: NextRequest) {
     const user = await requireAuth()
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
+    const hasStartingKit = searchParams.get('hasStartingKit')
 
     const projects = await db.project.findMany({
       where: {
         organizationId: user.organizationId,
         ...(status && { status: status as any }),
+        ...(hasStartingKit === 'true' && { requests: { some: { isStartingKit: true } } }),
       },
       include: {
         foreman: { select: { id: true, name: true } },

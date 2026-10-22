@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireRole, logAudit, unauthorized, forbidden, serverError, badRequest, calcDurationMins } from '@/lib/utils'
 import { notifyUser } from '@/lib/notifications'
+import { releaseSerialsForCheckout } from '@/lib/serial-assignment'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -22,16 +23,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const returnDate = new Date()
       const durationMins = calcDurationMins(checkout.checkoutDate, returnDate)
 
-      await db.$transaction([
-        db.checkout.update({
+      await db.$transaction(async (tx) => {
+        await tx.checkout.update({
           where: { id: params.id },
           data: { status: 'RETURNED', returnDate, durationMins },
-        }),
-        db.tool.update({
+        })
+        await tx.tool.update({
           where: { id: checkout.toolId },
           data: { currentStock: { increment: checkout.quantity } },
-        }),
-      ])
+        })
+        await releaseSerialsForCheckout(tx, checkout.id)
+      })
 
       await logAudit(
         user.id,

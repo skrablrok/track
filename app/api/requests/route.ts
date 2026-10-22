@@ -67,12 +67,9 @@ export async function POST(req: NextRequest) {
       if ((!hasTool && !hasCustomName) || !item.requestedQty || item.requestedQty < 1) {
         return badRequest('Each item needs a tool or a custom item name, and quantity ≥ 1')
       }
-      if (hasTool) {
-        const tool = toolById.get(item.toolId)
-        if (tool && tool.type !== 'MATERIAL' && parseInt(item.requestedQty) > tool.currentStock) {
-          return badRequest(`Cannot request more than what's in stock for "${tool.name}" (${tool.currentStock} available)`)
-        }
-      }
+      // Requesting more than current stock (of a tool or a material) no longer hard-fails
+      // the whole submission — it's flagged for procurement below like any other shortfall,
+      // so a copied "starting kit" with one now-unavailable item can still go through.
     }
 
     const needsProcurement = (i: any) => {
@@ -123,6 +120,9 @@ export async function POST(req: NextRequest) {
           items: {
             create: items.map((i: any) => {
               const resolvedToolId = i.toolId || (i.itemName ? customToolIds.get(String(i.itemName).trim()) : null) || null
+              const preferredSerials = Array.isArray(i.preferredSerials)
+                ? i.preferredSerials.filter((s: any) => typeof s === 'string' && s.trim()).map((s: string) => s.trim())
+                : []
               return {
                 toolId: resolvedToolId,
                 itemName: resolvedToolId ? null : String(i.itemName ?? '').trim() || null,
@@ -131,6 +131,7 @@ export async function POST(req: NextRequest) {
                 procurementStatus: needsProcurement(i) ? 'PENDING_PURCHASE' : null,
                 procurementUpdatedAt: needsProcurement(i) ? new Date() : null,
                 reservedQty: 0,
+                preferredSerials,
               }
             }),
           },

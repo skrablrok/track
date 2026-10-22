@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { requireRole, logAudit, unauthorized, serverError, badRequest } from '@/lib/utils'
 import { notifyUser, notifyAdmins } from '@/lib/notifications'
 import { sendDeliveryNoteEmail } from '@/lib/email'
+import { assignSerialsToCheckout } from '@/lib/serial-assignment'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     else status = 'PARTIALLY_APPROVED'
 
     const stockWarnings: { name: string; stock: number; negative: boolean }[] = []
+    const serialWarnings: { name: string; assigned: number; qty: number }[] = []
 
     await db.$transaction(async (tx) => {
       for (const item of items) {
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
           if (qty > 0) {
             const isMaterial = requestItem.tool?.type === 'MATERIAL'
-            await tx.checkout.create({
+            const checkout = await tx.checkout.create({
               data: {
                 toolId,
                 userId: request.requesterId,
@@ -77,6 +79,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 ...(isMaterial && { returnDate: new Date() }),
               },
             })
+
+            if (!isMaterial) {
+              const serialResult = await assignSerialsToCheckout(tx, {
+                toolId, checkoutId: checkout.id, organizationId: admin.organizationId, quantity: qty,
+                preferredSerials: requestItem.preferredSerials,
+              })
+              if (serialResult.engaged && serialResult.assigned < qty) {
+                serialWarnings.push({ name: requestItem.tool?.name || '', assigned: serialResult.assigned, qty })
+              }
+            }
           }
 
           const updatedTool = await tx.tool.findUnique({
@@ -105,7 +117,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             }
 
             const isMaterial = tool.type === 'MATERIAL'
-            await tx.checkout.create({
+            const checkout = await tx.checkout.create({
               data: {
                 toolId,
                 userId: request.requesterId,
@@ -118,13 +130,32 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 ...(isMaterial && { returnDate: new Date() }),
               },
             })
+
+            if (!isMaterial) {
+              const serialResult = await assignSerialsToCheckout(tx, {
+                toolId, checkoutId: checkout.id, organizationId: admin.organizationId, quantity: qty,
+                preferredSerials: requestItem.preferredSerials,
+              })
+              if (serialResult.engaged && serialResult.assigned < qty) {
+                serialWarnings.push({ name: tool.name, assigned: serialResult.assigned, qty })
+              }
+            }
           }
         }
       }
 
+      // The project's "starting kit" is whichever request first clears approval for it —
+      // decided here (at approval), not at submission, so a later-rejected first request
+      // never becomes the template.
+      let setStartingKit = false
+      if (request.projectId && (status === 'APPROVED' || status === 'PARTIALLY_APPROVED')) {
+        const existingKit = await tx.request.findFirst({ where: { projectId: request.projectId, isStartingKit: true } })
+        if (!existingKit) setStartingKit = true
+      }
+
       await tx.request.update({
         where: { id: params.id },
-        data: { status, adminNotes: adminNotes || null },
+        data: { status, adminNotes: adminNotes || null, ...(setStartingKit && { isStartingKit: true }) },
       })
     })
 
@@ -209,7 +240,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       }
     }
 
-    return NextResponse.json({ request: updated, stockWarnings, emailError })
+    return NextResponse.json({ request: updated, stockWarnings, serialWarnings, emailError })
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()
     if (e.message === 'Forbidden') return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })

@@ -45,6 +45,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
         include: {
           user: { select: { id: true, name: true, email: true } },
           project: true,
+          serialAssignments: { include: { unit: { select: { serialNumber: true } } }, orderBy: { assignedAt: 'asc' } },
         },
         orderBy: { checkoutDate: 'desc' },
       },
@@ -204,6 +205,9 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
                               </>
                             ) : tr(lang, 'noSite')}
                             {' · '}{isConsumed ? `${c.quantity}x` : formatMinutes(mins)}
+                            {c.serialAssignments.length > 0 && (
+                              <span className="font-mono text-gray-400">· #{c.serialAssignments.map((a) => a.unit.serialNumber).join(', ')}</span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -237,6 +241,9 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
                                   {initials(c.user.name)}
                                 </div>
                                 <span className="text-gray-800 whitespace-nowrap">{c.user.name}</span>
+                                {c.serialAssignments.length > 0 && (
+                                  <span className="font-mono text-xs text-gray-400 whitespace-nowrap">#{c.serialAssignments.map((a) => a.unit.serialNumber).join(', ')}</span>
+                                )}
                               </div>
                             </td>
                             <td className="px-5 py-3 text-gray-500 whitespace-nowrap">

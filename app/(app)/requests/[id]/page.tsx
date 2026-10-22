@@ -65,6 +65,7 @@ export default function RequestDetailPage() {
   const [adminNotes, setAdminNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [warnings, setWarnings] = useState<{ name: string; stock: number; negative: boolean }[]>([])
+  const [serialWarnings, setSerialWarnings] = useState<{ name: string; assigned: number; qty: number }[]>([])
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -108,6 +109,7 @@ export default function RequestDetailPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
       setWarnings(data.stockWarnings || [])
+      setSerialWarnings(data.serialWarnings || [])
       setEmailError(data.emailError || null)
       setDone(true)
       setRequest(data.request)
@@ -172,6 +174,23 @@ export default function RequestDetailPage() {
               <li key={i} className="text-sm text-amber-700 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
                 {w.name}: {w.stock}{w.negative ? ' (-)' : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {done && serialWarnings.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <IconOrodje size={16} className="text-blue-600" />
+            <p className="font-semibold text-blue-800 text-sm">{t('serialWarningsTitle')}</p>
+          </div>
+          <ul className="space-y-1">
+            {serialWarnings.map((w, i) => (
+              <li key={i} className="text-sm text-blue-700 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                {w.name}: {w.assigned}/{w.qty}
               </li>
             ))}
           </ul>

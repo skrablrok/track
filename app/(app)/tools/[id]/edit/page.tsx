@@ -19,6 +19,7 @@ const categoryKeys: Record<string, any> = {
 }
 
 type WarehouseRow = { warehouse: string; quantity: string }
+type SerialUnit = { id: string; serialNumber: string; status: 'AVAILABLE' | 'IN_USE' }
 
 export default function EditToolPage() {
   const { t } = useLanguage()
@@ -36,10 +37,61 @@ export default function EditToolPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [knownWarehouses, setKnownWarehouses] = useState<string[]>([])
+  const [serials, setSerials] = useState<SerialUnit[]>([])
+  const [newSerial, setNewSerial] = useState('')
+  const [serialError, setSerialError] = useState('')
+  const [serialWarning, setSerialWarning] = useState('')
+  const [addingSerial, setAddingSerial] = useState(false)
+  const [removingSerialId, setRemovingSerialId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/tools/warehouses').then((r) => r.json()).then((d) => Array.isArray(d) && setKnownWarehouses(d))
   }, [])
+
+  function loadSerials() {
+    fetch(`/api/tools/${id}/serials`).then((r) => r.json()).then((d) => Array.isArray(d) && setSerials(d)).catch(() => {})
+  }
+
+  useEffect(() => { loadSerials() }, [id])
+
+  async function handleAddSerial(e: React.FormEvent) {
+    e.preventDefault()
+    const sn = newSerial.trim()
+    if (!sn) return
+    setSerialError('')
+    setSerialWarning('')
+    setAddingSerial(true)
+    try {
+      const res = await fetch(`/api/tools/${id}/serials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serialNumber: sn }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      setNewSerial('')
+      if (data.warning) setSerialWarning(data.warning)
+      loadSerials()
+    } catch (e: any) {
+      setSerialError(e.message)
+    } finally {
+      setAddingSerial(false)
+    }
+  }
+
+  async function handleRemoveSerial(serialId: string) {
+    setSerialError('')
+    setRemovingSerialId(serialId)
+    try {
+      const res = await fetch(`/api/tools/${id}/serials/${serialId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed')
+      setSerials((prev) => prev.filter((s) => s.id !== serialId))
+    } catch (e: any) {
+      setSerialError(e.message)
+    } finally {
+      setRemovingSerialId(null)
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/tools/${id}`)
@@ -267,6 +319,46 @@ export default function EditToolPage() {
             </div>
           </div>
         </div>
+
+        {form.type !== 'MATERIAL' && (
+          <div className="border-t border-gray-100 pt-5">
+            <h3 className="text-sm font-semibold text-gray-700">{t('serialNumbersTitle')}</h3>
+            <p className="text-xs text-gray-400 mb-3">{t('serialNumbersHint')}</p>
+            {serialError && <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-2.5 text-xs mb-2">{serialError}</div>}
+            {serialWarning && <div className="bg-amber-50 text-amber-700 border border-amber-200 rounded-xl p-2.5 text-xs mb-2">{serialWarning}</div>}
+            {serials.length > 0 && (
+              <div className="space-y-1.5 mb-3">
+                {serials.map((s) => (
+                  <div key={s.id} className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2">
+                    <span className="flex-1 text-sm font-mono text-gray-800 truncate">{s.serialNumber}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
+                      s.status === 'IN_USE' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                    }`}>
+                      {s.status === 'IN_USE' ? t('serialStatusInUse') : t('serialStatusAvailable')}
+                    </span>
+                    <button type="button" onClick={() => handleRemoveSerial(s.id)}
+                      disabled={s.status === 'IN_USE' || removingSerialId === s.id}
+                      aria-label={t('removeSerialLabel')}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent transition-colors flex-shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {serials.length === 0 && <p className="text-xs text-gray-400 mb-3">{t('noSerialsRegisteredLabel')}</p>}
+            <div className="flex gap-2">
+              <input value={newSerial} onChange={(e) => setNewSerial(e.target.value)}
+                placeholder={t('addSerialPlaceholder')}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSerial(e) } }}
+                className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+              <button type="button" onClick={handleAddSerial} disabled={addingSerial || !newSerial.trim()}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-sm font-medium disabled:opacity-50 transition-colors">
+                <Plus size={14} /> {t('addSerialButton')}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="border-t border-gray-100 pt-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">{t('stockSettings')}</h3>

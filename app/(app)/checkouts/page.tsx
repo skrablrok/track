@@ -21,6 +21,7 @@ type Checkout = {
   tool: { id: string; name: string; imageUrl?: string; category?: string; type?: string }
   user: { id: string; name: string; email: string }
   project?: { id: string; name: string; location?: string }
+  serialAssignments?: { unit: { serialNumber: string } }[]
 }
 
 export default function CheckoutsPage() {
@@ -255,7 +256,14 @@ function CheckoutRow({ checkout: c, onReturn, onAdminAction, returning, armed, a
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-900 text-sm">{c.tool.name}</p>
+              <p className="font-medium text-gray-900 text-sm">
+                {c.tool.name}
+                {c.serialAssignments && c.serialAssignments.length > 0 && (
+                  <span className="ml-1.5 text-xs font-mono font-normal text-gray-400">
+                    #{c.serialAssignments.map((a) => a.unit.serialNumber).join(', ')}
+                  </span>
+                )}
+              </p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                 {isAdmin && (
                   <span className="flex items-center gap-1 text-xs text-gray-500"><User size={11} />{c.user.name}</span>

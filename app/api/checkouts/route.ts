@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth, logAudit, unauthorized, serverError, badRequest } from '@/lib/utils'
+import { assignSerialsToCheckout } from '@/lib/serial-assignment'
 
 export async function GET(req: NextRequest) {
   try {
@@ -30,6 +31,7 @@ export async function GET(req: NextRequest) {
         tool: { select: { id: true, name: true, imageUrl: true, category: true, type: true } },
         user: { select: { id: true, name: true, email: true } },
         project: { select: { id: true, name: true, location: true } },
+        serialAssignments: { include: { unit: { select: { serialNumber: true } } }, orderBy: { assignedAt: 'asc' } },
       },
       orderBy: { checkoutDate: 'desc' },
     })
@@ -57,8 +59,8 @@ export async function POST(req: NextRequest) {
 
     const isMaterial = tool.type === 'MATERIAL'
 
-    const [checkout] = await db.$transaction([
-      db.checkout.create({
+    const { checkout, serialResult } = await db.$transaction(async (tx) => {
+      const checkout = await tx.checkout.create({
         data: {
           toolId,
           userId: user.id,
@@ -75,12 +77,19 @@ export async function POST(req: NextRequest) {
           user: { select: { id: true, name: true, email: true } },
           project: true,
         },
-      }),
-      db.tool.update({
+      })
+
+      await tx.tool.update({
         where: { id: toolId },
         data: { currentStock: { decrement: qty } },
-      }),
-    ])
+      })
+
+      const serialResult = isMaterial
+        ? { engaged: false, assigned: 0, serials: [] as string[] }
+        : await assignSerialsToCheckout(tx, { toolId, checkoutId: checkout.id, organizationId: user.organizationId, quantity: qty })
+
+      return { checkout, serialResult }
+    })
 
     await logAudit(
       user.id,
@@ -91,7 +100,11 @@ export async function POST(req: NextRequest) {
       user.organizationId
     )
 
-    return NextResponse.json(checkout, { status: 201 })
+    const serialWarning = serialResult.engaged && serialResult.assigned < qty
+      ? `Only ${serialResult.assigned} of ${qty} unit(s) had a serial number assigned — the rest were checked out without one`
+      : null
+
+    return NextResponse.json({ ...checkout, serialWarning }, { status: 201 })
   } catch (e: any) {
     if (e.message === 'Unauthorized') return unauthorized()
     return serverError(e.message)

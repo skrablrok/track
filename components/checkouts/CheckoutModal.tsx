@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Wrench, MapPin, FileText } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import { toast } from '@/components/ui/toaster'
 
 interface Props {
   tool: { id: string; name: string; currentStock: number; totalStock: number; type?: string }
@@ -45,6 +46,8 @@ export default function CheckoutModal({ tool, onClose, onSuccess }: Props) {
         const d = await res.json()
         throw new Error(d.error || 'Failed')
       }
+      const data = await res.json()
+      if (data.serialWarning) toast('warning', data.serialWarning)
       onSuccess()
     } catch (e: any) {
       setError(e.message)

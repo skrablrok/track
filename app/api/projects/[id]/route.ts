@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth, requireRole, logAudit, unauthorized, forbidden, serverError } from '@/lib/utils'
+import { releaseSerialsForCheckout } from '@/lib/serial-assignment'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -81,6 +82,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
           where: { id: co.toolId },
           data: { currentStock: { increment: co.quantity } },
         })
+        await releaseSerialsForCheckout(tx, co.id)
       }
       await tx.project.delete({ where: { id: params.id } })
     })

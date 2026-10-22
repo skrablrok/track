@@ -23,7 +23,10 @@ type RequestItem = {
   itemName: string
   requestedQty: number
   notes: string
+  preferredSerials?: string[]
 }
+
+type KitProject = { id: string; name: string; location?: string; status: string }
 
 function NewRequestPageInner() {
   const router = useRouter()
@@ -40,21 +43,53 @@ function NewRequestPageInner() {
   const [customItemName, setCustomItemName] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [kitProjects, setKitProjects] = useState<KitProject[]>([])
+  const [copySourceId, setCopySourceId] = useState('')
+  const [copying, setCopying] = useState(false)
 
   useEffect(() => {
     Promise.all([
       fetch('/api/projects?status=ACTIVE').then((r) => r.json()),
       fetch('/api/tools').then((r) => r.json()),
-    ]).then(([p, toolList]) => {
+      fetch('/api/projects?hasStartingKit=true').then((r) => r.json()),
+    ]).then(([p, toolList, kitList]) => {
       setProjects(Array.isArray(p) ? p : [])
       const tl: Tool[] = Array.isArray(toolList) ? toolList : []
       setTools(tl)
+      setKitProjects(Array.isArray(kitList) ? kitList : [])
       if (preselectedToolId) {
         const found = tl.find((tool) => tool.id === preselectedToolId)
         if (found) setItems([{ toolId: found.id, tool: found, itemName: '', requestedQty: 1, notes: '' }])
       }
     })
   }, [])
+
+  async function handleCopyKit() {
+    if (!copySourceId) return
+    setCopying(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/projects/${copySourceId}/starting-kit`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to copy')
+      const kitItems: any[] = Array.isArray(data.items) ? data.items : []
+      setItems(kitItems.map((i) => ({
+        toolId: i.toolId,
+        tool: {
+          id: i.toolId, name: i.name, category: i.category, imageUrl: i.imageUrl,
+          type: i.type, currentStock: i.currentStock, minStock: i.minStock, totalStock: i.totalStock,
+        },
+        itemName: '',
+        requestedQty: i.requestedQty,
+        notes: '',
+        preferredSerials: i.preferredSerials || [],
+      })))
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setCopying(false)
+    }
+  }
 
   const filteredTools = tools.filter((tool) => {
     const q = toolSearch.toLowerCase()
@@ -98,7 +133,7 @@ function NewRequestPageInner() {
         body: JSON.stringify({
           projectId: projectId || null,
           notes,
-          items: items.map((i) => ({ toolId: i.toolId, itemName: i.itemName, requestedQty: i.requestedQty, notes: i.notes })),
+          items: items.map((i) => ({ toolId: i.toolId, itemName: i.itemName, requestedQty: i.requestedQty, notes: i.notes, preferredSerials: i.preferredSerials })),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed to submit')
@@ -148,6 +183,28 @@ function NewRequestPageInner() {
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 resize-none" />
           </div>
         </div>
+
+        {items.length === 0 && kitProjects.length > 0 && (
+          <div className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-5 space-y-3">
+            <div>
+              <h2 className="font-semibold text-gray-800">{t('copyFromProjectTitle')}</h2>
+              <p className="text-xs text-gray-500 mt-0.5">{t('copyFromProjectHint')}</p>
+            </div>
+            <div className="flex gap-2">
+              <select value={copySourceId} onChange={(e) => setCopySourceId(e.target.value)}
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <option value="">{t('selectSourceProjectPlaceholder')}</option>
+                {kitProjects.filter((p) => p.id !== projectId).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}{p.location ? ` · ${p.location}` : ''}</option>
+                ))}
+              </select>
+              <button type="button" onClick={handleCopyKit} disabled={!copySourceId || copying}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium disabled:opacity-50 transition-colors whitespace-nowrap">
+                {copying ? t('copyingItemsLabel') : t('copyItemsButton')}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
           <div className="flex items-center justify-between">
