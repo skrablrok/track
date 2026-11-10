@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer'
+import fs from 'fs'
+import path from 'path'
 import { generateDeliveryNotePdf } from '@/lib/pdf-delivery-note'
 import { t } from '@/lib/i18n/translations'
 
@@ -14,6 +16,23 @@ function createTransporter() {
   })
 }
 
+// Links in emails are a clickable BuildFlow logo instead of a button or raw URL.
+// The logo is embedded inline (cid) so it renders without a publicly reachable app URL.
+const LOGO_CID = 'buildflow-logo'
+let _logoPng: Buffer | null = null
+
+function logoAttachment() {
+  if (!_logoPng) _logoPng = fs.readFileSync(path.join(process.cwd(), 'public', 'icons', 'icon-192.png'))
+  return { filename: 'buildflow-logo.png', content: _logoPng, cid: LOGO_CID }
+}
+
+function logoLink(href: string, label: string) {
+  return `<a href="${href}" style="display:inline-block;text-decoration:none;text-align:center;">
+            <img src="cid:${LOGO_CID}" width="72" height="72" alt="${label}" style="display:block;margin:0 auto 8px;border:0;border-radius:16px;" />
+            <span style="color:#2563eb;font-weight:600;font-size:14px;">${label}</span>
+          </a>`
+}
+
 export async function sendInviteEmail(to: string, token: string) {
   const appUrl = (process.env.NEXTAUTH_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || 'http://localhost:3000').replace(/\/$/, '')
   const inviteUrl = `${appUrl}/invite/${token}`
@@ -21,6 +40,7 @@ export async function sendInviteEmail(to: string, token: string) {
   const transporter = createTransporter()
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    attachments: [logoAttachment()],
     to,
     subject: 'Povabljeni ste v BuildFlow',
     html: `
@@ -34,12 +54,9 @@ export async function sendInviteEmail(to: string, token: string) {
           <p style="color:#475569;margin:0 0 20px;">Povabljeni ste v sistem za upravljanje inventarja orodij BuildFlow. Kliknite spodnji gumb za dokončanje registracije.</p>
           <p style="color:#64748b;font-size:13px;margin:0 0 24px;">Ta povezava poteče čez <strong>7 dni</strong>.</p>
           <div style="text-align:center;margin-bottom:24px;">
-            <a href="${inviteUrl}" style="display:inline-block;background:#2563eb;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
-              Dokončaj registracijo
-            </a>
+            ${logoLink(inviteUrl, 'Dokončaj registracijo')}
           </div>
           <p style="color:#94a3b8;font-size:12px;margin:0;">Če tega povabila niste pričakovali, ga lahko varno prezrete.</p>
-          <p style="color:#94a3b8;font-size:12px;margin:8px 0 0;">Ali kopirajte to povezavo:<br/><span style="color:#2563eb;">${inviteUrl}</span></p>
         </div>
       </div>
     `,
@@ -75,9 +92,7 @@ export async function sendNewOrgNotificationEmail(
         </table>
         <p style="color:#475569;font-size:13px;margin:0 0 20px;">The organization's account is <strong>inactive</strong> until you approve it. Log in to the super-admin panel to activate it.</p>
         <div style="text-align:center;">
-          <a href="${appUrl}/super-admin" style="display:inline-block;background:#2563eb;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
-            Open Super Admin Panel
-          </a>
+          ${logoLink(`${appUrl}/super-admin`, 'Open Super Admin Panel')}
         </div>
       </div>
     </div>
@@ -86,6 +101,7 @@ export async function sendNewOrgNotificationEmail(
   const transporter = createTransporter()
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    attachments: [logoAttachment()],
     to,
     subject: `BuildFlow – New registration: ${orgName} (pending approval)`,
     html,
@@ -186,9 +202,7 @@ export async function sendDeliveryNoteEmail(
         </div>` : ''}
 
         <div style="text-align:center;">
-          <a href="${appUrl}/requests/${requestId}" style="display:inline-block;background:#2563eb;color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
-            Oglej zahtevek
-          </a>
+          ${logoLink(`${appUrl}/requests/${requestId}`, 'Oglej zahtevek')}
         </div>
 
         <p style="color:#94a3b8;font-size:11px;text-align:center;margin:20px 0 0;">
@@ -212,6 +226,7 @@ export async function sendDeliveryNoteEmail(
         subject,
         html,
         attachments: [
+          logoAttachment(),
           {
             filename: pdfFilename,
             content: pdfBuffer,
@@ -238,11 +253,8 @@ export async function sendPasswordResetEmail(to: string, token: string) {
         <p style="color:#475569;margin:0 0 20px;">Prejeli smo zahtevo za ponastavitev gesla za vaš račun BuildFlow. Kliknite spodnji gumb za nastavitev novega gesla.</p>
         <p style="color:#64748b;font-size:13px;margin:0 0 24px;">Ta povezava poteče čez <strong>1 uro</strong>. Če niste zahtevali ponastavitve, to e-pošto varno prezrite.</p>
         <div style="text-align:center;margin-bottom:24px;">
-          <a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
-            Ponastavi geslo
-          </a>
+          ${logoLink(resetUrl, 'Ponastavi geslo')}
         </div>
-        <p style="color:#94a3b8;font-size:12px;margin:0;">Ali kopirajte to povezavo:<br/><span style="color:#2563eb;">${resetUrl}</span></p>
       </div>
     </div>
   `
@@ -250,6 +262,7 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   const transporter = createTransporter()
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    attachments: [logoAttachment()],
     to,
     subject: 'BuildFlow – Ponastavitev gesla',
     html,
@@ -272,9 +285,7 @@ export async function sendNotificationEmail(to: string, title: string, message: 
         <p style="color:#475569;margin:0 0 20px;white-space:pre-line;">${message}</p>
         ${linkUrl ? `
         <div style="text-align:center;">
-          <a href="${appUrl}${linkUrl}" style="display:inline-block;background:#2563eb;color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
-            ${openButton}
-          </a>
+          ${logoLink(`${appUrl}${linkUrl}`, openButton)}
         </div>` : ''}
       </div>
     </div>
@@ -283,6 +294,7 @@ export async function sendNotificationEmail(to: string, title: string, message: 
   const transporter = createTransporter()
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    attachments: [logoAttachment()],
     to,
     subject: `BuildFlow – ${title}`,
     html,
@@ -339,9 +351,7 @@ export async function sendNewItemsAddedEmail(
           Ti artikli imajo trenutno zalogo <strong>0</strong>. Dodajte sliko, kategorijo in zalogo v nastavitvah.
         </p>
         <div style="text-align:center;">
-          <a href="${appUrl}/requests/${requestId}" style="display:inline-block;background:#2563eb;color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
-            Oglej zahtevek
-          </a>
+          ${logoLink(`${appUrl}/requests/${requestId}`, 'Oglej zahtevek')}
         </div>
       </div>
     </div>
@@ -352,6 +362,7 @@ export async function sendNewItemsAddedEmail(
     to.map((recipient) =>
       transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        attachments: [logoAttachment()],
         to: recipient,
         subject: `BuildFlow – ${newItems.length} nov artikel(i) samodejno dodan(i) v inventar`,
         html,
@@ -394,9 +405,7 @@ export async function sendProcurementEmail(
         ${renderSection('Nov material za nabavo (ni bil nikoli na zalogi)', neverStocked.map((i) => `${i.name} &ndash; kol. ${i.qty}`))}
         ${renderSection('Ponovna naročba &ndash; nizka zaloga', lowStock.map((i) => `${i.name} &ndash; potrebno ${i.qty}, na zalogi le ${i.currentStock}`))}
         <div style="text-align:center;margin:24px 0 0;">
-          <a href="${appUrl}${details.linkUrl}" style="display:inline-block;background:#2563eb;color:white;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
-            Oglej zahtevek
-          </a>
+          ${logoLink(`${appUrl}${details.linkUrl}`, 'Oglej zahtevek')}
         </div>
       </div>
     </div>
@@ -407,6 +416,7 @@ export async function sendProcurementEmail(
     to.map((recipient) =>
       transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        attachments: [logoAttachment()],
         to: recipient,
         subject: '&#9888;&#65039; BuildFlow – Potreben nakup materiala',
         html,
