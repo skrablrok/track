@@ -77,13 +77,21 @@ export default function SuperAdminPage() {
   async function copyLogoLink() {
     const origin = window.location.origin
     const registerUrl = `${origin}/register`
-    const html = `<table cellpadding="0" cellspacing="0" border="0"><tr>
-      <td style="vertical-align:middle;padding-right:12px;"><a href="${registerUrl}"><img src="${origin}/icons/icon-192.png" width="72" height="72" alt="BuildFlow" style="display:block;border:0;border-radius:16px;" /></a></td>
-      <td style="vertical-align:middle;font-family:Arial,sans-serif;">
-        <a href="${registerUrl}" style="text-decoration:none;">
-          <span style="display:block;color:#1e293b;font-size:20px;font-weight:700;">BuildFlow</span>
-          <span style="display:block;color:#475569;font-size:14px;margin-top:2px;">Pritisni in si ustvari lažje skladiščenje</span>
-        </a>
+    // Email-safe markup: tables + inline styles on every link, since Gmail/Outlook
+    // otherwise force blue underlined links and drop styles on nested spans
+    const font = 'font-family:Segoe UI,Helvetica,Arial,sans-serif;'
+    const html = `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;"><tr>
+      <td style="padding:16px 14px 16px 16px;vertical-align:middle;">
+        <a href="${registerUrl}" style="text-decoration:none;"><img src="${origin}/icons/icon-192.png" width="60" height="60" alt="BuildFlow" style="display:block;border:0;border-radius:14px;" /></a>
+      </td>
+      <td style="padding:16px 20px 16px 0;vertical-align:middle;${font}">
+        <a href="${registerUrl}" style="color:#0f172a;text-decoration:none;font-size:18px;font-weight:700;line-height:22px;${font}">BuildFlow</a><br />
+        <a href="${registerUrl}" style="color:#64748b;text-decoration:none;font-size:13px;line-height:20px;${font}">Pritisni in si ustvari lažje skladiščenje</a>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;"><tr>
+          <td bgcolor="#FF6A2B" style="background:#FF6A2B;border-radius:8px;">
+            <a href="${registerUrl}" style="display:inline-block;padding:8px 16px;color:#ffffff;text-decoration:none;font-size:13px;font-weight:600;${font}">Ustvari račun &rarr;</a>
+          </td>
+        </tr></table>
       </td>
     </tr></table>`
     try {
