@@ -77,7 +77,15 @@ export default function SuperAdminPage() {
   async function copyLogoLink() {
     const origin = window.location.origin
     const registerUrl = `${origin}/register`
-    const html = `<a href="${registerUrl}"><img src="${origin}/icons/icon-192.png" width="72" height="72" alt="BuildFlow" style="border:0;border-radius:16px;" /></a>`
+    const html = `<table cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="vertical-align:middle;padding-right:12px;"><a href="${registerUrl}"><img src="${origin}/icons/icon-192.png" width="72" height="72" alt="BuildFlow" style="display:block;border:0;border-radius:16px;" /></a></td>
+      <td style="vertical-align:middle;font-family:Arial,sans-serif;">
+        <a href="${registerUrl}" style="text-decoration:none;">
+          <span style="display:block;color:#1e293b;font-size:20px;font-weight:700;">BuildFlow</span>
+          <span style="display:block;color:#475569;font-size:14px;margin-top:2px;">Pritisni in si ustvari lažje skladiščenje</span>
+        </a>
+      </td>
+    </tr></table>`
     try {
       await navigator.clipboard.write([
         new ClipboardItem({
