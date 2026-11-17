@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   Building2, Users, Wrench, FolderOpen, ClipboardList,
   Power, PowerOff, RefreshCw, LogOut, ShieldCheck, Eye, EyeOff,
-  Trash2, ChevronRight,
+  Trash2, ChevronRight, Link2, Check,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -42,6 +42,7 @@ export default function SuperAdminPage() {
   const [showPass, setShowPass]   = useState(false)
   const [loginError, setLoginError] = useState('')
   const [loggingIn, setLoggingIn] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   useEffect(() => {
     if (status === 'authenticated') load()
@@ -68,6 +69,27 @@ export default function SuperAdminPage() {
     const result = await signIn('credentials', { email, password, redirect: false })
     setLoggingIn(false)
     if (result?.error) setLoginError('Invalid email or password.')
+  }
+
+  // Copies the BuildFlow logo linked to the registration page as rich HTML, so pasting
+  // it into a Gmail message gives a clickable logo. The image is loaded from this site,
+  // so it only shows for recipients when copied from the live (public) deployment.
+  async function copyLogoLink() {
+    const origin = window.location.origin
+    const registerUrl = `${origin}/register`
+    const html = `<a href="${registerUrl}"><img src="${origin}/icons/icon-192.png" width="72" height="72" alt="BuildFlow" style="border:0;border-radius:16px;" /></a>`
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([registerUrl], { type: 'text/plain' }),
+        }),
+      ])
+    } catch {
+      await navigator.clipboard.writeText(registerUrl)
+    }
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
   }
 
   async function deleteOrg(orgId: string) {
@@ -172,6 +194,10 @@ export default function SuperAdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button onClick={copyLogoLink} title="Copy the BuildFlow logo linked to the registration page — paste it into a Gmail message" className="flex items-center gap-1 px-2.5 py-1.5 border border-gray-200 bg-white rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition-colors">
+              {linkCopied ? <Check size={11} className="text-emerald-600" /> : <Link2 size={11} />}
+              <span className="hidden sm:inline">{linkCopied ? 'Copied!' : 'Copy signup logo'}</span>
+            </button>
             <button onClick={load} className="flex items-center gap-1 px-2.5 py-1.5 border border-gray-200 bg-white rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition-colors">
               <RefreshCw size={11} /> <span className="hidden sm:inline">Refresh</span>
             </button>
